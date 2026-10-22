@@ -120,8 +120,8 @@ fun MainActivity.createAgeCalculator(): View {
 fun MainActivity.createBmrCalculator(): View {
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(20f), dp(20f), dp(20f)) }
     var isMale = true
-    val maleLabel = if (isIosGlassMode) "מין: גבר" else "מין: גבר 👨"
-    val femaleLabel = if (isIosGlassMode) "מין: אישה" else "מין: אישה 👩"
+    val maleLabel = if (isCleanGlassActive) "מין: גבר" else "מין: גבר 👨"
+    val femaleLabel = if (isCleanGlassActive) "מין: אישה" else "מין: אישה 👩"
     val genderBtn = createActionBtn(maleLabel, false) {}
     genderBtn.setOnClickListener { feedback(it); isMale = !isMale; genderBtn.text = if (isMale) maleLabel else femaleLabel }
     val weight = createInputBox("משקל (ק״ג)"); val height = createInputBox("גובה (ס״מ)"); val age = createInputBox("גיל")
@@ -167,8 +167,8 @@ fun MainActivity.createFractionCalculator(): View {
 
 fun MainActivity.createSettingsPage(): View {
     val scroll = ScrollView(this); val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(0f), dp(20f), dp(24f)) }
-    
-    val titleThemes = TextView(this).apply { text = if (isIosGlassMode) "18 ערכות נושא ופלטות צבעים מוכנות" else "🎨 18 ערכות נושא ופלטות צבעים מוכנות"; setTextColor(Color.WHITE); textSize = 16f; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(12f), 0, dp(12f)) }
+   
+    val titleThemes = TextView(this).apply { text = if (isCleanGlassActive) "18 ערכות נושא ופלטות צבעים מוכנות" else "🎨 18 ערכות נושא ופלטות צבעים מוכנות"; setTextColor(Color.WHITE); textSize = 16f; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(12f), 0, dp(12f)) }
     val themeScroll = HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false; layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(16f) } }
     val themeContainer = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
     val presetThemes = listOf(
@@ -185,21 +185,21 @@ fun MainActivity.createSettingsPage(): View {
     for (theme in presetThemes) { val tName = theme.first; val tPri = Color.parseColor(theme.second); val tBg = Color.parseColor(theme.third); val btn = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(dp(12f), dp(12f), dp(12f), dp(12f)); background = GradientDrawable().apply { setColor(tBg); cornerRadius = dp(16f).toFloat(); setStroke(dp(2f), tPri) }; layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(6f), dp(6f), dp(6f), dp(6f)) }; addView(TextView(this@createSettingsPage).apply { text = tName; setTextColor(tPri); textSize = 14f; typeface = Typeface.DEFAULT_BOLD }); setOnClickListener { feedback(it); primaryColor = tPri; bgColor = tBg; savePreferences(); applyTheme() } }; themeContainer.addView(btn) }
     themeScroll.addView(themeContainer)
 
+    val currentModeLabel = when {
+        isAuroraMode -> IosGlassTheme.AURORA_THEME_NAME
+        isIosGlassMode -> "עיצוב הזכוכית (${IosGlassTheme.LIQUID_GLASS_THEME_NAME})"
+        else -> "עיצוב רגיל"
+    }
     val iosStyleBtn = createActionBtn(
-        if (isIosGlassMode) "סגנון עיצוב: iOS 26 Liquid Glass (פעיל)" else "סגנון עיצוב: רגיל (לחץ לעיצוב iOS 26 Liquid Glass) 🍎",
+        if (isCleanGlassActive) "מצב תצוגה: $currentModeLabel" else "✨ מצב תצוגה: $currentModeLabel",
         true
     ) {
-        isIosGlassMode = !isIosGlassMode
-        if (isIosGlassMode && primaryColor == Color.parseColor("#64B5F6") && bgColor == Color.parseColor("#08090C")) {
-            primaryColor = Color.parseColor("#FF9F0A")
-            bgColor = Color.parseColor("#181920")
-        }
-        savePreferences()
-        applyTheme()
+        showGlassDisplayModePickerDialog()
     }
     root.addView(titleThemes); root.addView(themeScroll); root.addView(iosStyleBtn)
-        // --- פאנל התאמה אישית מיוחד שמופיע רק כאשר ממשק ה-iOS מופעל ---
-    if (isIosGlassMode) {
+
+    // --- פאנל התאמה אישית מיוחד שמופיע רק כאשר עיצוב הזכוכית מופעל ---
+    if (isIosGlassMode && !isAuroraMode) {
         val iosPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16f), dp(16f), dp(16f), dp(16f))
@@ -265,43 +265,94 @@ fun MainActivity.createSettingsPage(): View {
         root.addView(iosPanel)
     }
 
+    // --- פאנל התאמה אישית מיוחד שמופיע כאשר הזוהר הצפוני (Aurora Borealis) מופעל ---
+    if (isAuroraMode) {
+        val auroraPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16f), dp(16f), dp(16f), dp(16f))
+            background = IosGlassTheme.createGlassCardDrawable(this@createSettingsPage, 22f)
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(8f); bottomMargin = dp(12f)
+            }
+        }
+        val auroraHeader = TextView(this).apply {
+            text = "התאמה אישית מלאה - ${IosGlassTheme.AURORA_THEME_NAME}"
+            setTextColor(AuroraBorealisTheme.AURORA_PRIMARY); textSize = 16f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.RIGHT
+            setPadding(0, 0, 0, dp(12f))
+        }
+        auroraPanel.addView(auroraHeader)
+
+        fun addAuroraSlider(labelPrefix: String, minVal: Int, maxVal: Int, currentVal: Int, unit: String, onValueChange: (Int) -> Unit) {
+            val lbl = TextView(this).apply {
+                text = "$labelPrefix: $currentVal$unit"
+                setTextColor(Color.WHITE); textSize = 14f; gravity = Gravity.RIGHT; setPadding(0, dp(6f), 0, dp(4f))
+            }
+            val seek = SeekBar(this).apply {
+                max = maxVal - minVal
+                progress = (currentVal - minVal).coerceIn(0, maxVal - minVal)
+                setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(s: SeekBar?, p: Int, fromUser: Boolean) {
+                        val v = minVal + p
+                        lbl.text = "$labelPrefix: $v$unit"
+                        if (fromUser) onValueChange(v)
+                    }
+                    override fun onStartTrackingTouch(s: SeekBar?) {}
+                    override fun onStopTrackingTouch(s: SeekBar?) {
+                        savePreferences()
+                        auroraPanel.background = IosGlassTheme.createGlassCardDrawable(this@createSettingsPage, 22f)
+                    }
+                })
+            }
+            auroraPanel.addView(lbl); auroraPanel.addView(seek)
+        }
+
+        addAuroraSlider("שקיפות זכוכית ארקטית (Aurora Opacity)", 80, 245, AuroraBorealisTheme.auroraOpacity, "") { AuroraBorealisTheme.auroraOpacity = it }
+        addAuroraSlider("עוצמת טשטוש עומק (Arctic Blur)", 0, 50, AuroraBorealisTheme.auroraBlurRadius.toInt(), "px") { AuroraBorealisTheme.auroraBlurRadius = it.toFloat() }
+        addAuroraSlider("עוצמת הארת ניאון ציאן (Luminescence)", 50, 255, AuroraBorealisTheme.auroraGlowIntensity, "") { AuroraBorealisTheme.auroraGlowIntensity = it }
+        addAuroraSlider("רדיוס קמירות מקשים (Corner Radius)", 10, 38, AuroraBorealisTheme.auroraCornerPt.toInt(), "pt") { AuroraBorealisTheme.auroraCornerPt = it.toFloat() }
+
+        root.addView(auroraPanel)
+    }
+
     var editingTarget = 0; val targetRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(16f); bottomMargin = dp(14f) } }
     lateinit var btnEditPrimary: TextView; lateinit var btnEditBg: TextView; lateinit var pickerContainer: FrameLayout
-    
-    fun refreshTargetButtons() { 
+   
+    fun refreshTargetButtons() {
         btnEditPrimary.background = GradientDrawable().apply { setColor(if (editingTarget == 0) primaryColor else Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(14f).toFloat(); setStroke(dp(2f), if (editingTarget == 0) Color.WHITE else Utils.lightenColor(bgColor, 0.15f)) }
         btnEditPrimary.setTextColor(if (editingTarget == 0) Color.parseColor("#08090C") else Color.WHITE)
         btnEditBg.background = GradientDrawable().apply { setColor(if (editingTarget == 1) primaryColor else Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(14f).toFloat(); setStroke(dp(2f), if (editingTarget == 1) Color.WHITE else Utils.lightenColor(bgColor, 0.15f)) }
-        btnEditBg.setTextColor(if (editingTarget == 1) Color.parseColor("#08090C") else Color.WHITE) 
+        btnEditBg.setTextColor(if (editingTarget == 1) Color.parseColor("#08090C") else Color.WHITE)
     }
-    
-    fun loadColorPicker() { 
-        refreshTargetButtons(); pickerContainer.removeAllViews() 
-        pickerContainer.addView(createColorWheelPicker(this, if (editingTarget == 0) primaryColor else bgColor) { newColor -> 
+   
+    fun loadColorPicker() {
+        refreshTargetButtons(); pickerContainer.removeAllViews()
+        pickerContainer.addView(createColorWheelPicker(this, if (editingTarget == 0) primaryColor else bgColor) { newColor ->
             if (editingTarget == 0) primaryColor = newColor else {
                 bgColor = newColor; window.statusBarColor = bgColor; window.navigationBarColor = bgColor
-                if (isIosGlassMode) mainContent?.background = IosGlassTheme.createLiquidAmbientBackground(this)
+                if (isAuroraMode) mainContent?.background = AuroraBorealisTheme.createAuroraAtmosphericBackground()
+                else if (isIosGlassMode) mainContent?.background = IosGlassTheme.createLiquidAmbientBackground(this)
                 else mainContent?.setBackgroundColor(bgColor)
-                drawerMenu?.setBackgroundColor(if (isIosGlassMode) Color.argb(225, Color.red(bgColor), Color.green(bgColor), Color.blue(bgColor)) else Utils.lightenColor(bgColor, 0.06f))
+                drawerMenu?.setBackgroundColor(if (isCleanGlassActive) Color.argb(225, Color.red(bgColor), Color.green(bgColor), Color.blue(bgColor)) else Utils.lightenColor(bgColor, 0.06f))
             }
-            savePreferences(); refreshTargetButtons() 
-        }) 
+            savePreferences(); refreshTargetButtons()
+        })
     }
-    
-    btnEditPrimary = TextView(this).apply { text = if (isIosGlassMode) "צבע נושא מותאם" else "🎨 צבע נושא מותאם"; gravity = Gravity.CENTER; textSize = 15f; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(12f), 0, dp(12f)); layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = dp(6f) }; setOnClickListener { feedback(it); editingTarget = 0; loadColorPicker() } }
-    btnEditBg = TextView(this).apply { text = if (isIosGlassMode) "צבע רקע מותאם" else "🌌 צבע רקע מותאם"; gravity = Gravity.CENTER; textSize = 15f; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(12f), 0, dp(12f)); layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { rightMargin = dp(6f) }; setOnClickListener { feedback(it); editingTarget = 1; loadColorPicker() } }
+   
+    btnEditPrimary = TextView(this).apply { text = if (isCleanGlassActive) "צבע נושא מותאם" else "🎨 צבע נושא מותאם"; gravity = Gravity.CENTER; textSize = 15f; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(12f), 0, dp(12f)); layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = dp(6f) }; setOnClickListener { feedback(it); editingTarget = 0; loadColorPicker() } }
+    btnEditBg = TextView(this).apply { text = if (isCleanGlassActive) "צבע רקע מותאם" else "🌌 צבע רקע מותאם"; gravity = Gravity.CENTER; textSize = 15f; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(12f), 0, dp(12f)); layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { rightMargin = dp(6f) }; setOnClickListener { feedback(it); editingTarget = 1; loadColorPicker() } }
     targetRow.addView(btnEditPrimary); targetRow.addView(btnEditBg); pickerContainer = FrameLayout(this).apply { layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(18f) } }; loadColorPicker()
-    
+   
     val titleSettings = TextView(this).apply { text = "הגדרות מערכת נוספות"; setTextColor(Color.WHITE); textSize = 16f; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(8f), 0, dp(10f)) }
     val vibBtn = createActionBtn(if (useHaptic) "רטט בלחיצה: מופעל 🟢" else "רטט בלחיצה: כבוי 🔴", false) { useHaptic = !useHaptic; savePreferences(); applyTheme() }
     val sndBtn = createActionBtn(if (useSound) "צלילי הקשה: מופעל 🔊" else "צלילי הקשה: כבוי 🔇", false) { useSound = !useSound; savePreferences(); applyTheme() }
-    val soundNames = arrayOf("מערכת 📱", "צליל 1 🎵", "צליל 2 🎶")
-    val sndTypeBtn = createActionBtn("סוג צליל: ${soundNames.getOrElse(soundType) { "מערכת 📱" }}", false) { AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert).setTitle("בחר צליל").setSingleChoiceItems(soundNames, soundType) { d, w -> soundType = w; savePreferences(); applyTheme(); d.dismiss() }.show() }
+    val soundLabel = if (soundType == 0) "מערכת 📱" else "צליל $soundType 🎵"
+    val sndTypeBtn = createActionBtn("סוג צליל: $soundLabel", false) { showGlassSoundPickerDialog { switchTab(19) } }
     val scrBtn = createActionBtn(if (keepScreenOn) "מסך תמיד דולק: מופעל 🔆" else "מסך תמיד דולק: כבוי 🌙", false) { keepScreenOn = !keepScreenOn; updateKeepScreenOn(); savePreferences(); applyTheme() }
     val shapeName = when(buttonCornerStyle) { 8f -> "מרובעים ⏹️"; 24f -> "מודרניים 🔲"; else -> "עגולים ⚪" }
     val shapeBtn = createActionBtn("צורת כפתורים: $shapeName", false) { buttonCornerStyle = when(buttonCornerStyle) { 8f -> 24f; 24f -> 42f; else -> 8f }; savePreferences(); applyTheme() }
     val precBtn = createActionBtn("דיוק עשרוני: $calcPrecision ספרות ⚙️", false) { calcPrecision = if (calcPrecision >= 10) 2 else calcPrecision + 2; savePreferences(); applyTheme() }
-    
+   
     root.addView(targetRow); root.addView(pickerContainer); root.addView(titleSettings)
     root.addView(vibBtn); root.addView(sndBtn); root.addView(sndTypeBtn); root.addView(scrBtn); root.addView(shapeBtn); root.addView(precBtn); scroll.addView(root); return scroll
 }
+ 
