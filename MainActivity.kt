@@ -296,6 +296,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         isRightHanded = prefs?.getBoolean("isRightHanded", true) ?: true
         isIosGlassMode = prefs?.getBoolean("isIosGlassMode", false) ?: false
         isAuroraMode = prefs?.getBoolean("isAuroraMode", false) ?: false
+        if (isAuroraMode && isIosGlassMode) isIosGlassMode = false
         IosGlassTheme.loadIosPrefs(prefs)
         calcPrecision = prefs?.getInt("calcPrecision", 8) ?: 8; buttonCornerStyle = prefs?.getFloat("buttonCornerStyle", 24f) ?: 24f
         primaryColor = prefs?.getInt("primaryColor", Color.parseColor("#64B5F6")) ?: Color.parseColor("#64B5F6"); bgColor = prefs?.getInt("bgColor", Color.parseColor("#08090C")) ?: Color.parseColor("#08090C")
@@ -638,6 +639,124 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         dialog.show()
     }
 
+    // תפריט לבחירת מצב תצוגה (עיצוב רגיל, עיצוב הזכוכית, או הזוהר הצפוני) זהה במראה לתפריט הצלילים
+    fun showGlassDisplayModePickerDialog() {
+        val activeAccent = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
+        if (isCleanGlassActive) IosGlassTheme.applyRealtimeGlassBlur(mainContent, true)
+
+        val dialogView = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20f), dp(20f), dp(20f), dp(18f))
+            background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@MainActivity, 28f)
+            else GradientDrawable().apply {
+                setColor(Utils.lightenColor(bgColor, 0.06f))
+                cornerRadius = dp(24f).toFloat()
+                setStroke(dp(1f), Utils.lightenColor(bgColor, 0.16f))
+            }
+        }
+
+        val titleTv = TextView(this).apply {
+            text = "בחר מצב תצוגה"
+            setTextColor(Color.WHITE)
+            textSize = 20f
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.RIGHT
+            setPadding(dp(4f), 0, dp(4f), dp(14f))
+        }
+        dialogView.addView(titleTv)
+
+        val listContainer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+
+        val dialog = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert).setView(dialogView).create()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.setOnDismissListener { if (isCleanGlassActive && !isDrawerOpen) IosGlassTheme.applyRealtimeGlassBlur(mainContent, false) }
+
+        val currentModeIndex = when {
+            isAuroraMode -> 2
+            isIosGlassMode -> 1
+            else -> 0
+        }
+
+        val modes = listOf(
+            Triple("עיצוב רגיל (קלאסי)", "🎨 עיצוב רגיל (קלאסי)", 19),
+            Triple("עיצוב הזכוכית (${IosGlassTheme.LIQUID_GLASS_THEME_NAME})", "💎 עיצוב הזכוכית (${IosGlassTheme.LIQUID_GLASS_THEME_NAME})", 203),
+            Triple("הזוהר הצפוני (${IosGlassTheme.AURORA_THEME_NAME})", "🌌 הזוהר הצפוני (${IosGlassTheme.AURORA_THEME_NAME})", 202)
+        )
+
+        for ((idx, modeData) in modes.withIndex()) {
+            val isSelected = (currentModeIndex == idx)
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(14f), dp(14f), dp(14f), dp(14f))
+                if (isSelected && isCleanGlassActive) {
+                    background = AuroraBorealisTheme.createActiveDrawerCapsule(this@MainActivity, isAuroraMode)
+                } else if (isSelected) {
+                    setBackgroundColor(Color.argb(45, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor)))
+                }
+                setOnClickListener {
+                    feedback(it)
+                    when (idx) {
+                        0 -> {
+                            isIosGlassMode = false
+                            isAuroraMode = false
+                        }
+                        1 -> {
+                            isIosGlassMode = true
+                            isAuroraMode = false
+                            if (primaryColor == AuroraBorealisTheme.AURORA_PRIMARY || (primaryColor == Color.parseColor("#64B5F6") && bgColor == Color.parseColor("#08090C"))) {
+                                primaryColor = Color.parseColor("#FF9F0A")
+                                bgColor = Color.parseColor("#181920")
+                            }
+                        }
+                        2 -> {
+                            isAuroraMode = true
+                            isIosGlassMode = false
+                            primaryColor = AuroraBorealisTheme.AURORA_PRIMARY
+                            bgColor = AuroraBorealisTheme.ARCTIC_BLUE
+                        }
+                    }
+                    savePreferences()
+                    dialog.dismiss()
+                    applyTheme()
+                }
+            }
+
+            val radioIndicator = RadioButton(this).apply {
+                isChecked = isSelected
+                isClickable = false
+                buttonTintList = ColorStateList.valueOf(if (isSelected) activeAccent else Color.WHITE)
+            }
+
+            val itemTv = TextView(this).apply {
+                text = if (isCleanGlassActive) modeData.first else modeData.second
+                setTextColor(if (isSelected) activeAccent else Color.WHITE)
+                textSize = 17f
+                typeface = if (isSelected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+                gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
+                compoundDrawablePadding = dp(10f)
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                if (isCleanGlassActive) {
+                    val modeIcon = AuroraBorealisTheme.createVectorIcon(this@MainActivity, modeData.third, if (isSelected) activeAccent else Color.WHITE, 20f, isAuroraMode)
+                    setCompoundDrawables(null, null, modeIcon, null)
+                }
+            }
+
+            row.addView(radioIndicator)
+            row.addView(itemTv)
+            listContainer.addView(row)
+            if (idx < modes.lastIndex) {
+                listContainer.addView(View(this).apply {
+                    setBackgroundColor(if (isAuroraMode) Color.argb(35, 0, 245, 212) else Color.argb(28, 255, 255, 255))
+                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1f))
+                })
+            }
+        }
+
+        dialogView.addView(listContainer)
+        dialog.show()
+    }
+
     private fun updateDrawerSelection() {
         val sepColor = when {
             isAuroraMode -> Color.argb(38, 0, 245, 212) // 1px glowing emerald line
@@ -673,7 +792,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
-    // מעדכן באופן אוטומטי את השמות במסך ההגדרות (למניעת הפרת זכויות יוצרים על השם iOS) ומוסיף אייקונים ודיאלוג צלילים מזכוכית
+    // מעדכן באופן אוטומטי את השמות במסך ההגדרות (למניעת הפרת זכויות יוצרים על השם iOS) ומוסיף אייקונים ודיאלוג צלילים ותצוגה מזכוכית
     private fun enhanceSettingsHierarchy(root: View) {
         when (root) {
             is TextView -> {
@@ -691,6 +810,20 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     root.setOnClickListener {
                         feedback(it)
                         showGlassSoundPickerDialog { switchTab(19) }
+                    }
+                }
+
+                // הפיכת כפתור סגנון העיצוב לפתיחת תפריט בחירת מצב התצוגה (רגיל / זכוכית / זוהר צפוני)
+                if (raw.contains("סגנון עיצוב:") || raw.contains("מצב תצוגה:")) {
+                    val activeModeTitle = when {
+                        isAuroraMode -> IosGlassTheme.AURORA_THEME_NAME
+                        isIosGlassMode -> "עיצוב הזכוכית (${IosGlassTheme.LIQUID_GLASS_THEME_NAME})"
+                        else -> "עיצוב רגיל"
+                    }
+                    root.text = if (isCleanGlassActive) "מצב תצוגה: $activeModeTitle" else "✨ מצב תצוגה: $activeModeTitle"
+                    root.setOnClickListener {
+                        feedback(it)
+                        showGlassDisplayModePickerDialog()
                     }
                 }
             }
@@ -725,22 +858,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 val scrollObj = settingsView as? ScrollView
                 currentSettingsScroll = scrollObj
                 val container = scrollObj?.getChildAt(0) as? LinearLayout ?: (settingsView as? LinearLayout)
-
-                // כפתור ייעודי להפעלת ערכת הנושא החדשה Aurora Borealis (זוהר הצפון)
-                val auroraBtn = createActionBtn(
-                    "ערכת נושא: ${IosGlassTheme.AURORA_THEME_NAME} (${if (isAuroraMode) "פעיל" else "כבוי"})",
-                    isAuroraMode
-                ) {
-                    isAuroraMode = !isAuroraMode
-                    if (isAuroraMode) {
-                        isIosGlassMode = true
-                        primaryColor = AuroraBorealisTheme.AURORA_PRIMARY
-                        bgColor = AuroraBorealisTheme.ARCTIC_BLUE
-                    }
-                    savePreferences()
-                    applyTheme()
-                }
-                container?.addView(auroraBtn, 0)
 
                 val handLabel = if (isCleanGlassActive) {
                     "יד דומיננטית: ${if (isRightHanded) "ימניים (תפריט ופעולות בימין)" else "שמאליים (תפריט ופעולות בשמאל)"}"
