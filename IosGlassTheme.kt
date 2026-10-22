@@ -200,11 +200,12 @@ object IosGlassTheme {
         return RippleDrawable(ColorStateList.valueOf(Color.parseColor("#66FFFFFF")), layers, null)
     }
 
-    // משטח Display Canvas, תפריטים ודיאלוגים עם שבירת אור
+    // משטח Display Canvas, תפריטים ודיאלוגים עם שבירת אור (במגירת התפריט cornerDp == 0f מוסרת המסגרת הלבנה בלבד)
     fun createGlassCardDrawable(activity: MainActivity, cornerDp: Float = glassCornerPt): Drawable {
         if (activity.isAuroraMode) {
             return AuroraBorealisTheme.createAuroraCardDrawable(activity, cornerDp, cornerDp == 0f)
         }
+        val isDrawer = (cornerDp == 0f)
         val radius = activity.dp(cornerDp).toFloat()
         val alphaScale = (glassOpacity / 255f).coerceIn(0.25f, 1f)
         val glass = GradientDrawable(
@@ -216,9 +217,14 @@ object IosGlassTheme {
             )
         ).apply {
             cornerRadius = radius
-            val specBorder = (specularIntensity * 0.65f).toInt().coerceIn(0, 255)
-            setStroke(activity.dp(1.2f), Color.argb(specBorder, 255, 255, 255))
+            if (!isDrawer) {
+                val specBorder = (specularIntensity * 0.65f).toInt().coerceIn(0, 255)
+                setStroke(activity.dp(1.2f), Color.argb(specBorder, 255, 255, 255))
+            }
         }
+
+        if (isDrawer) return glass
+
         val topEdge = GradientDrawable(
             GradientDrawable.Orientation.TOP_BOTTOM,
             intArrayOf(Color.argb((specularIntensity * 0.5f).toInt(), 255, 255, 255), Color.TRANSPARENT)
