@@ -192,7 +192,7 @@ object AuroraBorealisTheme {
         return RippleDrawable(ColorStateList.valueOf(Color.parseColor("#6600F5D4")), layers, null)
     }
 
-    // כרטיסי זכוכית, Display Canvas (radius 28pt) ורקע דיאלוגים ותפריטים
+    // כרטיסי זכוכית, Display Canvas (radius 28pt) ורקע דיאלוגים ותפריטים (במגירת התפריט מוסרת המסגרת הלבנה בלבד)
     fun createAuroraCardDrawable(activity: MainActivity, cornerDp: Float = 28f, isDrawer: Boolean = false): Drawable {
         val radius = if (isDrawer) 0f else activity.dp(cornerDp).toFloat()
         val glass = GradientDrawable(
@@ -204,8 +204,12 @@ object AuroraBorealisTheme {
             )
         ).apply {
             cornerRadius = radius
-            setStroke(activity.dp(1.2f), Color.argb(120, 0, 245, 212))
+            if (!isDrawer) {
+                setStroke(activity.dp(1.2f), Color.argb(120, 0, 245, 212))
+            }
         }
+
+        if (isDrawer) return glass
 
         val specularRim = GradientDrawable(
             GradientDrawable.Orientation.TOP_BOTTOM,
