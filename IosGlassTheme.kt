@@ -409,7 +409,7 @@ object IosGlassTheme {
                         canvas.drawLine(cx + r * 0.25f, cy + r * 0.25f, cx + r * 0.6f, cy + r * 0.25f, paint)
                         canvas.drawLine(cx + r * 0.25f, cy + r * 0.6f, cx + r * 0.6f, cy + r * 0.6f, paint)
                     }
-                    17 -> {
+                    17, 34 -> {
                         val path = Path().apply {
                             moveTo(cx - r * 0.75f, cy + r * 0.65f); lineTo(cx - r * 0.2f, cy + r * 0.15f)
                             lineTo(cx + r * 0.15f, cy + r * 0.35f); lineTo(cx + r * 0.75f, cy - r * 0.55f)
@@ -438,6 +438,54 @@ object IosGlassTheme {
                             moveTo(cx, cy - r * 0.75f); lineTo(cx + r * 0.88f, cy - r * 0.2f); lineTo(cx, cy + r * 0.35f); lineTo(cx - r * 0.88f, cy - r * 0.2f); close()
                         }
                         canvas.drawPath(cap, paint)
+                    }
+                    31 -> { // 87 קטגוריות יחידות והנדסה
+                        canvas.drawCircle(cx, cy - r * 0.6f, r * 0.16f, paint)
+                        canvas.drawLine(cx - r * 0.1f, cy - r * 0.45f, cx - r * 0.65f, cy + r * 0.75f, paint)
+                        canvas.drawLine(cx + r * 0.1f, cy - r * 0.45f, cx + r * 0.65f, cy + r * 0.75f, paint)
+                        canvas.drawLine(cx - r * 0.42f, cy + r * 0.2f, cx + r * 0.42f, cy + r * 0.2f, paint)
+                    }
+                    32 -> { // מתכות יקרות וגרפים
+                        val ingot = Path().apply {
+                            moveTo(cx - r * 0.48f, cy + r * 0.2f); lineTo(cx + r * 0.48f, cy + r * 0.2f)
+                            lineTo(cx + r * 0.75f, cy + r * 0.7f); lineTo(cx - r * 0.75f, cy + r * 0.7f); close()
+                        }
+                        canvas.drawPath(ingot, paint)
+                        canvas.drawCircle(cx, cy - r * 0.35f, r * 0.32f, paint)
+                    }
+                    33 -> { // 48 כלים שימושיים
+                        val resPath = Path().apply {
+                            moveTo(cx - r * 0.85f, cy); lineTo(cx - r * 0.5f, cy)
+                            lineTo(cx - r * 0.35f, cy - r * 0.4f); lineTo(cx - r * 0.1f, cy + r * 0.4f)
+                            lineTo(cx + r * 0.15f, cy - r * 0.4f); lineTo(cx + r * 0.4f, cy + r * 0.4f)
+                            lineTo(cx + r * 0.55f, cy); lineTo(cx + r * 0.85f, cy)
+                        }
+                        canvas.drawPath(resPath, paint)
+                    }
+                    35 -> { // 22 מחשבונים מתמטיים (סיגמא Σ)
+                        val sigma = Path().apply {
+                            moveTo(cx + r * 0.6f, cy - r * 0.7f); lineTo(cx - r * 0.6f, cy - r * 0.7f)
+                            lineTo(cx + r * 0.1f, cy); lineTo(cx - r * 0.6f, cy + r * 0.7f)
+                            lineTo(cx + r * 0.6f, cy + r * 0.7f)
+                        }
+                        canvas.drawPath(sigma, paint)
+                    }
+                    36 -> { // ייצוא PDF/CSV וגיבוי ענן
+                        canvas.drawRoundRect(cx - r * 0.75f, cy - r * 0.3f, cx + r * 0.75f, cy + r * 0.45f, r * 0.35f, r * 0.35f, paint)
+                        canvas.drawLine(cx, cy + r * 0.75f, cx, cy - r * 0.15f, paint)
+                    }
+                    305 -> { // קטגוריית מרכז מקצועי (Pro Mode Crown)
+                        val crown = Path().apply {
+                            moveTo(cx - r * 0.75f, cy + r * 0.58f)
+                            lineTo(cx - r * 0.8f, cy - r * 0.3f)
+                            lineTo(cx - r * 0.32f, cy + r * 0.1f)
+                            lineTo(cx, cy - r * 0.68f)
+                            lineTo(cx + r * 0.32f, cy + r * 0.1f)
+                            lineTo(cx + r * 0.8f, cy - r * 0.3f)
+                            lineTo(cx + r * 0.75f, cy + r * 0.58f)
+                            close()
+                        }
+                        canvas.drawPath(crown, paint)
                     }
                     100 -> {
                         canvas.drawRoundRect(cx - r * 0.8f, cy - r * 0.65f, cx + r * 0.8f, cy + r * 0.65f, r * 0.2f, r * 0.2f, paint)
