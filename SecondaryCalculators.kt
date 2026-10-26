@@ -69,6 +69,7 @@ fun MainActivity.createProgrammerCalculator(): View {
     })
     root.addView(input); root.addView(resText); return root
 }
+
 fun MainActivity.createPercentageCalculator(): View {
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(20f), dp(20f), dp(20f)) }
     val val1 = createInputBox("חלק / אחוז"); val val2 = createInputBox("שלם / סכום"); val resText = createResultTextView()
@@ -132,6 +133,7 @@ fun MainActivity.createBmrCalculator(): View {
     }
     root.addView(genderBtn); root.addView(weight); root.addView(height); root.addView(age); root.addView(btn); root.addView(resText); return root
 }
+
 fun MainActivity.createQuadraticCalculator(): View {
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(20f), dp(20f), dp(20f)) }
     val aIn = createInputBox("מקדם a"); val bIn = createInputBox("מקדם b"); val cIn = createInputBox("מקדם c")
@@ -167,7 +169,7 @@ fun MainActivity.createFractionCalculator(): View {
 
 fun MainActivity.createSettingsPage(): View {
     val scroll = ScrollView(this); val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(0f), dp(20f), dp(24f)) }
-   
+  
     val titleThemes = TextView(this).apply { text = if (isCleanGlassActive) "18 ערכות נושא ופלטות צבעים מוכנות" else "🎨 18 ערכות נושא ופלטות צבעים מוכנות"; setTextColor(Color.WHITE); textSize = 16f; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(12f), 0, dp(12f)) }
     val themeScroll = HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false; layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(16f) } }
     val themeContainer = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
@@ -196,7 +198,25 @@ fun MainActivity.createSettingsPage(): View {
     ) {
         showGlassDisplayModePickerDialog()
     }
-    root.addView(titleThemes); root.addView(themeScroll); root.addView(iosStyleBtn)
+
+    // מתג הפעלה / כיבוי של מצב מקצועי (Pro Mode) שפותח את 87 היחידות, 48 הכלים וכל תכונות ה-Pro בתפריט הצד
+    val proEnabled = ProState.isProEnabled(prefs)
+    val proModeToggleBtn = createActionBtn(
+        if (proEnabled) "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-48 כלים): מופעל 🟢"
+        else "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-48 כלים): כבוי 🔴",
+        proEnabled
+    ) {
+        val nextState = !ProState.isProEnabled(prefs)
+        ProState.setProEnabled(prefs, nextState)
+        Toast.makeText(
+            this,
+            if (nextState) "🚀 מצב מקצועי הופעל! קטגוריית Pro נוספה לתפריט הצד" else "מצב מקצועי כובה",
+            Toast.LENGTH_SHORT
+        ).show()
+        applyTheme()
+    }
+
+    root.addView(titleThemes); root.addView(themeScroll); root.addView(iosStyleBtn); root.addView(proModeToggleBtn)
 
     // --- פאנל התאמה אישית מיוחד שמופיע רק כאשר עיצוב הזכוכית מופעל ---
     if (isIosGlassMode && !isAuroraMode) {
@@ -316,14 +336,14 @@ fun MainActivity.createSettingsPage(): View {
 
     var editingTarget = 0; val targetRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(16f); bottomMargin = dp(14f) } }
     lateinit var btnEditPrimary: TextView; lateinit var btnEditBg: TextView; lateinit var pickerContainer: FrameLayout
-   
+  
     fun refreshTargetButtons() {
         btnEditPrimary.background = GradientDrawable().apply { setColor(if (editingTarget == 0) primaryColor else Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(14f).toFloat(); setStroke(dp(2f), if (editingTarget == 0) Color.WHITE else Utils.lightenColor(bgColor, 0.15f)) }
         btnEditPrimary.setTextColor(if (editingTarget == 0) Color.parseColor("#08090C") else Color.WHITE)
         btnEditBg.background = GradientDrawable().apply { setColor(if (editingTarget == 1) primaryColor else Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(14f).toFloat(); setStroke(dp(2f), if (editingTarget == 1) Color.WHITE else Utils.lightenColor(bgColor, 0.15f)) }
         btnEditBg.setTextColor(if (editingTarget == 1) Color.parseColor("#08090C") else Color.WHITE)
     }
-   
+  
     fun loadColorPicker() {
         refreshTargetButtons(); pickerContainer.removeAllViews()
         pickerContainer.addView(createColorWheelPicker(this, if (editingTarget == 0) primaryColor else bgColor) { newColor ->
@@ -337,11 +357,11 @@ fun MainActivity.createSettingsPage(): View {
             savePreferences(); refreshTargetButtons()
         })
     }
-   
+  
     btnEditPrimary = TextView(this).apply { text = if (isCleanGlassActive) "צבע נושא מותאם" else "🎨 צבע נושא מותאם"; gravity = Gravity.CENTER; textSize = 15f; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(12f), 0, dp(12f)); layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = dp(6f) }; setOnClickListener { feedback(it); editingTarget = 0; loadColorPicker() } }
     btnEditBg = TextView(this).apply { text = if (isCleanGlassActive) "צבע רקע מותאם" else "🌌 צבע רקע מותאם"; gravity = Gravity.CENTER; textSize = 15f; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(12f), 0, dp(12f)); layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { rightMargin = dp(6f) }; setOnClickListener { feedback(it); editingTarget = 1; loadColorPicker() } }
     targetRow.addView(btnEditPrimary); targetRow.addView(btnEditBg); pickerContainer = FrameLayout(this).apply { layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(18f) } }; loadColorPicker()
-   
+  
     val titleSettings = TextView(this).apply { text = "הגדרות מערכת נוספות"; setTextColor(Color.WHITE); textSize = 16f; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(8f), 0, dp(10f)) }
     val vibBtn = createActionBtn(if (useHaptic) "רטט בלחיצה: מופעל 🟢" else "רטט בלחיצה: כבוי 🔴", false) { useHaptic = !useHaptic; savePreferences(); applyTheme() }
     val sndBtn = createActionBtn(if (useSound) "צלילי הקשה: מופעל 🔊" else "צלילי הקשה: כבוי 🔇", false) { useSound = !useSound; savePreferences(); applyTheme() }
@@ -351,7 +371,7 @@ fun MainActivity.createSettingsPage(): View {
     val shapeName = when(buttonCornerStyle) { 8f -> "מרובעים ⏹️"; 24f -> "מודרניים 🔲"; else -> "עגולים ⚪" }
     val shapeBtn = createActionBtn("צורת כפתורים: $shapeName", false) { buttonCornerStyle = when(buttonCornerStyle) { 8f -> 24f; 24f -> 42f; else -> 8f }; savePreferences(); applyTheme() }
     val precBtn = createActionBtn("דיוק עשרוני: $calcPrecision ספרות ⚙️", false) { calcPrecision = if (calcPrecision >= 10) 2 else calcPrecision + 2; savePreferences(); applyTheme() }
-   
+  
     root.addView(targetRow); root.addView(pickerContainer); root.addView(titleSettings)
     root.addView(vibBtn); root.addView(sndBtn); root.addView(sndTypeBtn); root.addView(scrBtn); root.addView(shapeBtn); root.addView(precBtn); scroll.addView(root); return scroll
 }
