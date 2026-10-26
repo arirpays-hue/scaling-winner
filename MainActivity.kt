@@ -92,46 +92,55 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     )
 
     val categories = listOf(
-        "🧮 מחשבון רגיל",           // 0
-        "🔬 מחשבון מדעי",           // 1
-        "🧾 מחשבון מע״מ",           // 2
-        "🏦 מחשבון הלוואה",         // 3
-        "📏 המרת מרחקים",           // 4
-        "⚖️ המרת משקלים",           // 5
-        "🌡️ המרת טמפ׳",            // 6
-        "💻 מחשבון מתכנתים",        // 7
-        "📊 חישוב אחוזים",          // 8
-        "🏷️ חישוב הנחות",           // 9
-        "💰 חלוקת טיפים",           // 10
-        "🏃 מדד BMI",              // 11
-        "🎂 חישוב גיל",             // 12
-        "💵 מטבעות לייב",           // 13
-        "🔥 מחשבון BMR",            // 14
-        "➗ משוואות ריבועיות",      // 15
-        "⅟ מחשבון שברים",          // 16
-        "📈 ריבית דריבית",          // 17
-        "🚀 המרת מהירות",           // 18
-        "⚙️ הגדרות",               // 19
-        "⛽ מחשבון עלות דלק",       // 20
-        "🚘 יעילות שריפת דלק",      // 21
-        "🎓 ממוצע ציונים",          // 22
-        "🍽️ מחשבון תשר מתקדם",      // 23
-        "🛍️ מחשבון מס מכירות",      // 24
-        "🏷️ מחשבון מחיר יחידתי",    // 25
-        "🌍 ממיר שעון עולמי",       // 26
-        "🌸 מחשבון ביוץ",           // 27
-        "🔢 ממיר הקסדצימלי",        // 28
-        "💎 מחשבון חסכונות",        // 29
-        "📅 מחשבון תאריך"           // 30
+        "🧮 מחשבון רגיל",                    // 0
+        "🔬 מחשבון מדעי",                    // 1
+        "🧾 מחשבון מע״מ",                    // 2
+        "🏦 מחשבון הלוואה",                  // 3
+        "📏 המרת מרחקים",                    // 4
+        "⚖️ המרת משקלים",                    // 5
+        "🌡️ המרת טמפ׳",                     // 6
+        "💻 מחשבון מתכנתים",                 // 7
+        "📊 חישוב אחוזים",                   // 8
+        "🏷️ חישוב הנחות",                    // 9
+        "💰 חלוקת טיפים",                    // 10
+        "🏃 מדד BMI",                       // 11
+        "🎂 חישוב גיל",                      // 12
+        "💵 מטבעות לייב",                    // 13
+        "🔥 מחשבון BMR",                     // 14
+        "➗ משוואות ריבועיות",               // 15
+        "⅟ מחשבון שברים",                   // 16
+        "📈 ריבית דריבית",                   // 17
+        "🚀 המרת מהירות",                    // 18
+        "⚙️ הגדרות",                        // 19
+        "⛽ מחשבון עלות דלק",                // 20
+        "🚘 יעילות שריפת דלק",               // 21
+        "🎓 ממוצע ציונים",                   // 22
+        "🍽️ מחשבון תשר מתקדם",               // 23
+        "🛍️ מחשבון מס מכירות",               // 24
+        "🏷️ מחשבון מחיר יחידתי",             // 25
+        "🌍 ממיר שעון עולמי",                // 26
+        "🌸 מחשבון ביוץ",                    // 27
+        "🔢 ממיר הקסדצימלי",                 // 28
+        "💎 מחשבון חסכונות",                 // 29
+        "📅 מחשבון תאריך",                   // 30
+        "📐 87 קטגוריות יחידות והנדסה",      // 31 (Pro)
+        "🥇 מטבעות, מתכות יקרות וגרפים",     // 32 (Pro)
+        "🧰 48 כלים שימושיים ומעבדה",        // 33 (Pro)
+        "💰 20 מחשבונים פיננסיים Pro",       // 34 (Pro)
+        "🧮 22 מחשבונים מתמטיים Pro",        // 35 (Pro)
+        "☁️ ייצוא PDF/CSV, גיבוי ומועדפים"   // 36 (Pro)
     )
 
-    // חלוקת התפריט לקטגוריות עם אייקון וקטורי לכל קטגוריה (למעט הגדרות)
+    // חלוקת התפריט לקטגוריות עם אייקון וקטורי לכל קטגוריה (כולל קטגוריית Pro 305)
     private val drawerSections = listOf(
         Triple(301, "📐 מתמטיקה ומדע", listOf(0, 1, 8, 15, 16, 7, 28, 22)),
         Triple(302, "💳 פיננסים וצרכנות", listOf(2, 24, 3, 17, 29, 9, 25, 10, 23, 13)),
         Triple(303, "🔄 המרות, רכב ודלק", listOf(4, 5, 6, 18, 20, 21)),
-        Triple(304, "❤️ בריאות, זמן ותאריכים", listOf(11, 14, 27, 12, 30, 26))
+        Triple(304, "❤️ בריאות, זמן ותאריכים", listOf(11, 14, 27, 12, 30, 26)),
+        Triple(305, "🚀 מרכז מקצועי (Pro Mode)", listOf(31, 32, 33, 34, 35, 36))
     )
+
+    private var proCategoryDivider: View? = null
 
     var currentInput = ""; var justCalculated = false
     var expressionView: TextView? = null; var currentView: TextView? = null; var memoryIndicator: TextView? = null
@@ -174,7 +183,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         mainContent?.addView(topHeader); mainContent?.addView(contentFrame)
 
         dimView = View(this).apply { setBackgroundColor(Color.parseColor("#B3000000")); visibility = View.GONE; alpha = 0f; layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT); setOnClickListener { if (isDrawerOpen) closeDrawer() } }
-       
+      
         // isFillViewport = true מבטיח שהתפריט תמיד יגיע עד סוף המסך וההגדרות יישבו בתחתית
         drawerScroll = ScrollView(this).apply {
             isClickable = true
@@ -267,6 +276,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 }
                 setBackgroundColor(Color.TRANSPARENT)
             }
+            if (secIconCode == 305) proCategoryDivider = catSep
             drawerSeparators.add(catSep)
             drawerMenu?.addView(catSep)
             drawerMenu?.addView(sectionItemsContainer)
@@ -382,7 +392,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     fun savePreferences() {
         IosGlassTheme.saveIosPrefs(prefs)
-        prefs?.edit()?.putBoolean("useHaptic", useHaptic)?.putBoolean("useSound", useSound)?.putBoolean("useAnimations", useAnimations)?.putBoolean("keepScreenOn", keepScreenOn)?.putBoolean("isRightHanded", isRightHanded)?.putBoolean("isIosGlassMode", isIosGlassMode)?.putBoolean("isAuroraMode", isAuroraMode)?.putInt("soundType", soundType.coerceIn(0, 3))?.putInt("calcPrecision", calcPrecision)?.putFloat("buttonCornerStyle", buttonCornerStyle)?.putInt("primaryColor", primaryColor)?.putInt("bgColor", bgColor)?.putLong("memoryValue", memoryValue.toRawBits())?.putString("fromCurrency", fromCurrency)?.putString("toCurrency", toCurrency)?.putString("fromDist", fromDist)?.putString("toDist", toDist)?.putString("fromWeight", fromWeight)?.putString("toWeight", toWeight)?.putString("fromTemp", fromTemp)?.putString("toTemp", toTemp)?.putString("fromSpeed", fromSpeed)?.putString("toSpeed", toSpeed)?.putString("history", historyList.take(30).joinToString("||"))?.apply()
+        val maxHist = if (ProState.isProEnabled(prefs)) 500 else 30
+        prefs?.edit()?.putBoolean("useHaptic", useHaptic)?.putBoolean("useSound", useSound)?.putBoolean("useAnimations", useAnimations)?.putBoolean("keepScreenOn", keepScreenOn)?.putBoolean("isRightHanded", isRightHanded)?.putBoolean("isIosGlassMode", isIosGlassMode)?.putBoolean("isAuroraMode", isAuroraMode)?.putInt("soundType", soundType.coerceIn(0, 3))?.putInt("calcPrecision", calcPrecision)?.putFloat("buttonCornerStyle", buttonCornerStyle)?.putInt("primaryColor", primaryColor)?.putInt("bgColor", bgColor)?.putLong("memoryValue", memoryValue.toRawBits())?.putString("fromCurrency", fromCurrency)?.putString("toCurrency", toCurrency)?.putString("fromDist", fromDist)?.putString("toDist", toDist)?.putString("fromWeight", fromWeight)?.putString("toWeight", toWeight)?.putString("fromTemp", fromTemp)?.putString("toTemp", toTemp)?.putString("fromSpeed", fromSpeed)?.putString("toSpeed", toSpeed)?.putString("history", historyList.take(maxHist).joinToString("||"))?.apply()
     }
     fun updateKeepScreenOn() { if (keepScreenOn) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
 
@@ -466,6 +477,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     private fun updateDrawerSelection() {
         val activeAccent = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
+        val proActive = ProState.isProEnabled(prefs)
         val sepColor = when {
             isAuroraMode -> Color.argb(38, 0, 245, 212)
             isIosGlassMode -> Color.argb(28, 255, 255, 255)
@@ -473,8 +485,17 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         for (sep in drawerSeparators) sep.setBackgroundColor(sepColor)
 
-        // עדכון כותרות הקטגוריות המתקפלות וסמליהן בכל 3 ערכות הנושא
+        // עדכון כותרות הקטגוריות המתקפלות וסמליהן בכל 3 ערכות הנושא (והצגה/הסתרה של קטגוריית ה-Pro)
         for ((secIconCode, headerTv, container) in drawerSectionHeaders) {
+            if (secIconCode == 305) {
+                headerTv.visibility = if (proActive) View.VISIBLE else View.GONE
+                proCategoryDivider?.visibility = if (proActive) View.VISIBLE else View.GONE
+                if (!proActive) {
+                    container.visibility = View.GONE
+                    continue
+                }
+            }
+
             val rawSecTitle = headerTv.tag as? String ?: ""
             val cleanTitle = IosGlassTheme.cleanCategoryTitle(rawSecTitle, true)
             val isExpanded = expandedSections.contains(secIconCode)
@@ -582,6 +603,12 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             28 -> createHexConverter()
             29 -> createSavingsCalculator()
             30 -> createDateAnniversaryCalculator()
+            31 -> createPro87UnitConverter()
+            32 -> createProCurrenciesAndMetalsHub()
+            33 -> createPro48ToolsHub()
+            34 -> createProFinancial20Suite()
+            35 -> createProMath22Suite()
+            36 -> createProPowerFeaturesCenter()
             else -> createBasicCalculator()
         }
         contentFrame.addView(view)
