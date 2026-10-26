@@ -186,7 +186,7 @@ fun MainActivity.showItemPicker(title: String, items: List<String>, onSelected: 
     populateList(""); dialogView.addView(searchInput); dialogView.addView(scrollView); dialog.show()
 }
 
-// חלון בחירת צליל בעיצוב זכוכית עם אייקוני גלי-קול וקטוריים מוארים (ללא אימוג'ים)
+// חלון בחירת צליל מקשים (3 צלילי מקשים מותאמים + צליל מערכת)
 fun MainActivity.showGlassSoundPickerDialog(onSoundChanged: () -> Unit = {}) {
     val activeAccent = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
     if (isCleanGlassActive) IosGlassTheme.applyRealtimeGlassBlur(mainContent, true)
@@ -211,16 +211,13 @@ fun MainActivity.showGlassSoundPickerDialog(onSoundChanged: () -> Unit = {}) {
     }
     dialogView.addView(titleTv)
 
-    val scrollView = ScrollView(this).apply { layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(340f)) }
     val listContainer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-    scrollView.addView(listContainer)
 
     val dialog = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert).setView(dialogView).create()
     dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
     dialog.setOnDismissListener { if (!isDrawerOpen) IosGlassTheme.applyRealtimeGlassBlur(mainContent, false) }
 
-    val options = mutableListOf("מערכת")
-    for (i in 1..12) options.add("צליל $i")
+    val options = listOf("מערכת", "צליל 1", "צליל 2", "צליל 3")
 
     for ((idx, label) in options.withIndex()) {
         val isSelected = (soundType == idx)
@@ -263,13 +260,15 @@ fun MainActivity.showGlassSoundPickerDialog(onSoundChanged: () -> Unit = {}) {
         row.addView(radioIndicator)
         row.addView(itemTv)
         listContainer.addView(row)
-        listContainer.addView(View(this).apply {
-            setBackgroundColor(if (isAuroraMode) Color.argb(35, 0, 245, 212) else Color.argb(28, 255, 255, 255))
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1f))
-        })
+        if (idx < options.lastIndex) {
+            listContainer.addView(View(this).apply {
+                setBackgroundColor(if (isAuroraMode) Color.argb(35, 0, 245, 212) else Color.argb(28, 255, 255, 255))
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1f))
+            })
+        }
     }
 
-    dialogView.addView(scrollView)
+    dialogView.addView(listContainer)
     dialog.show()
 }
 
