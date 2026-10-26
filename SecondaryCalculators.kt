@@ -199,7 +199,7 @@ fun MainActivity.createSettingsPage(): View {
         showGlassDisplayModePickerDialog()
     }
 
-    // מתג הפעלה / כיבוי של מצב מקצועי (Pro Mode) שפותח את 87 היחידות, 48 הכלים וכל תכונות ה-Pro בתפריט הצד
+    // מתג הפעלה / כיבוי של מצב מקצועי (Pro Mode) שפותח את כל כלי ה-Pro בתפריט הצד
     val proEnabled = ProState.isProEnabled(prefs)
     val proModeToggleBtn = createActionBtn(
         if (proEnabled) "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-48 כלים): מופעל 🟢"
