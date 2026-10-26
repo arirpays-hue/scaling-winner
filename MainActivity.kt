@@ -28,7 +28,6 @@ import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.SoundEffectConstants
 import android.view.View
-import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
@@ -53,6 +52,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private var appLogoView: TextView? = null
     private val drawerItemsViews = mutableListOf<View>()
     private val drawerSeparators = mutableListOf<View>()
+    private val drawerSectionHeaders = mutableListOf<Pair<Int, TextView>>()
     val keypadButtons = mutableMapOf<String, TextView>()
     var tts: TextToSpeech? = null
 
@@ -64,7 +64,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     var isRightHanded = true
     var isIosGlassMode = false
     var isAuroraMode = false
-    val isCleanGlassActive: Boolean get() = isIosGlassMode || isAuroraMode
+    val isCleanGlassActive: Boolean get() = isIosGlassActiveOrAurora
+
+    private val isIosGlassActiveOrAurora: Boolean get() = isIosGlassMode || isAuroraMode
 
     var settingsScrollY = 0
     var currentSettingsScroll: ScrollView? = null
@@ -89,11 +91,45 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     )
 
     val categories = listOf(
-        "🧮 מחשבון רגיל", "🔬 מחשבון מדעי", "🧾 מחשבון מע״מ", "🏦 מחשבון הלוואה",
-        "📏 המרת מרחקים", "⚖️ המרת משקלים", "🌡️ המרת טמפ׳", "💻 מחשבון מתכנתים",
-        "📊 חישוב אחוזים", "🏷️ חישוב הנחות", "💰 חלוקת טיפים", "🏃 מדד BMI", "🎂 חישוב גיל",
-        "💵 מטבעות לייב", "🔥 מחשבון BMR", "➗ משוואות ריבועיות", "⅟ מחשבון שברים",
-        "📈 ריבית דריבית", "🚀 המרת מהירות", "⚙️ הגדרות"
+        "🧮 מחשבון רגיל",           // 0
+        "🔬 מחשבון מדעי",           // 1
+        "🧾 מחשבון מע״מ",           // 2
+        "🏦 מחשבון הלוואה",         // 3
+        "📏 המרת מרחקים",           // 4
+        "⚖️ המרת משקלים",           // 5
+        "🌡️ המרת טמפ׳",            // 6
+        "💻 מחשבון מתכנתים",        // 7
+        "📊 חישוב אחוזים",          // 8
+        "🏷️ חישוב הנחות",           // 9
+        "💰 חלוקת טיפים",           // 10
+        "🏃 מדד BMI",              // 11
+        "🎂 חישוב גיל",             // 12
+        "💵 מטבעות לייב",           // 13
+        "🔥 מחשבון BMR",            // 14
+        "➗ משוואות ריבועיות",      // 15
+        "⅟ מחשבון שברים",          // 16
+        "📈 ריבית דריבית",          // 17
+        "🚀 המרת מהירות",           // 18
+        "⚙️ הגדרות",               // 19
+        "⛽ מחשבון עלות דלק",       // 20
+        "🚘 יעילות שריפת דלק",      // 21
+        "🎓 ממוצע ציונים",          // 22
+        "🍽️ מחשבון תשר מתקדם",      // 23
+        "🛍️ מחשבון מס מכירות",      // 24
+        "🏷️ מחשבון מחיר יחידתי",    // 25
+        "🌍 ממיר שעון עולמי",       // 26
+        "🌸 מחשבון ביוץ",           // 27
+        "🔢 ממיר הקסדצימלי",        // 28
+        "💎 מחשבון חסכונות",        // 29
+        "📅 מחשבון תאריך"           // 30
+    )
+
+    // חלוקת התפריט לקטגוריות עם אייקון וקטורי לכל קטגוריה (למעט הגדרות)
+    private val drawerSections = listOf(
+        Triple(301, "📐 מתמטיקה ומדע", listOf(0, 1, 8, 15, 16, 7, 28, 22)),
+        Triple(302, "💳 פיננסים וצרכנות", listOf(2, 24, 3, 17, 29, 9, 25, 10, 23, 13)),
+        Triple(303, "🔄 המרות, רכב ודלק", listOf(4, 5, 6, 18, 20, 21)),
+        Triple(304, "❤️ בריאות, זמן ותאריכים", listOf(11, 14, 27, 12, 30, 26))
     )
 
     var currentInput = ""; var justCalculated = false
@@ -140,34 +176,65 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         drawerScroll = ScrollView(this).apply { isClickable = true }
         drawerMenu = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, dp(30f), 0, dp(30f)) }
 
-        val appLogo = TextView(this).apply { text = "אולר שווייצרי\nPro fx-991"; setTextColor(Color.WHITE); textSize = 24f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER; setPadding(0, 0, 0, dp(30f)) }
+        val appLogo = TextView(this).apply { text = "אולר שווייצרי\nPro fx-991"; setTextColor(Color.WHITE); textSize = 24f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER; setPadding(0, 0, 0, dp(22f)) }
         appLogoView = appLogo
         drawerMenu?.addView(appLogo)
 
+        // יצירת כל פריטי המחשבונים מראש לפי אינדקס
+        drawerItemsViews.clear()
         for ((index, title) in categories.withIndex()) {
             val item = TextView(this).apply {
                 text = IosGlassTheme.cleanCategoryTitle(title, isCleanGlassActive)
-                textSize = 16f
+                textSize = 15.5f
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
                 compoundDrawablePadding = dp(12f)
-                setPadding(dp(20f), dp(14f), dp(20f), dp(14f))
+                setPadding(dp(20f), dp(13f), dp(20f), dp(13f))
                 layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                     setMargins(dp(10f), dp(2f), dp(10f), dp(2f))
                 }
                 setOnClickListener { feedback(it); settingsScrollY = 0; switchTab(index); closeDrawer() }
             }
-            drawerItemsViews.add(item); drawerMenu?.addView(item)
-
-            val sep = View(this).apply {
-                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1f)).apply {
-                    setMargins(dp(22f), 0, dp(22f), 0)
-                }
-                setBackgroundColor(Color.TRANSPARENT)
-            }
-            drawerSeparators.add(sep)
-            drawerMenu?.addView(sep)
+            drawerItemsViews.add(item)
         }
+
+        // הוספת הקטגוריות לתפריט הצד עם כותרות וסמלים
+        drawerSectionHeaders.clear()
+        drawerSeparators.clear()
+        for ((secIconCode, secTitle, itemIndices) in drawerSections) {
+            val headerTv = TextView(this).apply {
+                tag = secTitle
+                textSize = 13.5f
+                typeface = Typeface.DEFAULT_BOLD
+                compoundDrawablePadding = dp(8f)
+                setPadding(dp(18f), dp(16f), dp(18f), dp(6f))
+            }
+            drawerSectionHeaders.add(secIconCode to headerTv)
+            drawerMenu?.addView(headerTv)
+
+            for (idx in itemIndices) {
+                drawerMenu?.addView(drawerItemsViews[idx])
+                val sep = View(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1f)).apply {
+                        setMargins(dp(22f), 0, dp(22f), 0)
+                    }
+                    setBackgroundColor(Color.TRANSPARENT)
+                }
+                drawerSeparators.add(sep)
+                drawerMenu?.addView(sep)
+            }
+        }
+
+        // הוספת "הגדרות" (אינדקס 19) בתחתית התפריט מחוץ לקטגוריות
+        val settingsTopDivider = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1.5f)).apply {
+                setMargins(dp(16f), dp(14f), dp(16f), dp(6f))
+            }
+            setBackgroundColor(Color.TRANSPARENT)
+        }
+        drawerSeparators.add(settingsTopDivider)
+        drawerMenu?.addView(settingsTopDivider)
+        drawerMenu?.addView(drawerItemsViews[19])
 
         drawerScroll.addView(drawerMenu); rootFrame.addView(mainContent); rootFrame.addView(dimView); rootFrame.addView(drawerScroll)
         updateHandednessLayout()
@@ -176,7 +243,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     private fun getDrawerWidthPx(): Int {
         val screenW = resources.displayMetrics.widthPixels
-        return if (isCleanGlassActive && screenW > 0) (screenW * 0.75f).toInt() else dp(280f)
+        return if (isCleanGlassActive && screenW > 0) (screenW * 0.75f).toInt() else dp(285f)
     }
 
     fun updateHandednessLayout() {
@@ -197,6 +264,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         for (v in drawerItemsViews) {
             (v as? TextView)?.gravity = (if (isRightHanded) Gravity.RIGHT else Gravity.LEFT) or Gravity.CENTER_VERTICAL
+        }
+        for ((_, headerTv) in drawerSectionHeaders) {
+            headerTv.gravity = (if (isRightHanded) Gravity.RIGHT else Gravity.LEFT) or Gravity.CENTER_VERTICAL
         }
         val drawerW = getDrawerWidthPx()
         drawerScroll.layoutParams = FrameLayout.LayoutParams(drawerW, FrameLayout.LayoutParams.MATCH_PARENT).apply {
@@ -336,17 +406,27 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     fun copyToClipboard(text: String) { val cb = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager; cb.setPrimaryClip(ClipData.newPlainText("CalcResult", text)); Toast.makeText(this, if (isCleanGlassActive) "הועתק ללוח" else "הועתק ללוח 📋", Toast.LENGTH_SHORT).show() }
 
     private fun updateDrawerSelection() {
+        val activeAccent = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
         val sepColor = when {
             isAuroraMode -> Color.argb(38, 0, 245, 212)
             isIosGlassMode -> Color.argb(28, 255, 255, 255)
-            else -> Color.TRANSPARENT
+            else -> Color.argb(25, 255, 255, 255)
         }
         for (sep in drawerSeparators) sep.setBackgroundColor(sepColor)
+
+        // עדכון כותרות הקטגוריות וסמליהן בכל 3 ערכות הנושא
+        for ((secIconCode, headerTv) in drawerSectionHeaders) {
+            val rawSecTitle = headerTv.tag as? String ?: ""
+            headerTv.text = IosGlassTheme.cleanCategoryTitle(rawSecTitle, isCleanGlassActive)
+            headerTv.setTextColor(activeAccent)
+            val secIcon = AuroraBorealisTheme.createVectorIcon(this, secIconCode, activeAccent, 18f, isAuroraMode)
+            if (isRightHanded) headerTv.setCompoundDrawables(null, null, secIcon, null)
+            else headerTv.setCompoundDrawables(secIcon, null, null, null)
+        }
 
         for (i in drawerItemsViews.indices) {
             val tv = drawerItemsViews[i] as TextView
             val isSelected = (i == currentTabIndex)
-            val activeAccent = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
             val tint = if (isSelected) activeAccent else Color.WHITE
             tv.text = IosGlassTheme.cleanCategoryTitle(categories[i], isCleanGlassActive)
             if (isCleanGlassActive) {
@@ -414,6 +494,17 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 }
                 settingsView
             }
+            20 -> createFuelCostCalculator()
+            21 -> createFuelEfficiencyCalculator()
+            22 -> createGpaCalculator()
+            23 -> createAdvancedTipCalculator()
+            24 -> createSalesTaxCalculator()
+            25 -> createUnitPriceCalculator()
+            26 -> createWorldClockConverter()
+            27 -> createOvulationCalculator()
+            28 -> createHexConverter()
+            29 -> createSavingsCalculator()
+            30 -> createDateAnniversaryCalculator()
             else -> createBasicCalculator()
         }
         contentFrame.addView(view)
