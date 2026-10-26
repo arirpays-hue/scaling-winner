@@ -572,6 +572,37 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 currentSettingsScroll = scrollObj
                 val container = scrollObj?.getChildAt(0) as? LinearLayout ?: (settingsView as? LinearLayout)
 
+                // מוודא שכפתור מתג מצב מקצועי (Pro Mode) תמיד קיים במסך ההגדרות
+                var hasProBtn = false
+                if (container != null) {
+                    for (i in 0 until container.childCount) {
+                        val ch = container.getChildAt(i)
+                        if (ch is TextView && ch.text.contains("Pro Mode")) {
+                            hasProBtn = true
+                            break
+                        }
+                    }
+                    if (!hasProBtn) {
+                        val proEnabled = ProState.isProEnabled(prefs)
+                        val proBtn = createActionBtn(
+                            if (proEnabled) "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-48 כלים): מופעל 🟢"
+                            else "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-48 כלים): כבוי 🔴",
+                            proEnabled
+                        ) {
+                            val nextState = !ProState.isProEnabled(prefs)
+                            ProState.setProEnabled(prefs, nextState)
+                            if (nextState) expandedSections.add(305)
+                            Toast.makeText(
+                                this,
+                                if (nextState) "🚀 מצב מקצועי הופעל! קטגוריית Pro נפתחה בתפריט הצד" else "מצב מקצועי כובה",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            applyTheme()
+                        }
+                        container.addView(proBtn, 3.coerceAtMost(container.childCount))
+                    }
+                }
+
                 val handLabel = if (isCleanGlassActive) {
                     "יד דומיננטית: ${if (isRightHanded) "ימניים (תפריט ופעולות בימין)" else "שמאליים (תפריט ופעולות בשמאל)"}"
                 } else {
