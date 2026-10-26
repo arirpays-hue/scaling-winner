@@ -268,38 +268,14 @@ fun MainActivity.createUnitPriceCalculator(): View {
     scroll.addView(root); return scroll
 }
 
-// 26. ממיר שעון עולמי (400+ ערים ואזורי זמן כולל חישוב שעון קיץ)
+// 26. ממיר שעון עולמי עם שמות כל הערים בעולם מתורגמים לעברית (מתוך WorldCitiesData)
 fun MainActivity.createWorldClockConverter(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(16f), dp(20f), dp(24f)) }
 
-    val priorityCities = mapOf(
-        "Asia/Jerusalem" to "ירושלים / תל אביב (ישראל)",
-        "America/New_York" to "ניו יורק (ארה״ב)",
-        "Europe/London" to "לונדון (בריטניה)",
-        "Europe/Paris" to "פריז (צרפת)",
-        "Europe/Berlin" to "ברלין (גרמניה)",
-        "Asia/Tokyo" to "טוקיו (יפן)",
-        "Australia/Sydney" to "סידני (אוסטרליה)",
-        "America/Los_Angeles" to "לוס אנג׳לס (ארה״ב)",
-        "Asia/Dubai" to "דובאי (איחוד האמירויות)",
-        "Asia/Bangkok" to "בנגקוק (תאילנד)",
-        "America/Toronto" to "טורונטו (קנדה)",
-        "Europe/Rome" to "רומא (איטליה)",
-        "Europe/Madrid" to "מדריד (ספרד)",
-        "Europe/Moscow" to "מוסקבה (רוסיה)",
-        "Asia/Shanghai" to "שנגחאי (סין)",
-        "Asia/Singapore" to "סינגפור",
-        "Asia/Hong_Kong" to "הונג קונג",
-        "America/Sao_Paulo" to "סאו פאולו (ברזיל)",
-        "America/Buenos_Aires" to "בואנוס איירס (ארגנטינה)",
-        "Europe/Zurich" to "ציריך (שווייץ)",
-        "Europe/Amsterdam" to "אמסטרדם (הולנד)"
-    )
-
-    val allZoneItems = rememberWorldZones(priorityCities)
+    val allZoneItems = WorldCitiesData.getAllWorldCitiesHebrew()
     var selectedZoneId = "America/New_York"
-    var selectedDisplay = "${priorityCities[selectedZoneId]} - $selectedZoneId"
+    var selectedDisplay = WorldCitiesData.getHebrewDisplay(selectedZoneId)
 
     val cityBtn = createActionBtn("עיר יעד: $selectedDisplay", false) {}
     val resCard = LinearLayout(this).apply {
@@ -343,20 +319,6 @@ fun MainActivity.createWorldClockConverter(): View {
 
     root.addView(cityBtn); root.addView(refreshBtn); root.addView(resCard)
     scroll.addView(root); return scroll
-}
-
-private fun rememberWorldZones(priorityCities: Map<String, String>): List<String> {
-    val list = mutableListOf<String>()
-    for ((id, heb) in priorityCities) {
-        list.add("$heb - $id")
-    }
-    val allIds = TimeZone.getAvailableIDs().filter { it.contains("/") && !it.startsWith("Etc/") && !priorityCities.containsKey(it) }.sorted()
-    for (id in allIds) {
-        val city = id.substringAfterLast("/").replace("_", " ")
-        val region = id.substringBefore("/")
-        list.add("$city ($region) - $id")
-    }
-    return list
 }
 
 // 27. מחשבון ביוץ וחלון פוריות (כולל שמירת הערות לתאריכים)
