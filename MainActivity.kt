@@ -174,8 +174,17 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         mainContent?.addView(topHeader); mainContent?.addView(contentFrame)
 
         dimView = View(this).apply { setBackgroundColor(Color.parseColor("#B3000000")); visibility = View.GONE; alpha = 0f; layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT); setOnClickListener { if (isDrawerOpen) closeDrawer() } }
-        drawerScroll = ScrollView(this).apply { isClickable = true }
-        drawerMenu = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, dp(30f), 0, dp(30f)) }
+       
+        // isFillViewport = true מבטיח שהתפריט תמיד יגיע עד סוף המסך וההגדרות יישבו בתחתית
+        drawerScroll = ScrollView(this).apply {
+            isClickable = true
+            isFillViewport = true
+        }
+        drawerMenu = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(30f), 0, dp(24f))
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+        }
 
         val appLogo = TextView(this).apply { text = "אולר שווייצרי\nPro fx-991"; setTextColor(Color.WHITE); textSize = 24f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER; setPadding(0, 0, 0, dp(22f)) }
         appLogoView = appLogo
@@ -263,7 +272,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             drawerMenu?.addView(sectionItemsContainer)
         }
 
-        // הוספת "הגדרות" (אינדקס 19) בתחתית התפריט מחוץ לקטגוריות
+        // מרווח גמיש (Spacer) שדוחף את "הגדרות" תמיד לקצה התחתון של המסך גם כשכל הקטגוריות סגורות
+        val bottomSpacer = Space(this).apply {
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
+        }
+        drawerMenu?.addView(bottomSpacer)
+
+        // הוספת "הגדרות" (אינדקס 19) בקצה התחתון של התפריט מחוץ לקטגוריות
         val settingsTopDivider = View(this).apply {
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1.5f)).apply {
                 setMargins(dp(16f), dp(14f), dp(16f), dp(6f))
@@ -382,7 +397,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         if (isAuroraMode) {
             mainContent?.background = AuroraBorealisTheme.createAuroraAtmosphericBackground()
-            drawerMenu?.background = AuroraBorealisTheme.createAuroraCardDrawable(this, 0f, isDrawer = true)
+            val drawerBg = AuroraBorealisTheme.createAuroraCardDrawable(this, 0f, isDrawer = true)
+            drawerScroll.background = drawerBg
+            drawerMenu?.background = null
             val iconCol = AuroraBorealisTheme.AURORA_PRIMARY
             pipBtn.text = ""
             pipBtn.setCompoundDrawables(AuroraBorealisTheme.createVectorIcon(this, 100, iconCol, 22f, true), null, null, null)
@@ -390,14 +407,17 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             historyBtn.setCompoundDrawables(AuroraBorealisTheme.createVectorIcon(this, 101, iconCol, 22f, true), null, null, null)
         } else if (isIosGlassMode) {
             mainContent?.background = IosGlassTheme.createLiquidAmbientBackground(this)
-            drawerMenu?.background = IosGlassTheme.createGlassCardDrawable(this, 0f)
+            val drawerBg = IosGlassTheme.createGlassCardDrawable(this, 0f)
+            drawerScroll.background = drawerBg
+            drawerMenu?.background = null
             pipBtn.text = ""
             pipBtn.setCompoundDrawables(IosGlassTheme.createSfSymbolDrawable(this, 100, primaryColor, 22f), null, null, null)
             historyBtn.text = ""
             historyBtn.setCompoundDrawables(IosGlassTheme.createSfSymbolDrawable(this, 101, primaryColor, 22f), null, null, null)
         } else {
             mainContent?.setBackgroundColor(bgColor)
-            drawerMenu?.setBackgroundColor(Utils.lightenColor(bgColor, 0.06f))
+            drawerScroll.setBackgroundColor(Utils.lightenColor(bgColor, 0.06f))
+            drawerMenu?.background = null
             pipBtn.setCompoundDrawables(null, null, null, null)
             historyBtn.setCompoundDrawables(null, null, null, null)
             pipBtn.text = "🧮"; historyBtn.text = "🕒"
@@ -456,7 +476,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         // עדכון כותרות הקטגוריות המתקפלות וסמליהן בכל 3 ערכות הנושא
         for ((secIconCode, headerTv, container) in drawerSectionHeaders) {
             val rawSecTitle = headerTv.tag as? String ?: ""
-            val cleanTitle = IosGlassTheme.cleanCategoryTitle(rawSecTitle, isCleanGlassActive)
+            val cleanTitle = IosGlassTheme.cleanCategoryTitle(rawSecTitle, true)
             val isExpanded = expandedSections.contains(secIconCode)
             val arrow = if (isExpanded) "▾" else if (isRightHanded) "◂" else "▸"
             headerTv.text = if (isRightHanded) "$cleanTitle  $arrow" else "$arrow  $cleanTitle"
