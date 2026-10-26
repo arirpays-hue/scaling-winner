@@ -16,18 +16,16 @@ import android.widget.TextView
 
 object IosGlassTheme {
 
-    // שמות רשמיים מוגנים מזכויות יוצרים (ללא שימוש בסימן המסחרי iOS)
     const val LIQUID_GLASS_THEME_NAME = "Liquid Glass Pro"
     const val AURORA_THEME_NAME = "Aurora Borealis (זוהר הצפון)"
 
-    // --- פרמטרים להתאמה אישית של Liquid Glass Pro ---
-    var glassOpacity: Int = 185          // 75..245 שקיפות הזכוכית
-    var glassBlurRadius: Float = 28f     // 0..50 עוצמת טשטוש
-    var specularIntensity: Int = 210     // 40..255 עוצמת פס ההברקה העליון (1px Specular)
-    var glassCornerPt: Float = 24f       // רדיוס פינות הזכוכית (ברירת מחדל 24pt)
-    var symbolDepthMode: Int = 0         // 0 = חרוט בזכוכית (Etched), 1 = מרחף 1 מ"מ (Floating)
-    var pressGlowIntensity: Int = 220    // עוצמת הארת הפולימר בלחיצה
-    var useClassicOrangeOps: Boolean = true // שימוש בכתום נוזלי לפעולות או בצבע הנושא
+    var glassOpacity: Int = 185
+    var glassBlurRadius: Float = 28f
+    var specularIntensity: Int = 210
+    var glassCornerPt: Float = 24f
+    var symbolDepthMode: Int = 0
+    var pressGlowIntensity: Int = 220
+    var useClassicOrangeOps: Boolean = true
 
     fun loadIosPrefs(prefs: SharedPreferences?) {
         if (prefs == null) return
@@ -54,13 +52,11 @@ object IosGlassTheme {
             ?.apply()
     }
 
-    // מסיר אימוג'ים משמות המחשבונים והכפתורים במצב זכוכית ומשאיר טקסט נקי בלבד
     fun cleanCategoryTitle(rawTitle: String, isCleanMode: Boolean): String {
         if (!isCleanMode) return rawTitle
         return rawTitle.replace(Regex("[\\p{So}\\p{Cn}]"), "").trim()
     }
 
-    // עיצוב טקסט מתמטי בסגנון SF Symbols 6 (כולל הטיה אלגנטית לפונקציות מדעיות ומשתנים)
     fun formatSymbolText(symbol: String, isCleanMode: Boolean): CharSequence {
         if (!isCleanMode) return symbol
         val displaySym = when (symbol) {
@@ -76,7 +72,6 @@ object IosGlassTheme {
         return displaySym
     }
 
-    // החלת עיצוב טיפוגרפי, הילה ניאונית 5% והצללת עומק לסמל בתוך הכפתור
     fun styleSymbolTextView(tv: TextView, activity: MainActivity, symbol: String, isPressed: Boolean = false) {
         if (activity.isAuroraMode) {
             AuroraBorealisTheme.styleAuroraSymbol(tv, symbol, isPressed)
@@ -110,7 +105,6 @@ object IosGlassTheme {
         }
     }
 
-    // יצירת כפתור Liquid Glass Pro (או Aurora Borealis כשמופעל)
     fun createGlassButtonDrawable(
         activity: MainActivity,
         symbol: String,
@@ -138,27 +132,23 @@ object IosGlassTheme {
                 Color.argb(aTop, r, g, b) to Color.argb(aBot, Color.red(opColor), Color.green(opColor), Color.blue(opColor))
             }
             isCommand -> {
-                // Frosted Light Grey Glass
                 val aTop = ((145 * alphaScale).toInt() + pressBoost).coerceAtMost(255)
                 val aBot = ((95 * alphaScale).toInt() + pressBoost).coerceAtMost(255)
                 Color.argb(aTop, 210, 218, 230) to Color.argb(aBot, 145, 155, 170)
             }
             else -> {
-                // Deep Translucent Slate Glass (0-9 & scientific)
                 val aTop = ((105 * alphaScale).toInt() + pressBoost).coerceAtMost(255)
                 val aBot = ((65 * alphaScale).toInt() + pressBoost).coerceAtMost(255)
                 Color.argb(aTop, 72, 82, 102) to Color.argb(aBot, 38, 44, 58)
             }
         }
 
-        // 1. שכבת צל עומק תחתונה
         val ambientShadow = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = radius
             setColor(Color.argb(if (isPressed) 45 else 110, 0, 0, 0))
         }
 
-        // 2. גוף הזכוכית הנוזלית (Liquid Glass Matrix)
         val glassBody = GradientDrawable(
             GradientDrawable.Orientation.TOP_BOTTOM,
             intArrayOf(topColor, bottomColor)
@@ -169,7 +159,6 @@ object IosGlassTheme {
             setStroke(activity.dp(1f), Color.argb(borderAlpha, 255, 255, 255))
         }
 
-        // 3. פס הברקה עליון 1px Specular White Top-Inner-Border (Glow Layer)
         val specAlpha = (if (isPressed) (specularIntensity + 45) else specularIntensity).coerceIn(0, 255)
         val specularTopEdge = GradientDrawable(
             GradientDrawable.Orientation.TOP_BOTTOM,
@@ -180,7 +169,6 @@ object IosGlassTheme {
             setStroke(activity.dp(1f), Color.argb(specAlpha, 255, 255, 255))
         }
 
-        // 4. שכבת הארת ליבה פנימית (מופעלת בלחיצה - Radial Polymer Glow)
         val innerCoreGlow = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = radius
@@ -200,7 +188,6 @@ object IosGlassTheme {
         return RippleDrawable(ColorStateList.valueOf(Color.parseColor("#66FFFFFF")), layers, null)
     }
 
-    // משטח Display Canvas, תפריטים ודיאלוגים עם שבירת אור (במגירת התפריט cornerDp == 0f מוסרת המסגרת הלבנה בלבד)
     fun createGlassCardDrawable(activity: MainActivity, cornerDp: Float = glassCornerPt): Drawable {
         if (activity.isAuroraMode) {
             return AuroraBorealisTheme.createAuroraCardDrawable(activity, cornerDp, cornerDp == 0f)
@@ -235,7 +222,6 @@ object IosGlassTheme {
         }
     }
 
-    // רקע אווירתי של Liquid Glass Pro שמאפשר לאור להשתקף מבעד למקשי הזכוכית
     fun createLiquidAmbientBackground(activity: MainActivity): Drawable {
         if (activity.isAuroraMode) {
             return AuroraBorealisTheme.createAuroraAtmosphericBackground()
@@ -267,7 +253,6 @@ object IosGlassTheme {
         }
     }
 
-    // החלת טשטוש זכוכית אמיתי (backdrop-filter blur) על המסך כאשר התפריט או דיאלוג נפתחים
     fun applyRealtimeGlassBlur(targetView: View?, enable: Boolean) {
         if (targetView == null) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -282,7 +267,6 @@ object IosGlassTheme {
         }
     }
 
-    // --- ציור אייקונים וקטוריים בסגנון SF Symbols 6 עבור כל 20 המחשבונים וכפתורי המערכת (ללא אימוג'ים) ---
     fun createSfSymbolDrawable(
         context: Context,
         categoryIndex: Int,
@@ -320,7 +304,7 @@ object IosGlassTheme {
                 canvas.drawRoundRect(cx - r * 1.15f, cy - r * 1.15f, cx + r * 1.15f, cy + r * 1.15f, r * 0.45f, r * 0.45f, fillPaint)
 
                 when (categoryIndex) {
-                    0 -> { // מחשבון רגיל
+                    0, 301 -> {
                         val d = r * 0.45f
                         canvas.drawLine(cx - d - r * 0.2f, cy - d, cx - d + r * 0.2f, cy - d, paint)
                         canvas.drawLine(cx - d, cy - d - r * 0.2f, cx - d, cy - d + r * 0.2f, paint)
@@ -330,58 +314,53 @@ object IosGlassTheme {
                         canvas.drawLine(cx + d - r * 0.2f, cy + d - r * 0.1f, cx + d + r * 0.2f, cy + d - r * 0.1f, paint)
                         canvas.drawLine(cx + d - r * 0.2f, cy + d + r * 0.1f, cx + d + r * 0.2f, cy + d + r * 0.1f, paint)
                     }
-                    1 -> { // מחשבון מדעי
-                        val path = Path().apply {
-                            moveTo(cx - r * 0.8f, cy)
-                            cubicTo(cx - r * 0.3f, cy - r * 0.9f, cx + r * 0.3f, cy + r * 0.9f, cx + r * 0.8f, cy)
-                        }
+                    1 -> {
+                        val path = Path().apply { moveTo(cx - r * 0.8f, cy); cubicTo(cx - r * 0.3f, cy - r * 0.9f, cx + r * 0.3f, cy + r * 0.9f, cx + r * 0.8f, cy) }
                         canvas.drawPath(path, paint)
                     }
-                    2 -> { // מע"מ
+                    2, 24 -> {
                         canvas.drawRoundRect(cx - r * 0.65f, cy - r * 0.8f, cx + r * 0.65f, cy + r * 0.8f, r * 0.2f, r * 0.2f, paint)
                         canvas.drawLine(cx - r * 0.35f, cy - r * 0.3f, cx + r * 0.35f, cy - r * 0.3f, paint)
                         canvas.drawLine(cx - r * 0.35f, cy + r * 0.2f, cx + r * 0.15f, cy + r * 0.2f, paint)
                     }
-                    3 -> { // הלוואה
-                        val path = Path().apply {
-                            moveTo(cx - r * 0.8f, cy - r * 0.25f); lineTo(cx, cy - r * 0.8f); lineTo(cx + r * 0.8f, cy - r * 0.25f); close()
-                        }
+                    3, 29, 302 -> {
+                        val path = Path().apply { moveTo(cx - r * 0.8f, cy - r * 0.25f); lineTo(cx, cy - r * 0.8f); lineTo(cx + r * 0.8f, cy - r * 0.25f); close() }
                         canvas.drawPath(path, paint)
                         canvas.drawLine(cx - r * 0.5f, cy - r * 0.2f, cx - r * 0.5f, cy + r * 0.65f, paint)
                         canvas.drawLine(cx, cy - r * 0.2f, cx, cy + r * 0.65f, paint)
                         canvas.drawLine(cx + r * 0.5f, cy - r * 0.2f, cx + r * 0.5f, cy + r * 0.65f, paint)
                         canvas.drawLine(cx - r * 0.8f, cy + r * 0.7f, cx + r * 0.8f, cy + r * 0.7f, paint)
                     }
-                    4 -> { // המרת מרחקים
+                    4, 303 -> {
                         canvas.drawRoundRect(cx - r * 0.85f, cy - r * 0.4f, cx + r * 0.85f, cy + r * 0.4f, r * 0.15f, r * 0.15f, paint)
                         canvas.drawLine(cx - r * 0.4f, cy - r * 0.4f, cx - r * 0.4f, cy, paint)
                         canvas.drawLine(cx, cy - r * 0.4f, cx, cy + r * 0.1f, paint)
                         canvas.drawLine(cx + r * 0.4f, cy - r * 0.4f, cx + r * 0.4f, cy, paint)
                     }
-                    5 -> { // המרת משקלים
+                    5 -> {
                         canvas.drawLine(cx, cy - r * 0.75f, cx, cy + r * 0.75f, paint)
                         canvas.drawLine(cx - r * 0.7f, cy - r * 0.35f, cx + r * 0.7f, cy - r * 0.35f, paint)
                         canvas.drawArc(cx - r * 0.85f, cy - r * 0.05f, cx - r * 0.35f, cy + r * 0.4f, 0f, 180f, false, paint)
                         canvas.drawArc(cx + r * 0.35f, cy - r * 0.05f, cx + r * 0.85f, cy + r * 0.4f, 0f, 180f, false, paint)
                     }
-                    6 -> { // המרת טמפ'
+                    6 -> {
                         canvas.drawArc(cx - r * 0.45f, cy + r * 0.05f, cx + r * 0.45f, cy + r * 0.85f, -45f, 270f, false, paint)
                         canvas.drawLine(cx - r * 0.22f, cy - r * 0.75f, cx - r * 0.22f, cy + r * 0.2f, paint)
                         canvas.drawLine(cx + r * 0.22f, cy - r * 0.75f, cx + r * 0.22f, cy + r * 0.2f, paint)
                     }
-                    7 -> { // מחשבון מתכנתים
+                    7, 28 -> {
                         canvas.drawLine(cx - r * 0.35f, cy - r * 0.45f, cx - r * 0.8f, cy, paint)
                         canvas.drawLine(cx - r * 0.8f, cy, cx - r * 0.35f, cy + r * 0.45f, paint)
                         canvas.drawLine(cx + r * 0.35f, cy - r * 0.45f, cx + r * 0.8f, cy, paint)
                         canvas.drawLine(cx + r * 0.8f, cy, cx + r * 0.35f, cy + r * 0.45f, paint)
                         canvas.drawLine(cx + r * 0.15f, cy - r * 0.55f, cx - r * 0.15f, cy + r * 0.55f, paint)
                     }
-                    8 -> { // חישוב אחוזים
+                    8 -> {
                         canvas.drawLine(cx - r * 0.6f, cy + r * 0.6f, cx + r * 0.6f, cy - r * 0.6f, paint)
                         canvas.drawCircle(cx - r * 0.4f, cy - r * 0.4f, r * 0.22f, paint)
                         canvas.drawCircle(cx + r * 0.4f, cy + r * 0.4f, r * 0.22f, paint)
                     }
-                    9 -> { // חישוב הנחות
+                    9, 25 -> {
                         val path = Path().apply {
                             moveTo(cx - r * 0.75f, cy - r * 0.75f); lineTo(cx + r * 0.1f, cy - r * 0.75f)
                             lineTo(cx + r * 0.8f, cy); lineTo(cx, cy + r * 0.8f); lineTo(cx - r * 0.75f, cy + r * 0.1f); close()
@@ -389,29 +368,29 @@ object IosGlassTheme {
                         canvas.drawPath(path, paint)
                         canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.12f, paint)
                     }
-                    10 -> { // חלוקת טיפים
+                    10, 23 -> {
                         canvas.drawCircle(cx - r * 0.25f, cy - r * 0.1f, r * 0.55f, paint)
                         canvas.drawCircle(cx + r * 0.3f, cy + r * 0.2f, r * 0.45f, paint)
                     }
-                    11 -> { // מדד BMI
+                    11, 27, 304 -> {
                         val path = Path().apply {
                             moveTo(cx - r * 0.85f, cy); lineTo(cx - r * 0.35f, cy); lineTo(cx - r * 0.15f, cy - r * 0.65f)
                             lineTo(cx + r * 0.15f, cy + r * 0.65f); lineTo(cx + r * 0.35f, cy); lineTo(cx + r * 0.85f, cy)
                         }
                         canvas.drawPath(path, paint)
                     }
-                    12 -> { // חישוב גיל
+                    12, 30 -> {
                         canvas.drawRoundRect(cx - r * 0.75f, cy - r * 0.65f, cx + r * 0.75f, cy + r * 0.75f, r * 0.2f, r * 0.2f, paint)
                         canvas.drawLine(cx - r * 0.75f, cy - r * 0.2f, cx + r * 0.75f, cy - r * 0.2f, paint)
                         canvas.drawLine(cx - r * 0.35f, cy - r * 0.85f, cx - r * 0.35f, cy - r * 0.45f, paint)
                         canvas.drawLine(cx + r * 0.35f, cy - r * 0.85f, cx + r * 0.35f, cy - r * 0.45f, paint)
                     }
-                    13 -> { // מטבעות לייב
+                    13, 26 -> {
                         canvas.drawArc(cx - r * 0.7f, cy - r * 0.7f, cx + r * 0.7f, cy + r * 0.7f, -150f, 120f, false, paint)
                         canvas.drawArc(cx - r * 0.7f, cy - r * 0.7f, cx + r * 0.7f, cy + r * 0.7f, 30f, 120f, false, paint)
                         canvas.drawLine(cx, cy - r * 0.4f, cx, cy + r * 0.4f, paint)
                     }
-                    14 -> { // מחשבון BMR
+                    14 -> {
                         val path = Path().apply {
                             moveTo(cx, cy - r * 0.85f)
                             cubicTo(cx + r * 0.8f, cy - r * 0.1f, cx + r * 0.65f, cy + r * 0.75f, cx, cy + r * 0.85f)
@@ -419,18 +398,18 @@ object IosGlassTheme {
                         }
                         canvas.drawPath(path, paint)
                     }
-                    15 -> { // משוואות ריבועיות
+                    15 -> {
                         canvas.drawLine(cx - r * 0.8f, cy + r * 0.5f, cx + r * 0.8f, cy + r * 0.5f, paint)
                         val path = Path().apply { moveTo(cx - r * 0.65f, cy - r * 0.65f); quadTo(cx, cy + r * 1.1f, cx + r * 0.65f, cy - r * 0.65f) }
                         canvas.drawPath(path, paint)
                     }
-                    16 -> { // מחשבון שברים
+                    16 -> {
                         canvas.drawLine(cx - r * 0.65f, cy + r * 0.65f, cx + r * 0.65f, cy - r * 0.65f, paint)
                         canvas.drawLine(cx - r * 0.4f, cy - r * 0.65f, cx - r * 0.4f, cy - r * 0.15f, paint)
                         canvas.drawLine(cx + r * 0.25f, cy + r * 0.25f, cx + r * 0.6f, cy + r * 0.25f, paint)
                         canvas.drawLine(cx + r * 0.25f, cy + r * 0.6f, cx + r * 0.6f, cy + r * 0.6f, paint)
                     }
-                    17 -> { // ריבית דריבית
+                    17 -> {
                         val path = Path().apply {
                             moveTo(cx - r * 0.75f, cy + r * 0.65f); lineTo(cx - r * 0.2f, cy + r * 0.15f)
                             lineTo(cx + r * 0.15f, cy + r * 0.35f); lineTo(cx + r * 0.75f, cy - r * 0.55f)
@@ -439,21 +418,32 @@ object IosGlassTheme {
                         canvas.drawLine(cx + r * 0.35f, cy - r * 0.55f, cx + r * 0.75f, cy - r * 0.55f, paint)
                         canvas.drawLine(cx + r * 0.75f, cy - r * 0.55f, cx + r * 0.75f, cy - r * 0.15f, paint)
                     }
-                    18 -> { // המרת מהירות
+                    18, 21 -> {
                         canvas.drawArc(cx - r * 0.8f, cy - r * 0.6f, cx + r * 0.8f, cy + r * 0.8f, 165f, 210f, false, paint)
                         canvas.drawLine(cx, cy + r * 0.2f, cx + r * 0.45f, cy - r * 0.35f, paint)
                     }
-                    19 -> { // הגדרות
+                    19 -> {
                         canvas.drawLine(cx - r * 0.75f, cy - r * 0.45f, cx + r * 0.75f, cy - r * 0.45f, paint)
                         canvas.drawCircle(cx - r * 0.2f, cy - r * 0.45f, r * 0.2f, paint)
                         canvas.drawLine(cx - r * 0.75f, cy + r * 0.45f, cx + r * 0.75f, cy + r * 0.45f, paint)
                         canvas.drawCircle(cx + r * 0.25f, cy + r * 0.45f, r * 0.2f, paint)
                     }
-                    100 -> { // PiP (חלון צף)
+                    20 -> { // עלות דלק
+                        canvas.drawRoundRect(cx - r * 0.55f, cy - r * 0.75f, cx + r * 0.35f, cy + r * 0.75f, r * 0.15f, r * 0.15f, paint)
+                        canvas.drawLine(cx + r * 0.35f, cy - r * 0.3f, cx + r * 0.7f, cy + r * 0.1f, paint)
+                        canvas.drawLine(cx + r * 0.7f, cy + r * 0.1f, cx + r * 0.7f, cy + r * 0.55f, paint)
+                    }
+                    22 -> { // ממוצע ציונים
+                        val cap = Path().apply {
+                            moveTo(cx, cy - r * 0.75f); lineTo(cx + r * 0.88f, cy - r * 0.2f); lineTo(cx, cy + r * 0.35f); lineTo(cx - r * 0.88f, cy - r * 0.2f); close()
+                        }
+                        canvas.drawPath(cap, paint)
+                    }
+                    100 -> {
                         canvas.drawRoundRect(cx - r * 0.8f, cy - r * 0.65f, cx + r * 0.8f, cy + r * 0.65f, r * 0.2f, r * 0.2f, paint)
                         canvas.drawRoundRect(cx + r * 0.05f, cy - r * 0.05f, cx + r * 0.65f, cy + r * 0.5f, r * 0.1f, r * 0.1f, paint)
                     }
-                    101 -> { // History (שעון היסטוריה)
+                    101 -> {
                         canvas.drawArc(cx - r * 0.75f, cy - r * 0.75f, cx + r * 0.75f, cy + r * 0.75f, -60f, 300f, false, paint)
                         canvas.drawLine(cx, cy - r * 0.4f, cx, cy, paint)
                         canvas.drawLine(cx, cy, cx + r * 0.3f, cy + r * 0.2f, paint)
