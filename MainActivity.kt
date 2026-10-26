@@ -52,7 +52,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private var appLogoView: TextView? = null
     private val drawerItemsViews = mutableListOf<View>()
     private val drawerSeparators = mutableListOf<View>()
-    private val drawerSectionHeaders = mutableListOf<Pair<Int, TextView>>()
+    private val drawerSectionHeaders = mutableListOf<Triple<Int, TextView, LinearLayout>>()
+    private val expandedSections = mutableSetOf<Int>()
     val keypadButtons = mutableMapOf<String, TextView>()
     var tts: TextToSpeech? = null
 
@@ -147,7 +148,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             .build()
 
         soundPool = SoundPool.Builder().setMaxStreams(10).setAudioAttributes(audioAttributes).build()
-        for (i in 1..12) {
+        for (i in 1..3) {
             val rId = resources.getIdentifier("sound$i", "raw", packageName)
             if (rId != 0) soundIds[i] = soundPool.load(this, rId, 1)
         }
@@ -183,13 +184,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         // יצירת כל פריטי המחשבונים מראש לפי אינדקס
         drawerItemsViews.clear()
         for ((index, title) in categories.withIndex()) {
+            val isSettings = (index == 19)
             val item = TextView(this).apply {
                 text = IosGlassTheme.cleanCategoryTitle(title, isCleanGlassActive)
-                textSize = 15.5f
+                textSize = if (isSettings) 16.5f else 15f
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
                 compoundDrawablePadding = dp(12f)
-                setPadding(dp(20f), dp(13f), dp(20f), dp(13f))
+                setPadding(dp(if (isSettings) 20f else 28f), dp(13f), dp(if (isSettings) 20f else 28f), dp(13f))
                 layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                     setMargins(dp(10f), dp(2f), dp(10f), dp(2f))
                 }
@@ -198,31 +200,67 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             drawerItemsViews.add(item)
         }
 
-        // הוספת הקטגוריות לתפריט הצד עם כותרות וסמלים
+        // הוספת הקטגוריות לתפריט הצד כך שרק שם וסמל הקטגוריה מוצגים, ובלחיצה נפתחים המחשבונים שלה
         drawerSectionHeaders.clear()
         drawerSeparators.clear()
         for ((secIconCode, secTitle, itemIndices) in drawerSections) {
+            val sectionItemsContainer = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                visibility = View.GONE
+            }
+
             val headerTv = TextView(this).apply {
                 tag = secTitle
-                textSize = 13.5f
+                textSize = 16.5f
                 typeface = Typeface.DEFAULT_BOLD
-                compoundDrawablePadding = dp(8f)
-                setPadding(dp(18f), dp(16f), dp(18f), dp(6f))
+                compoundDrawablePadding = dp(12f)
+                setPadding(dp(20f), dp(15f), dp(20f), dp(15f))
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    setMargins(dp(10f), dp(4f), dp(10f), dp(4f))
+                }
+                setOnClickListener {
+                    feedback(it)
+                    val isCurrentlyOpen = expandedSections.contains(secIconCode)
+                    if (isCurrentlyOpen) {
+                        expandedSections.remove(secIconCode)
+                        sectionItemsContainer.visibility = View.GONE
+                    } else {
+                        expandedSections.add(secIconCode)
+                        sectionItemsContainer.visibility = View.VISIBLE
+                        if (useAnimations) {
+                            sectionItemsContainer.alpha = 0f
+                            sectionItemsContainer.translationY = -dp(8f).toFloat()
+                            sectionItemsContainer.animate().alpha(1f).translationY(0f).setDuration(200).setInterpolator(DecelerateInterpolator()).start()
+                        }
+                    }
+                    updateDrawerSelection()
+                }
             }
-            drawerSectionHeaders.add(secIconCode to headerTv)
-            drawerMenu?.addView(headerTv)
 
             for (idx in itemIndices) {
-                drawerMenu?.addView(drawerItemsViews[idx])
+                sectionItemsContainer.addView(drawerItemsViews[idx])
                 val sep = View(this).apply {
                     layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1f)).apply {
-                        setMargins(dp(22f), 0, dp(22f), 0)
+                        setMargins(dp(28f), 0, dp(28f), 0)
                     }
                     setBackgroundColor(Color.TRANSPARENT)
                 }
                 drawerSeparators.add(sep)
-                drawerMenu?.addView(sep)
+                sectionItemsContainer.addView(sep)
             }
+
+            drawerSectionHeaders.add(Triple(secIconCode, headerTv, sectionItemsContainer))
+            drawerMenu?.addView(headerTv)
+
+            val catSep = View(this).apply {
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1f)).apply {
+                    setMargins(dp(20f), 0, dp(20f), 0)
+                }
+                setBackgroundColor(Color.TRANSPARENT)
+            }
+            drawerSeparators.add(catSep)
+            drawerMenu?.addView(catSep)
+            drawerMenu?.addView(sectionItemsContainer)
         }
 
         // הוספת "הגדרות" (אינדקס 19) בתחתית התפריט מחוץ לקטגוריות
@@ -265,7 +303,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         for (v in drawerItemsViews) {
             (v as? TextView)?.gravity = (if (isRightHanded) Gravity.RIGHT else Gravity.LEFT) or Gravity.CENTER_VERTICAL
         }
-        for ((_, headerTv) in drawerSectionHeaders) {
+        for ((_, headerTv, _) in drawerSectionHeaders) {
             headerTv.gravity = (if (isRightHanded) Gravity.RIGHT else Gravity.LEFT) or Gravity.CENTER_VERTICAL
         }
         val drawerW = getDrawerWidthPx()
@@ -308,7 +346,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     private fun loadPreferences() {
         useHaptic = prefs?.getBoolean("useHaptic", true) ?: true; useSound = prefs?.getBoolean("useSound", true) ?: true; useAnimations = prefs?.getBoolean("useAnimations", true) ?: true
-        keepScreenOn = prefs?.getBoolean("keepScreenOn", false) ?: false; soundType = prefs?.getInt("soundType", 0) ?: 0
+        keepScreenOn = prefs?.getBoolean("keepScreenOn", false) ?: false
+        soundType = (prefs?.getInt("soundType", 0) ?: 0).coerceIn(0, 3)
         isRightHanded = prefs?.getBoolean("isRightHanded", true) ?: true
         isIosGlassMode = prefs?.getBoolean("isIosGlassMode", false) ?: false
         isAuroraMode = prefs?.getBoolean("isAuroraMode", false) ?: false
@@ -328,7 +367,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     fun savePreferences() {
         IosGlassTheme.saveIosPrefs(prefs)
-        prefs?.edit()?.putBoolean("useHaptic", useHaptic)?.putBoolean("useSound", useSound)?.putBoolean("useAnimations", useAnimations)?.putBoolean("keepScreenOn", keepScreenOn)?.putBoolean("isRightHanded", isRightHanded)?.putBoolean("isIosGlassMode", isIosGlassMode)?.putBoolean("isAuroraMode", isAuroraMode)?.putInt("soundType", soundType)?.putInt("calcPrecision", calcPrecision)?.putFloat("buttonCornerStyle", buttonCornerStyle)?.putInt("primaryColor", primaryColor)?.putInt("bgColor", bgColor)?.putLong("memoryValue", memoryValue.toRawBits())?.putString("fromCurrency", fromCurrency)?.putString("toCurrency", toCurrency)?.putString("fromDist", fromDist)?.putString("toDist", toDist)?.putString("fromWeight", fromWeight)?.putString("toWeight", toWeight)?.putString("fromTemp", fromTemp)?.putString("toTemp", toTemp)?.putString("fromSpeed", fromSpeed)?.putString("toSpeed", toSpeed)?.putString("history", historyList.take(30).joinToString("||"))?.apply()
+        prefs?.edit()?.putBoolean("useHaptic", useHaptic)?.putBoolean("useSound", useSound)?.putBoolean("useAnimations", useAnimations)?.putBoolean("keepScreenOn", keepScreenOn)?.putBoolean("isRightHanded", isRightHanded)?.putBoolean("isIosGlassMode", isIosGlassMode)?.putBoolean("isAuroraMode", isAuroraMode)?.putInt("soundType", soundType.coerceIn(0, 3))?.putInt("calcPrecision", calcPrecision)?.putFloat("buttonCornerStyle", buttonCornerStyle)?.putInt("primaryColor", primaryColor)?.putInt("bgColor", bgColor)?.putLong("memoryValue", memoryValue.toRawBits())?.putString("fromCurrency", fromCurrency)?.putString("toCurrency", toCurrency)?.putString("fromDist", fromDist)?.putString("toDist", toDist)?.putString("fromWeight", fromWeight)?.putString("toWeight", toWeight)?.putString("fromTemp", fromTemp)?.putString("toTemp", toTemp)?.putString("fromSpeed", fromSpeed)?.putString("toSpeed", toSpeed)?.putString("history", historyList.take(30).joinToString("||"))?.apply()
     }
     fun updateKeepScreenOn() { if (keepScreenOn) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
 
@@ -396,7 +435,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 soundPool.play(acSoundId, 1f, 1f, 0, 0, 1f)
             } else if (soundType == 0) {
                 view.playSoundEffect(SoundEffectConstants.CLICK)
-            } else if (soundType in 1..12) {
+            } else if (soundType in 1..3) {
                 if (soundIds[soundType] != 0) soundPool.play(soundIds[soundType], 1f, 1f, 0, 0, 1f)
                 else Toast.makeText(this, "⚠️ קובץ sound${soundType}.mp3 לא נמצא!", Toast.LENGTH_SHORT).show()
             }
@@ -414,14 +453,32 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         for (sep in drawerSeparators) sep.setBackgroundColor(sepColor)
 
-        // עדכון כותרות הקטגוריות וסמליהן בכל 3 ערכות הנושא
-        for ((secIconCode, headerTv) in drawerSectionHeaders) {
+        // עדכון כותרות הקטגוריות המתקפלות וסמליהן בכל 3 ערכות הנושא
+        for ((secIconCode, headerTv, container) in drawerSectionHeaders) {
             val rawSecTitle = headerTv.tag as? String ?: ""
-            headerTv.text = IosGlassTheme.cleanCategoryTitle(rawSecTitle, isCleanGlassActive)
-            headerTv.setTextColor(activeAccent)
-            val secIcon = AuroraBorealisTheme.createVectorIcon(this, secIconCode, activeAccent, 18f, isAuroraMode)
+            val cleanTitle = IosGlassTheme.cleanCategoryTitle(rawSecTitle, isCleanGlassActive)
+            val isExpanded = expandedSections.contains(secIconCode)
+            val arrow = if (isExpanded) "▾" else if (isRightHanded) "◂" else "▸"
+            headerTv.text = if (isRightHanded) "$cleanTitle  $arrow" else "$arrow  $cleanTitle"
+
+            val hasActiveChild = drawerSections.find { it.first == secIconCode }?.third?.contains(currentTabIndex) == true
+            val headerTint = if (isExpanded || hasActiveChild) activeAccent else Color.WHITE
+            headerTv.setTextColor(headerTint)
+
+            val secIcon = AuroraBorealisTheme.createVectorIcon(this, secIconCode, headerTint, 22f, isAuroraMode)
             if (isRightHanded) headerTv.setCompoundDrawables(null, null, secIcon, null)
             else headerTv.setCompoundDrawables(secIcon, null, null, null)
+
+            if (isExpanded || hasActiveChild) {
+                if (isCleanGlassActive) {
+                    headerTv.background = AuroraBorealisTheme.createActiveDrawerCapsule(this, isAuroraMode)
+                } else {
+                    headerTv.setBackgroundColor(Color.argb(35, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor)))
+                }
+            } else {
+                headerTv.background = null
+            }
+            container.visibility = if (isExpanded) View.VISIBLE else View.GONE
         }
 
         for (i in drawerItemsViews.indices) {
@@ -430,7 +487,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             val tint = if (isSelected) activeAccent else Color.WHITE
             tv.text = IosGlassTheme.cleanCategoryTitle(categories[i], isCleanGlassActive)
             if (isCleanGlassActive) {
-                val icon = AuroraBorealisTheme.createVectorIcon(this, i, tint, 22f, isAuroraMode)
+                val icon = AuroraBorealisTheme.createVectorIcon(this, i, tint, 20f, isAuroraMode)
                 if (isRightHanded) tv.setCompoundDrawables(null, null, icon, null)
                 else tv.setCompoundDrawables(icon, null, null, null)
             } else {
