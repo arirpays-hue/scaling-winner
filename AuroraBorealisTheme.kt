@@ -232,7 +232,7 @@ object AuroraBorealisTheme {
         sizeDp: Float = 22f,
         isGlowing: Boolean = true
     ): Drawable {
-        if (!isGlowing && (iconCode in 0..36 || iconCode in 100..101 || iconCode in 301..305)) {
+        if (!isGlowing && (iconCode in 0..55 || iconCode in 100..101 || iconCode in 301..310)) {
             return IosGlassTheme.createSfSymbolDrawable(context, iconCode, tintColor, sizeDp)
         }
 
@@ -291,7 +291,7 @@ object AuroraBorealisTheme {
                         canvas.drawLine(cx - r * 0.45f, cy, cx + r * 0.45f, cy, paint)
                         canvas.drawLine(cx, cy - r * 0.45f, cx, cy + r * 0.45f, paint)
                     }
-                    1 -> { // מחשבון מדעי
+                    1, 44, 308 -> { // מחשבון מדעי / הטבלה המחזורית ומודל אטום בוהר
                         canvas.save(); canvas.rotate(30f, cx, cy)
                         canvas.drawOval(RectF(cx - r * 0.88f, cy - r * 0.36f, cx + r * 0.88f, cy + r * 0.36f), paint)
                         canvas.restore(); canvas.save(); canvas.rotate(-30f, cx, cy)
@@ -389,7 +389,7 @@ object AuroraBorealisTheme {
                         canvas.drawOval(RectF(cx - r * 0.38f, cy - r * 0.8f, cx + r * 0.38f, cy + r * 0.8f), paint)
                         canvas.drawLine(cx - r * 0.8f, cy, cx + r * 0.8f, cy, paint)
                     }
-                    14 -> { // מחשבון BMR
+                    14, 38, 306 -> { // מחשבון BMR / מעבדת חוק אוהם והספק / קטגוריית חשמל
                         val bolt = Path().apply {
                             moveTo(cx + r * 0.18f, cy - r * 0.88f); lineTo(cx - r * 0.55f, cy + r * 0.08f); lineTo(cx + r * 0.08f, cy + r * 0.08f)
                             lineTo(cx - r * 0.18f, cy + r * 0.88f); lineTo(cx + r * 0.55f, cy - r * 0.08f); lineTo(cx - r * 0.08f, cy - r * 0.08f); close()
@@ -440,13 +440,117 @@ object AuroraBorealisTheme {
                         canvas.drawPath(cap, paint)
                         canvas.drawLine(cx + r * 0.65f, cy - r * 0.05f, cx + r * 0.65f, cy + r * 0.65f, paint)
                     }
-                    31 -> { // 87 קטגוריות יחידות והנדסה (מחוגה / קליבר הנדסי)
+                    31, 305 -> { // 87 קטגוריות יחידות והמרה מרובה / קטגוריית הנדסה Pro (קליבר / מחוגה)
                         canvas.drawCircle(cx, cy - r * 0.62f, r * 0.16f, paint)
                         canvas.drawLine(cx - r * 0.1f, cy - r * 0.48f, cx - r * 0.68f, cy + r * 0.78f, paint)
                         canvas.drawLine(cx + r * 0.1f, cy - r * 0.48f, cx + r * 0.68f, cy + r * 0.78f, paint)
                         canvas.drawArc(RectF(cx - r * 0.55f, cy - r * 0.15f, cx + r * 0.55f, cy + r * 0.45f), 20f, 140f, false, paint)
                     }
-                    32 -> { // מטבעות, מתכות יקרות וגרפים (מטיל זהב + קו מגמה)
+                    32 -> { // אינסטלציה, צנרת, ספיקה ולחץ (צינור + ברז וטיפה)
+                        canvas.drawRoundRect(RectF(cx - r * 0.82f, cy - r * 0.22f, cx + r * 0.82f, cy + r * 0.22f), r * 0.12f, r * 0.12f, paint)
+                        canvas.drawLine(cx, cy - r * 0.22f, cx, cy - r * 0.68f, paint)
+                        canvas.drawLine(cx - r * 0.42f, cy - r * 0.68f, cx + r * 0.42f, cy - r * 0.68f, paint)
+                        canvas.drawCircle(cx, cy + r * 0.62f, r * 0.18f, paint)
+                    }
+                    33 -> { // מינון תרופות, עירוי IV וסוכר (שקית עירוי וצלב רפואי)
+                        canvas.drawRoundRect(RectF(cx - r * 0.55f, cy - r * 0.75f, cx + r * 0.55f, cy + r * 0.45f), r * 0.2f, r * 0.2f, paint)
+                        canvas.drawLine(cx - r * 0.25f, cy - r * 0.15f, cx + r * 0.25f, cy - r * 0.15f, paint)
+                        canvas.drawLine(cx, cy - r * 0.4f, cx, cy + r * 0.1f, paint)
+                        canvas.drawLine(cx, cy + r * 0.45f, cx, cy + r * 0.85f, paint)
+                    }
+                    34 -> { // בנייה, בטון, ריצוף ומיזוג BTU (קובייה הנדסית תלת-ממדית)
+                        val cube = Path().apply {
+                            moveTo(cx, cy - r * 0.82f); lineTo(cx + r * 0.75f, cy - r * 0.38f)
+                            lineTo(cx + r * 0.75f, cy + r * 0.42f); lineTo(cx, cy + r * 0.82f)
+                            lineTo(cx - r * 0.75f, cy + r * 0.42f); lineTo(cx - r * 0.75f, cy - r * 0.38f); close()
+                        }
+                        canvas.drawPath(cube, paint)
+                        canvas.drawLine(cx - r * 0.75f, cy - r * 0.38f, cx, cy + r * 0.05f, paint)
+                        canvas.drawLine(cx + r * 0.75f, cy - r * 0.38f, cx, cy + r * 0.05f, paint)
+                        canvas.drawLine(cx, cy + r * 0.05f, cx, cy + r * 0.82f, paint)
+                    }
+                    35 -> { // קודי צבע של נגדים (גוף נגד עם מוליכים ופסי צבע)
+                        canvas.drawLine(cx - r * 0.92f, cy, cx - r * 0.58f, cy, paint)
+                        canvas.drawLine(cx + r * 0.58f, cy, cx + r * 0.92f, cy, paint)
+                        canvas.drawRoundRect(RectF(cx - r * 0.58f, cy - r * 0.36f, cx + r * 0.58f, cy + r * 0.36f), r * 0.16f, r * 0.16f, paint)
+                        canvas.drawLine(cx - r * 0.28f, cy - r * 0.36f, cx - r * 0.28f, cy + r * 0.36f, paint)
+                        canvas.drawLine(cx, cy - r * 0.36f, cx, cy + r * 0.36f, paint)
+                        canvas.drawLine(cx + r * 0.28f, cy - r * 0.36f, cx + r * 0.28f, cy + r * 0.36f, paint)
+                    }
+                    36 -> { // מפענח קודי קבלים ואנרגיה (סמל קבל לוחות מקבילים)
+                        canvas.drawLine(cx - r * 0.88f, cy, cx - r * 0.18f, cy, paint)
+                        canvas.drawLine(cx + r * 0.18f, cy, cx + r * 0.88f, cy, paint)
+                        canvas.drawLine(cx - r * 0.18f, cy - r * 0.65f, cx - r * 0.18f, cy + r * 0.65f, paint)
+                        canvas.drawLine(cx + r * 0.18f, cy - r * 0.65f, cx + r * 0.18f, cy + r * 0.65f, paint)
+                    }
+                    37 -> { // עוביי חוטים AWG/SWG ומפל מתח (חתך כבל רב-גידי)
+                        canvas.drawCircle(cx, cy, r * 0.82f, paint)
+                        canvas.drawCircle(cx, cy, r * 0.24f, dotPaint)
+                        for (i in 0 until 6) {
+                            val a = Math.toRadians((i * 60).toDouble())
+                            canvas.drawCircle((cx + cos(a) * r * 0.48f).toFloat(), (cy + sin(a) * r * 0.48f).toFloat(), r * 0.14f, dotPaint)
+                        }
+                    }
+                    39 -> { // פלס בנאים דו-צירי עם בועות (צינור פלס עם שנתות ובועה במרכז)
+                        canvas.drawRoundRect(RectF(cx - r * 0.88f, cy - r * 0.34f, cx + r * 0.88f, cy + r * 0.34f), r * 0.34f, r * 0.34f, paint)
+                        canvas.drawLine(cx - r * 0.28f, cy - r * 0.34f, cx - r * 0.28f, cy + r * 0.34f, paint)
+                        canvas.drawLine(cx + r * 0.28f, cy - r * 0.34f, cx + r * 0.28f, cy + r * 0.34f, paint)
+                        canvas.drawCircle(cx, cy, r * 0.18f, dotPaint)
+                    }
+                    40, 307 -> { // מצפן מגנטי חי עם מחוג זז / קטגוריית חיישנים ומדידה
+                        canvas.drawCircle(cx, cy, r * 0.82f, paint)
+                        val needle = Path().apply {
+                            moveTo(cx + r * 0.48f, cy - r * 0.48f)
+                            lineTo(cx + r * 0.14f, cy + r * 0.14f)
+                            lineTo(cx - r * 0.48f, cy + r * 0.48f)
+                            lineTo(cx - r * 0.14f, cy - r * 0.14f)
+                            close()
+                        }
+                        canvas.drawPath(needle, paint)
+                        canvas.drawCircle(cx, cy, r * 0.1f, dotPaint)
+                    }
+                    41 -> { // מד-זווית אינטראקטיבי וסרגל מכויל (קשת מד-זווית עם זרוע זווית)
+                        canvas.drawArc(RectF(cx - r * 0.82f, cy - r * 0.42f, cx + r * 0.82f, cy + r * 1.15f), 180f, 180f, true, paint)
+                        canvas.drawLine(cx, cy + r * 0.36f, cx + r * 0.55f, cy - r * 0.25f, paint)
+                        canvas.drawCircle(cx, cy + r * 0.36f, r * 0.12f, dotPaint)
+                    }
+                    42 -> { // שעון עצר כרונוגרף והקפות
+                        canvas.drawCircle(cx, cy + r * 0.1f, r * 0.72f, paint)
+                        canvas.drawLine(cx - r * 0.25f, cy - r * 0.82f, cx + r * 0.25f, cy - r * 0.82f, paint)
+                        canvas.drawLine(cx, cy - r * 0.82f, cx, cy - r * 0.62f, paint)
+                        canvas.drawLine(cx, cy + r * 0.1f, cx, cy - r * 0.32f, paint)
+                        canvas.drawLine(cx, cy + r * 0.1f, cx + r * 0.35f, cy + r * 0.1f, paint)
+                    }
+                    43 -> { // פנס מסך עוצמתי ותאורת מעבדה
+                        val body = Path().apply {
+                            moveTo(cx - r * 0.28f, cy + r * 0.78f); lineTo(cx + r * 0.28f, cy + r * 0.78f)
+                            lineTo(cx + r * 0.28f, cy + r * 0.1f); lineTo(cx + r * 0.55f, cy - r * 0.32f)
+                            lineTo(cx - r * 0.55f, cy - r * 0.32f); lineTo(cx - r * 0.28f, cy + r * 0.1f); close()
+                        }
+                        canvas.drawPath(body, paint)
+                        canvas.drawLine(cx, cy - r * 0.52f, cx, cy - r * 0.85f, paint)
+                        canvas.drawLine(cx - r * 0.38f, cy - r * 0.48f, cx - r * 0.62f, cy - r * 0.78f, paint)
+                        canvas.drawLine(cx + r * 0.38f, cy - r * 0.48f, cx + r * 0.62f, cy - r * 0.78f, paint)
+                    }
+                    45 -> { // מתרגם ומשדר קוד מורס (נקודה-קו-נקודה וגלי שידור)
+                        canvas.drawCircle(cx - r * 0.62f, cy + r * 0.25f, r * 0.14f, dotPaint)
+                        canvas.drawLine(cx - r * 0.22f, cy + r * 0.25f, cx + r * 0.28f, cy + r * 0.25f, paint)
+                        canvas.drawCircle(cx + r * 0.62f, cy + r * 0.25f, r * 0.14f, dotPaint)
+                        canvas.drawArc(RectF(cx - r * 0.55f, cy - r * 0.72f, cx + r * 0.55f, cy + r * 0.1f), 200f, 140f, false, paint)
+                    }
+                    46 -> { // מחולל סיסמאות ומד אנטרופיה (מנעול הצפנה)
+                        canvas.drawRoundRect(RectF(cx - r * 0.58f, cy - r * 0.1f, cx + r * 0.58f, cy + r * 0.78f), r * 0.18f, r * 0.18f, paint)
+                        canvas.drawArc(RectF(cx - r * 0.38f, cy - r * 0.78f, cx + r * 0.38f, cy + r * 0.1f), 180f, 180f, false, paint)
+                        canvas.drawCircle(cx, cy + r * 0.32f, r * 0.14f, dotPaint)
+                    }
+                    47 -> { // גימטריה, ספרות רומיות וטקסט (לוחות/ספרות רומיות)
+                        canvas.drawLine(cx - r * 0.72f, cy - r * 0.65f, cx + r * 0.72f, cy - r * 0.65f, paint)
+                        canvas.drawLine(cx - r * 0.72f, cy + r * 0.65f, cx + r * 0.72f, cy + r * 0.65f, paint)
+                        canvas.drawLine(cx - r * 0.45f, cy - r * 0.65f, cx - r * 0.45f, cy + r * 0.65f, paint)
+                        canvas.drawLine(cx, cy - r * 0.65f, cx + r * 0.32f, cy + r * 0.65f, paint)
+                        canvas.drawLine(cx + r * 0.62f, cy - r * 0.65f, cx + r * 0.32f, cy + r * 0.65f, paint)
+                    }
+                    48 -> { // מתכות יקרות, מטבעות וגרפים (מטיל זהב + קו מגמה)
                         val ingot = Path().apply {
                             moveTo(cx - r * 0.5f, cy + r * 0.2f); lineTo(cx + r * 0.5f, cy + r * 0.2f)
                             lineTo(cx + r * 0.78f, cy + r * 0.72f); lineTo(cx - r * 0.78f, cy + r * 0.72f); close()
@@ -458,24 +562,46 @@ object AuroraBorealisTheme {
                         }
                         canvas.drawPath(chart, paint)
                     }
-                    33 -> { // 48 כלים שימושיים ומעבדה (סמל נגד אלקטרוני ומעגל)
-                        val resPath = Path().apply {
-                            moveTo(cx - r * 0.88f, cy); lineTo(cx - r * 0.55f, cy)
-                            lineTo(cx - r * 0.4f, cy - r * 0.45f); lineTo(cx - r * 0.15f, cy + r * 0.45f)
-                            lineTo(cx + r * 0.15f, cy - r * 0.45f); lineTo(cx + r * 0.4f, cy + r * 0.45f)
-                            lineTo(cx + r * 0.55f, cy); lineTo(cx + r * 0.88f, cy)
+                    49 -> { // משכנתא ולוח סילוקין שפיצר (בית עם גג משופע)
+                        val roof = Path().apply {
+                            moveTo(cx - r * 0.85f, cy - r * 0.05f); lineTo(cx, cy - r * 0.82f); lineTo(cx + r * 0.85f, cy - r * 0.05f)
                         }
-                        canvas.drawPath(resPath, paint)
+                        canvas.drawPath(roof, paint)
+                        canvas.drawRect(cx - r * 0.58f, cy - r * 0.05f, cx + r * 0.58f, cy + r * 0.78f, paint)
+                        canvas.drawRect(cx - r * 0.18f, cy + r * 0.28f, cx + r * 0.18f, cy + r * 0.78f, paint)
                     }
-                    34 -> { // 20 מחשבונים פיננסיים Pro (גרף צמיחה מעוטר ביהלום)
+                    50, 309 -> { // תשואת ROI, צמיחה CAGR וחוק 72 / קטגוריית השקעות Pro
                         val p = Path().apply {
                             moveTo(cx - r * 0.78f, cy + r * 0.65f); lineTo(cx - r * 0.25f, cy + r * 0.1f)
-                            lineTo(cx + r * 0.15f, cy + r * 0.32f); lineTo(cx + r * 0.75f, cy - r * 0.45f)
+                            lineTo(cx + r * 0.15f, cy + r * 0.32f); lineTo(cx + r * 0.75f, cy - r * 0.55f)
                         }
                         canvas.drawPath(p, paint)
-                        canvas.drawCircle(cx - r * 0.35f, cy - r * 0.45f, r * 0.22f, paint)
+                        canvas.drawLine(cx + r * 0.35f, cy - r * 0.55f, cx + r * 0.75f, cy - r * 0.55f, paint)
+                        canvas.drawLine(cx + r * 0.75f, cy - r * 0.55f, cx + r * 0.75f, cy - r * 0.15f, paint)
                     }
-                    35 -> { // 22 מחשבונים מתמטיים Pro (סימן סכימה סיגמא Σ)
+                    51 -> { // מרווח רווח, נקודת איזון ותקציב (נקודת חיתוך Break-Even)
+                        canvas.drawLine(cx - r * 0.78f, cy + r * 0.72f, cx + r * 0.78f, cy - r * 0.72f, paint)
+                        canvas.drawLine(cx - r * 0.78f, cy + r * 0.15f, cx + r * 0.78f, cy - r * 0.35f, paint)
+                        canvas.drawCircle(cx + r * 0.12f, cy - r * 0.12f, r * 0.18f, dotPaint)
+                    }
+                    52 -> { // סטטיסטיקה, סטיית תקן ועקומת פעמון (Bell Curve)
+                        val bell = Path().apply {
+                            moveTo(cx - r * 0.85f, cy + r * 0.65f)
+                            cubicTo(cx - r * 0.35f, cy + r * 0.65f, cx - r * 0.32f, cy - r * 0.75f, cx, cy - r * 0.75f)
+                            cubicTo(cx + r * 0.32f, cy - r * 0.75f, cx + r * 0.35f, cy + r * 0.65f, cx + r * 0.85f, cy + r * 0.65f)
+                        }
+                        canvas.drawPath(bell, paint)
+                        canvas.drawLine(cx, cy - r * 0.75f, cx, cy + r * 0.65f, paint)
+                    }
+                    53 -> { // גאומטריה 2D/3D, פיתגורס ושרטוט (משולש ישר-זווית ומעגל)
+                        val tri = Path().apply {
+                            moveTo(cx - r * 0.72f, cy + r * 0.68f); lineTo(cx + r * 0.75f, cy + r * 0.68f)
+                            lineTo(cx - r * 0.72f, cy - r * 0.72f); close()
+                        }
+                        canvas.drawPath(tri, paint)
+                        canvas.drawRect(cx - r * 0.72f, cy + r * 0.38f, cx - r * 0.42f, cy + r * 0.68f, paint)
+                    }
+                    54, 310 -> { // תורת המספרים, GCD/LCM וקומבינטוריקה / קטגוריית מתמטיקה Pro (סיגמא Σ)
                         val sigma = Path().apply {
                             moveTo(cx + r * 0.65f, cy - r * 0.72f); lineTo(cx - r * 0.65f, cy - r * 0.72f)
                             lineTo(cx + r * 0.15f, cy); lineTo(cx - r * 0.65f, cy + r * 0.72f)
@@ -483,26 +609,12 @@ object AuroraBorealisTheme {
                         }
                         canvas.drawPath(sigma, paint)
                     }
-                    36 -> { // ייצוא PDF/CSV, גיבוי ומועדפים (ענן סנכרון וחץ)
+                    55 -> { // ייצוא PDF/CSV, גיבוי Drive ומועדפים (ענן סנכרון וחץ)
                         canvas.drawRoundRect(RectF(cx - r * 0.78f, cy - r * 0.35f, cx + r * 0.78f, cy + r * 0.45f), r * 0.38f, r * 0.38f, paint)
                         canvas.drawArc(RectF(cx - r * 0.45f, cy - r * 0.78f, cx + r * 0.35f, cy - r * 0.05f), 180f, 180f, false, paint)
                         canvas.drawLine(cx, cy + r * 0.78f, cx, cy - r * 0.15f, paint)
                         canvas.drawLine(cx - r * 0.25f, cy + r * 0.1f, cx, cy - r * 0.15f, paint)
                         canvas.drawLine(cx + r * 0.25f, cy + r * 0.1f, cx, cy - r * 0.15f, paint)
-                    }
-                    305 -> { // קטגוריית מרכז מקצועי (Pro Mode Crown Crystal)
-                        val crown = Path().apply {
-                            moveTo(cx - r * 0.78f, cy + r * 0.6f)
-                            lineTo(cx - r * 0.85f, cy - r * 0.35f)
-                            lineTo(cx - r * 0.35f, cy + r * 0.1f)
-                            lineTo(cx, cy - r * 0.72f)
-                            lineTo(cx + r * 0.35f, cy + r * 0.1f)
-                            lineTo(cx + r * 0.85f, cy - r * 0.35f)
-                            lineTo(cx + r * 0.78f, cy + r * 0.6f)
-                            close()
-                        }
-                        canvas.drawPath(crown, paint)
-                        canvas.drawCircle(cx, cy - r * 0.82f, r * 0.09f, dotPaint)
                     }
                     100 -> { // PiP
                         canvas.drawRoundRect(RectF(cx - r * 0.82f, cy - r * 0.72f, cx + r * 0.35f, cy + r * 0.35f), r * 0.18f, r * 0.18f, paint)
