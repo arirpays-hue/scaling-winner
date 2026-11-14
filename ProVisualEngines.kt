@@ -7,49 +7,62 @@ import android.view.View
 import kotlin.math.*
 
 // =========================================================================
-// 1. קנבס פלס בנאים דו-צירי חי עם בועות זזות (Bullseye + Dual Spirit Tubes)
+// 1. קנבס פלס בנאים דו-צירי חי עם בועות זזות וכיול (Bullseye + Dual Spirit Tubes)
 // =========================================================================
 class SpiritLevelCanvasView(context: Context, private val activity: MainActivity) : View(context) {
     var rollDeg: Float = 0f
     var pitchDeg: Float = 0f
+    var tareRollOffset: Float = 0f
+    var tarePitchOffset: Float = 0f
 
-    private val framePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 5f }
+    private val framePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-    private val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 2f }
+    private val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val bubblePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; textSize = 34f; textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT_BOLD }
+    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.DEFAULT_BOLD
+    }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        val d = resources.displayMetrics.density
+        framePaint.strokeWidth = 2.2f * d
+        gridPaint.strokeWidth = 1.1f * d
+        textPaint.textSize = 14.5f * d
+
         val w = width.toFloat()
         val h = height.toFloat()
-        val cx = w / 2f
-        val cy = h * 0.44f
-        val radius = min(w, h) * 0.30f
+        val adjRoll = rollDeg - tareRollOffset
+        val adjPitch = pitchDeg - tarePitchOffset
 
-        val isLevel = abs(rollDeg) < 1.5f && abs(pitchDeg) < 1.5f
+        val cx = w * 0.44f
+        val cy = h * 0.40f
+        val radius = min(w, h) * 0.27f
+
+        val isLevel = hypot(adjRoll.toDouble(), adjPitch.toDouble()) < 1.2
         val accent = when {
             isLevel -> Color.parseColor("#00E676")
             activity.isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
             else -> activity.primaryColor
         }
 
-        bgPaint.color = Color.argb(140, 14, 24, 34)
+        bgPaint.color = Color.argb(155, 12, 22, 32)
         framePaint.color = accent
-        gridPaint.color = Color.argb(90, Color.red(accent), Color.green(accent), Color.blue(accent))
+        gridPaint.color = Color.argb(95, Color.red(accent), Color.green(accent), Color.blue(accent))
 
-        // מטרה מרכזית (Bullseye)
+        // 1. מטרת איזון עגולה מרכזית (Bullseye)
         canvas.drawCircle(cx, cy, radius, bgPaint)
         canvas.drawCircle(cx, cy, radius, framePaint)
-        canvas.drawCircle(cx, cy, radius * 0.65f, gridPaint)
-        canvas.drawCircle(cx, cy, radius * 0.30f, gridPaint)
+        canvas.drawCircle(cx, cy, radius * 0.64f, gridPaint)
+        canvas.drawCircle(cx, cy, radius * 0.28f, gridPaint)
         canvas.drawLine(cx - radius, cy, cx + radius, cy, gridPaint)
         canvas.drawLine(cx, cy - radius, cx, cy + radius, gridPaint)
 
-        // חישוב מיקום הבועה במטרה המרכזית
         val maxTilt = 45f
-        val normX = (rollDeg / maxTilt).coerceIn(-1f, 1f)
-        val normY = (pitchDeg / maxTilt).coerceIn(-1f, 1f)
+        val normX = (adjRoll / maxTilt).coerceIn(-1f, 1f)
+        val normY = (adjPitch / maxTilt).coerceIn(-1f, 1f)
         val bx = cx + normX * (radius * 0.72f)
         val by = cy + normY * (radius * 0.72f)
         val bubbleR = radius * 0.22f
@@ -60,36 +73,172 @@ class SpiritLevelCanvasView(context: Context, private val activity: MainActivity
         )
         canvas.drawCircle(bx, by, bubbleR, bubblePaint)
 
-        // צינור פלס אופקי תחתון
-        val barTop = cy + radius + 36f
-        val barBottom = barTop + 54f
-        val barLeft = cx - radius * 1.15f
-        val barRight = cx + radius * 1.15f
+        // 2. מבחנת פלס אנכית בצד ימין
+        val vTubeW = 24f * d
+        val vTubeLeft = cx + radius + 18f * d
+        val vTubeRight = vTubeLeft + vTubeW
+        val vTubeTop = cy - radius
+        val vTubeBottom = cy + radius
+        val vRect = RectF(vTubeLeft, vTubeTop, vTubeRight, vTubeBottom)
+        canvas.drawRoundRect(vRect, vTubeW / 2f, vTubeW / 2f, bgPaint)
+        canvas.drawRoundRect(vRect, vTubeW / 2f, vTubeW / 2f, framePaint)
+        canvas.drawLine(vTubeLeft, cy - 10f * d, vTubeRight, cy - 10f * d, gridPaint)
+        canvas.drawLine(vTubeLeft, cy + 10f * d, vTubeRight, cy + 10f * d, gridPaint)
+        val vBubbleY = cy + normY * ((vTubeBottom - vTubeTop) * 0.36f)
+        canvas.drawRoundRect(
+            RectF(vTubeLeft + 3f * d, vBubbleY - 12f * d, vTubeRight - 3f * d, vBubbleY + 12f * d),
+            10f * d, 10f * d, bubblePaint
+        )
+
+        // 3. מבחנת פלס אופקית תחתונה
+        val hTubeH = 24f * d
+        val barTop = cy + radius + 16f * d
+        val barBottom = barTop + hTubeH
+        val barLeft = cx - radius
+        val barRight = vTubeRight
         val barRect = RectF(barLeft, barTop, barRight, barBottom)
-        canvas.drawRoundRect(barRect, 27f, 27f, bgPaint)
-        canvas.drawRoundRect(barRect, 27f, 27f, framePaint)
-        canvas.drawLine(cx - 25f, barTop, cx - 25f, barBottom, gridPaint)
-        canvas.drawLine(cx + 25f, barTop, cx + 25f, barBottom, gridPaint)
+        canvas.drawRoundRect(barRect, hTubeH / 2f, hTubeH / 2f, bgPaint)
+        canvas.drawRoundRect(barRect, hTubeH / 2f, hTubeH / 2f, framePaint)
+        val barMidX = (barLeft + barRight) / 2f
+        canvas.drawLine(barMidX - 12f * d, barTop, barMidX - 12f * d, barBottom, gridPaint)
+        canvas.drawLine(barMidX + 12f * d, barTop, barMidX + 12f * d, barBottom, gridPaint)
 
-        val hBubbleX = cx + normX * ((barRight - barLeft) * 0.38f)
-        canvas.drawRoundRect(RectF(hBubbleX - 32f, barTop + 6f, hBubbleX + 32f, barBottom - 6f), 20f, 20f, bubblePaint)
+        val hBubbleX = barMidX + normX * ((barRight - barLeft) * 0.36f)
+        canvas.drawRoundRect(
+            RectF(hBubbleX - 14f * d, barTop + 3f * d, hBubbleX + 14f * d, barBottom - 3f * d),
+            10f * d, 10f * d, bubblePaint
+        )
 
-        val statusTxt = if (isLevel) "מאוזן לחלוטין (0.0°)" else "X: ${Utils.formatResult(rollDeg.toDouble(), 1)}°  |  Y: ${Utils.formatResult(pitchDeg.toDouble(), 1)}°"
-        canvas.drawText(statusTxt, cx, h - 24f, textPaint)
+        val slopePct = tan(Math.toRadians(hypot(adjRoll.toDouble(), adjPitch.toDouble()))).coerceAtMost(9.99) * 100.0
+        val statusTxt = if (isLevel) {
+            "🟢 המשטח מאוזן לחלוטין (0.0° | שיפוע 0%)"
+        } else {
+            "X: ${Utils.formatResult(adjRoll.toDouble(), 1)}° | Y: ${Utils.formatResult(adjPitch.toDouble(), 1)}° | שיפוע: ${Utils.formatResult(slopePct, 1)}%"
+        }
+        canvas.drawText(statusTxt, w / 2f, h - 12f * d, textPaint)
     }
 }
 
 // =========================================================================
-// 2. קנבס מצפן חי עם שושנת רוחות ומחוג מסתובב ( ותמיכה בסיבוב במגע )
+// 2. קנבס כרונוגרף דו-טבעתי מונפש 60FPS לשעון עצר והקפות (ללא חיתוך!)
 // =========================================================================
-class CompassRoseCanvasView(context: Context, private val activity: MainActivity, private val onHeadingChanged: (Float) -> Unit) : View(context) {
-    var azimuthDeg: Float = 0f
+class ChronographStopwatchCanvasView(context: Context, private val activity: MainActivity) : View(context) {
+    var totalElapsedMs: Long = 0L
+    var currentLapElapsedMs: Long = 0L
+    var lapNumber: Int = 1
 
-    private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 5f }
-    private val tickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 3f; color = Color.WHITE }
+    private val outerTrackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val innerTrackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val outerArcPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
+    private val innerArcPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
+    private val tickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = Color.WHITE }
+    private val mainTimePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+    }
+    private val subTimePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.DEFAULT_BOLD
+    }
+
+    private fun formatMs(ms: Long): String {
+        val min = (ms / 60000) % 60
+        val sec = (ms / 1000) % 60
+        val cs = (ms % 1000) / 10
+        return String.format("%02d:%02d.%02d", min, sec, cs)
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val d = resources.displayMetrics.density
+        val cx = width / 2f
+        val cy = height / 2f
+        val maxRadius = (min(width, height) / 2f) - (16f * d)
+        val innerRadius = maxRadius * 0.82f
+
+        val accent = if (activity.isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else activity.primaryColor
+        val secondary = Color.parseColor("#FF9F0A")
+
+        outerTrackPaint.strokeWidth = 7f * d
+        outerTrackPaint.color = Color.argb(45, 255, 255, 255)
+        innerTrackPaint.strokeWidth = 5f * d
+        innerTrackPaint.color = Color.argb(35, 255, 255, 255)
+
+        outerArcPaint.strokeWidth = 7.5f * d
+        outerArcPaint.color = accent
+        innerArcPaint.strokeWidth = 5.5f * d
+        innerArcPaint.color = secondary
+
+        // שנתות 60 שניות
+        for (i in 0 until 60) {
+            val angleRad = Math.toRadians((i * 6 - 90).toDouble())
+            val isMajor = (i % 5 == 0)
+            tickPaint.strokeWidth = if (isMajor) 2f * d else 1f * d
+            tickPaint.alpha = if (isMajor) 220 else 90
+            val rStart = if (isMajor) maxRadius * 0.90f else maxRadius * 0.94f
+            val x1 = (cx + cos(angleRad) * rStart).toFloat()
+            val y1 = (cy + sin(angleRad) * rStart).toFloat()
+            val x2 = (cx + cos(angleRad) * maxRadius).toFloat()
+            val y2 = (cy + sin(angleRad) * maxRadius).toFloat()
+            canvas.drawLine(x1, y1, x2, y2, tickPaint)
+        }
+
+        // מסלולים וקשתות התקדמות
+        canvas.drawCircle(cx, cy, maxRadius, outerTrackPaint)
+        canvas.drawCircle(cx, cy, innerRadius, innerTrackPaint)
+
+        val outerSweep = ((totalElapsedMs % 60000L) / 60000f) * 360f
+        val innerSweep = ((currentLapElapsedMs % 60000L) / 60000f) * 360f
+
+        canvas.drawArc(
+            RectF(cx - maxRadius, cy - maxRadius, cx + maxRadius, cy + maxRadius),
+            -90f, outerSweep, false, outerArcPaint
+        )
+        canvas.drawArc(
+            RectF(cx - innerRadius, cy - innerRadius, cx + innerRadius, cy + innerRadius),
+            -90f, innerSweep, false, innerArcPaint
+        )
+
+        // נקודת קצה זוהרת על המחוג החיצוני
+        val tipRad = Math.toRadians((outerSweep - 90f).toDouble())
+        val tipX = (cx + cos(tipRad) * maxRadius).toFloat()
+        val tipY = (cy + sin(tipRad) * maxRadius).toFloat()
+        canvas.drawCircle(tipX, tipY, 5.5f * d, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE })
+
+        // טקסט מרכזי מותאם אוטומטית לרדיוס המעגל
+        mainTimePaint.textSize = (maxRadius * 0.28f).coerceIn(18f * d, 32f * d)
+        subTimePaint.textSize = (maxRadius * 0.13f).coerceIn(11f * d, 15f * d)
+        subTimePaint.color = secondary
+
+        canvas.drawText(formatMs(totalElapsedMs), cx, cy + (4f * d), mainTimePaint)
+        canvas.drawText("הקפה #$lapNumber: ${formatMs(currentLapElapsedMs)}", cx, cy + maxRadius * 0.34f, subTimePaint)
+        subTimePaint.color = accent
+        canvas.drawText("CHRONOGRAPH PRO", cx, cy - maxRadius * 0.32f, subTimePaint)
+    }
+}
+
+// =========================================================================
+// 3. קנבס מצפן חי עם שושנת רוחות, נעילת אזימוט יעד ועוצמת שדה מגנטי (µT)
+// =========================================================================
+class CompassRoseCanvasView(
+    context: Context,
+    private val activity: MainActivity,
+    private val onHeadingChanged: (Float) -> Unit
+) : View(context) {
+    var azimuthDeg: Float = 0f
+    var lockedTargetDeg: Float? = null
+    var magneticFieldUt: Float = 45f
+
+    private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val tickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = Color.WHITE }
     private val northPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = Color.parseColor("#FF3B30") }
     private val southPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = Color.parseColor("#B0BEC5") }
-    private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; textSize = 36f; textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT_BOLD }
+    private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.DEFAULT_BOLD
+    }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_MOVE) {
@@ -108,13 +257,18 @@ class CompassRoseCanvasView(context: Context, private val activity: MainActivity
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        val d = resources.displayMetrics.density
+        ringPaint.strokeWidth = 2.2f * d
+        tickPaint.strokeWidth = 1.5f * d
+        labelPaint.textSize = 13.5f * d
+
         val cx = width / 2f
-        val cy = height / 2f
-        val r = min(width, height) * 0.39f
+        val cy = height * 0.46f
+        val r = min(width, height) * 0.36f
         val accent = if (activity.isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else activity.primaryColor
 
         ringPaint.color = accent
-        canvas.drawCircle(cx, cy, r, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(145, 12, 20, 30) })
+        canvas.drawCircle(cx, cy, r, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(150, 12, 20, 30) })
         canvas.drawCircle(cx, cy, r, ringPaint)
 
         canvas.save()
@@ -135,131 +289,188 @@ class CompassRoseCanvasView(context: Context, private val activity: MainActivity
         labelPaint.color = Color.parseColor("#FF3B30")
         canvas.drawText("N (צפון)", cx, cy - r * 0.56f, labelPaint)
         labelPaint.color = Color.WHITE
-        canvas.drawText("S", cx, cy + r * 0.68f, labelPaint)
-        canvas.drawText("E", cx + r * 0.62f, cy + 12f, labelPaint)
-        canvas.drawText("W", cx - r * 0.62f, cy + 12f, labelPaint)
+        canvas.drawText("S", cx, cy + r * 0.66f, labelPaint)
+        canvas.drawText("E", cx + r * 0.62f, cy + 5f * d, labelPaint)
+        canvas.drawText("W", cx - r * 0.62f, cy + 5f * d, labelPaint)
 
-        // מחוג צפון ודרום
+        // סימון יעד נעול אם קיים
+        lockedTargetDeg?.let { target ->
+            val tRad = Math.toRadians((target - 90).toDouble())
+            val tx = (cx + cos(tRad) * r * 0.92f).toFloat()
+            val ty = (cy + sin(tRad) * r * 0.92f).toFloat()
+            canvas.drawCircle(tx, ty, 6f * d, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#FFD700") })
+        }
+
         val northPath = Path().apply {
-            moveTo(cx, cy - r * 0.48f)
-            lineTo(cx - r * 0.10f, cy)
-            lineTo(cx + r * 0.10f, cy)
+            moveTo(cx, cy - r * 0.46f)
+            lineTo(cx - r * 0.09f, cy)
+            lineTo(cx + r * 0.09f, cy)
             close()
         }
         val southPath = Path().apply {
-            moveTo(cx, cy + r * 0.48f)
-            lineTo(cx - r * 0.10f, cy)
-            lineTo(cx + r * 0.10f, cy)
+            moveTo(cx, cy + r * 0.46f)
+            lineTo(cx - r * 0.09f, cy)
+            lineTo(cx + r * 0.09f, cy)
             close()
         }
         canvas.drawPath(southPath, southPaint)
         canvas.drawPath(northPath, northPaint)
         canvas.restore()
 
-        canvas.drawCircle(cx, cy, r * 0.08f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent })
+        canvas.drawCircle(cx, cy, r * 0.07f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent })
+        labelPaint.color = accent
+        canvas.drawText(
+            "שדה מגנטי: ${Utils.formatResult(magneticFieldUt.toDouble(), 1)} µT",
+            cx,
+            height - 10f * d,
+            labelPaint
+        )
     }
 }
 
 // =========================================================================
-// 3. קנבס נגד חשמלי אינטראקטיבי עם פסי צבע חיים (Canva Resistor Visual)
+// 4. קנבס נגד חשמלי 4 ו-5 פסים אינטראקטיבי
 // =========================================================================
 class ResistorVisualCanvasView(context: Context) : View(context) {
     var bandColors: IntArray = intArrayOf(Color.rgb(139, 69, 19), Color.BLACK, Color.RED, Color.rgb(212, 175, 55))
     var labelText: String = "1.0 kΩ ±5%"
 
-    private val wirePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.LTGRAY; strokeWidth = 14f; style = Paint.Style.STROKE }
+    private val wirePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.LTGRAY; style = Paint.Style.STROKE }
     private val bodyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#D7CCC8"); style = Paint.Style.FILL }
-    private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; strokeWidth = 3f; style = Paint.Style.STROKE }
-    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; textSize = 40f; textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT_BOLD }
+    private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; style = Paint.Style.STROKE }
+    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.DEFAULT_BOLD
+    }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        val d = resources.displayMetrics.density
+        wirePaint.strokeWidth = 5f * d
+        borderPaint.strokeWidth = 1.5f * d
+        textPaint.textSize = 15f * d
+
         val w = width.toFloat()
         val h = height.toFloat()
         val cy = h * 0.42f
-        canvas.drawLine(w * 0.08f, cy, w * 0.92f, cy, wirePaint)
+        val halfBodyH = 22f * d
+        canvas.drawLine(w * 0.06f, cy, w * 0.94f, cy, wirePaint)
 
-        val bodyRect = RectF(w * 0.22f, cy - 48f, w * 0.78f, cy + 48f)
-        canvas.drawRoundRect(bodyRect, 32f, 32f, bodyPaint)
-        canvas.drawRoundRect(bodyRect, 32f, 32f, borderPaint)
+        val bodyRect = RectF(w * 0.20f, cy - halfBodyH, w * 0.80f, cy + halfBodyH)
+        canvas.drawRoundRect(bodyRect, 14f * d, 14f * d, bodyPaint)
+        canvas.drawRoundRect(bodyRect, 14f * d, 14f * d, borderPaint)
 
-        val positions = floatArrayOf(0.30f, 0.42f, 0.54f, 0.70f)
-        for (i in bandColors.indices.take(4)) {
+        val positions = if (bandColors.size >= 5) {
+            floatArrayOf(0.27f, 0.37f, 0.47f, 0.57f, 0.72f)
+        } else {
+            floatArrayOf(0.28f, 0.41f, 0.54f, 0.71f)
+        }
+        val bandHalfW = 5.5f * d
+        for (i in bandColors.indices.take(positions.size)) {
             val bx = w * positions[i]
             val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = bandColors[i]; style = Paint.Style.FILL }
-            canvas.drawRect(bx - 14f, cy - 48f, bx + 14f, cy + 48f, p)
+            canvas.drawRect(bx - bandHalfW, cy - halfBodyH, bx + bandHalfW, cy + halfBodyH, p)
         }
-        canvas.drawText(labelText, w / 2f, h * 0.86f, textPaint)
+        canvas.drawText(labelText, w / 2f, h - 14f * d, textPaint)
     }
 }
 
 // =========================================================================
-// 4. קנבס מודל אטום בוהר עם מסלולי אלקטרונים לטבלה המחזורית
+// 5. קנבס מודל אטום בוהר עם אנימציית אלקטרונים מסתובבים בזמן אמת!
 // =========================================================================
 class BohrAtomCanvasView(context: Context, private val activity: MainActivity) : View(context) {
     var symbol: String = "Au"
     var atomicNumber: Int = 79
-    var atomicMass: String = "196.97"
+    var shellsConfig: List<Int> = listOf(2, 8, 18, 32, 18, 1)
+    private var phaseAngle: Float = 0f
 
-    private val orbitPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 3f }
+    private val orbitPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val electronPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; textSize = 44f; textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT_BOLD }
+    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.DEFAULT_BOLD
+    }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        val d = resources.displayMetrics.density
+        orbitPaint.strokeWidth = 1.3f * d
         val cx = width / 2f
         val cy = height / 2f
-        val maxR = min(width, height) * 0.42f
+        val maxR = min(width, height) * 0.43f
         val accent = if (activity.isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else activity.primaryColor
 
-        orbitPaint.color = Color.argb(120, Color.red(accent), Color.green(accent), Color.blue(accent))
+        orbitPaint.color = Color.argb(105, Color.red(accent), Color.green(accent), Color.blue(accent))
         electronPaint.color = accent
 
-        val shells = when {
-            atomicNumber <= 2 -> listOf(atomicNumber)
-            atomicNumber <= 10 -> listOf(2, atomicNumber - 2)
-            atomicNumber <= 18 -> listOf(2, 8, atomicNumber - 10)
-            else -> listOf(2, 8, 18, (atomicNumber - 28).coerceAtMost(12))
-        }
+        val activeShells = shellsConfig.ifEmpty { listOf(1) }
+        val stepR = (maxR * 0.70f) / activeShells.size.coerceAtLeast(1)
 
-        for ((idx, count) in shells.withIndex()) {
-            val r = maxR * (0.38f + idx * 0.18f)
+        for ((idx, count) in activeShells.withIndex()) {
+            val r = maxR * 0.26f + (idx + 1) * stepR
             canvas.drawCircle(cx, cy, r, orbitPaint)
+            val speedDir = if (idx % 2 == 0) 1f else -0.7f
+            val baseRot = Math.toRadians((phaseAngle * speedDir * (1.2f - idx * 0.12f)).toDouble())
             for (e in 0 until count) {
-                val angle = (2.0 * PI * e) / count
+                val angle = baseRot + (2.0 * PI * e) / count.coerceAtLeast(1)
                 val ex = (cx + cos(angle) * r).toFloat()
                 val ey = (cy + sin(angle) * r).toFloat()
-                canvas.drawCircle(ex, ey, 8f, electronPaint)
+                canvas.drawCircle(ex, ey, 3.6f * d, electronPaint)
             }
         }
 
-        canvas.drawCircle(cx, cy, maxR * 0.24f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(200, Color.red(accent), Color.green(accent), Color.blue(accent)) })
-        textPaint.textSize = 42f
-        canvas.drawText(symbol, cx, cy + 14f, textPaint)
+        val nucR = maxR * 0.20f
+        canvas.drawCircle(
+            cx, cy, nucR,
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.argb(215, Color.red(accent), Color.green(accent), Color.blue(accent))
+            }
+        )
+        textPaint.textSize = (nucR * 0.85f).coerceAtLeast(14f * d)
+        canvas.drawText(symbol, cx, cy + textPaint.textSize * 0.34f, textPaint)
+
+        phaseAngle = (phaseAngle + 1.4f) % 360f
+        if (isAttachedToWindow) {
+            postInvalidateOnAnimation()
+        }
     }
 }
 
 // =========================================================================
-// 5. קנבס מד-זווית אינטראקטיבי (0°-180°) + סרגל מכויל בסנטימטרים
+// 6. קנבס מד-זווית דו-זרועי אינטראקטיבי + סרגל קליבר נגרר
 // =========================================================================
 class ProtractorRulerCanvasView(context: Context, private val activity: MainActivity) : View(context) {
-    var measuredAngle: Float = 45f
+    var angleArmA: Float = 25f
+    var angleArmB: Float = 115f
+    var caliperCm: Float = 3.5f
 
-    private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; strokeWidth = 3f; style = Paint.Style.STROKE }
-    private val armPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeWidth = 7f; style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
-    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; textSize = 34f; typeface = Typeface.DEFAULT_BOLD }
+    private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; style = Paint.Style.STROKE }
+    private val armAPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
+    private val armBPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; color = Color.parseColor("#FF9F0A") }
+    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; typeface = Typeface.DEFAULT_BOLD }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_MOVE) {
             parent?.requestDisallowInterceptTouchEvent(true)
-            val originX = width * 0.55f
-            val originY = height * 0.72f
-            val dx = event.x - originX
-            val dy = originY - event.y
-            var deg = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat()
-            if (deg < 0f) deg = 0f
-            if (deg > 180f) deg = 180f
-            measuredAngle = deg
+            val d = resources.displayMetrics.density
+            if (event.x < 95f * d) {
+                val dpi = resources.displayMetrics.ydpi.coerceAtLeast(160f)
+                val pxPerCm = dpi / 2.54f
+                caliperCm = ((event.y - 20f * d) / pxPerCm).coerceIn(0.1f, 12f)
+            } else {
+                val ox = width * 0.62f
+                val oy = height * 0.72f
+                val dx = event.x - ox
+                val dy = oy - event.y
+                val deg = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat().coerceIn(0f, 180f)
+                if (abs(deg - angleArmA) <= abs(deg - angleArmB)) {
+                    angleArmA = deg
+                } else {
+                    angleArmB = deg
+                }
+            }
             invalidate()
             return true
         }
@@ -268,49 +479,68 @@ class ProtractorRulerCanvasView(context: Context, private val activity: MainActi
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        val d = resources.displayMetrics.density
         val accent = if (activity.isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else activity.primaryColor
-        armPaint.color = accent
+        linePaint.strokeWidth = 1.4f * d
+        armAPaint.strokeWidth = 3.2f * d
+        armAPaint.color = accent
+        armBPaint.strokeWidth = 3.2f * d
 
-        // סרגל מכויל בצד שמאל
+        // סרגל מכויל בצד שמאל + קליבר מדידה
         val dpi = resources.displayMetrics.ydpi.coerceAtLeast(160f)
         val pxPerCm = dpi / 2.54f
-        var y = 30f
+        val topOffset = 20f * d
+        var y = topOffset
         var cm = 0
-        while (y < height - 20f) {
-            canvas.drawLine(0f, y, 75f, y, linePaint)
-            canvas.drawText("${cm}cm", 85f, y + 10f, textPaint.apply { textSize = 26f })
+        textPaint.textSize = 11f * d
+        while (y < height - 15f * d) {
+            canvas.drawLine(0f, y, 36f * d, y, linePaint)
+            canvas.drawText("${cm}cm", 40f * d, y + 4f * d, textPaint)
             for (mm in 1..9) {
                 val my = y + (mm / 10f) * pxPerCm
-                if (my < height) canvas.drawLine(0f, my, if (mm == 5) 50f else 28f, my, linePaint)
+                if (my < height) {
+                    canvas.drawLine(0f, my, if (mm == 5) 25f * d else 14f * d, my, linePaint)
+                }
             }
             cm++
             y += pxPerCm
         }
 
-        // מד-זווית אינטראקטיבי במרכז-ימין
-        val ox = width * 0.58f
-        val oy = height * 0.72f
-        val r = min(width * 0.36f, height * 0.52f)
-        val arcRect = RectF(ox - r, oy - r, ox + r, oy + r)
-        canvas.drawArc(arcRect, 180f, 180f, true, linePaint)
+        // קו קליבר נגרר על הסרגל
+        val caliperY = topOffset + caliperCm * pxPerCm
+        canvas.drawLine(0f, caliperY, 85f * d, caliperY, armBPaint)
 
-        for (d in 0..180 step 15) {
-            val rad = Math.toRadians(d.toDouble())
-            val x1 = (ox + cos(rad) * (r * 0.85f)).toFloat()
-            val y1 = (oy - sin(rad) * (r * 0.85f)).toFloat()
+        // מד-זווית דו-זרועי במרכז-ימין
+        val ox = width * 0.62f
+        val oy = height * 0.72f
+        val r = min(width * 0.34f, height * 0.52f)
+        canvas.drawArc(RectF(ox - r, oy - r, ox + r, oy + r), 180f, 180f, true, linePaint)
+
+        for (deg in 0..180 step 15) {
+            val rad = Math.toRadians(deg.toDouble())
+            val x1 = (ox + cos(rad) * (r * 0.86f)).toFloat()
+            val y1 = (oy - sin(rad) * (r * 0.86f)).toFloat()
             val x2 = (ox + cos(rad) * r).toFloat()
             val y2 = (oy - sin(rad) * r).toFloat()
             canvas.drawLine(x1, y1, x2, y2, linePaint)
         }
 
-        val radSel = Math.toRadians(measuredAngle.toDouble())
-        val tx = (ox + cos(radSel) * r * 1.05f).toFloat()
-        val ty = (oy - sin(radSel) * r * 1.05f).toFloat()
-        canvas.drawLine(ox, oy, tx, ty, armPaint)
-        canvas.drawCircle(ox, oy, 12f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent })
+        val radA = Math.toRadians(angleArmA.toDouble())
+        val radB = Math.toRadians(angleArmB.toDouble())
+        canvas.drawLine(ox, oy, (ox + cos(radA) * r * 1.05f).toFloat(), (oy - sin(radA) * r * 1.05f).toFloat(), armAPaint)
+        canvas.drawLine(ox, oy, (ox + cos(radB) * r * 1.05f).toFloat(), (oy - sin(radB) * r * 1.05f).toFloat(), armBPaint)
+        canvas.drawCircle(ox, oy, 5f * d, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent })
 
-        textPaint.textSize = 38f
-        canvas.drawText("זווית נמדדת (גרור באצבע): ${Utils.formatResult(measuredAngle.toDouble(), 1)}°", ox - r * 0.85f, oy + 75f, textPaint)
+        val deltaAngle = abs(angleArmB - angleArmA)
+        textPaint.textSize = 13.5f * d
+        textPaint.textAlign = Paint.Align.CENTER
+        canvas.drawText(
+            "Δ זווית: ${Utils.formatResult(deltaAngle.toDouble(), 1)}°  |  קליבר: ${Utils.formatResult(caliperCm.toDouble(), 2)} ס״מ (${Utils.formatResult(caliperCm / 2.54, 2)}\")",
+            ox - r * 0.1f,
+            height - 12f * d,
+            textPaint
+        )
+        textPaint.textAlign = Paint.Align.LEFT
     }
 }
  
