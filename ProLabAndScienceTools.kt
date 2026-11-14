@@ -18,10 +18,21 @@ import android.widget.*
 import kotlin.math.*
 import kotlin.random.Random
 
-// עזר ליצירת כותרת קנבה מעוצבת לכל מסך Pro
+// כותרת קנבה מעוצבת לכל מסך Pro הכוללת סרגל שבבי מועדפים וכפתור כוכב להוספה/הסרה מהמועדפים
 fun MainActivity.createProCanvaHeader(title: String, subtitle: String): LinearLayout {
     val accent = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
-    return LinearLayout(this).apply {
+    val outerWrapper = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        )
+    }
+
+    // סרגל גישה מהירה למועדפים בראש המסך
+    outerWrapper.addView(createFavoritesQuickChipsBar())
+
+    val card = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(18f), dp(14f), dp(18f), dp(14f))
         background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProCanvaHeader, 22f)
@@ -30,23 +41,77 @@ fun MainActivity.createProCanvaHeader(title: String, subtitle: String): LinearLa
             cornerRadius = dp(22f).toFloat()
             setStroke(dp(1.5f), accent)
         }
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(14f) }
-        addView(TextView(this@createProCanvaHeader).apply {
-            text = IosGlassTheme.cleanCategoryTitle(title, isCleanGlassActive)
-            setTextColor(Color.WHITE); textSize = 19f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.RIGHT
-        })
-        addView(TextView(this@createProCanvaHeader).apply {
-            text = subtitle
-            setTextColor(accent); textSize = 13.5f; gravity = Gravity.RIGHT; setPadding(0, dp(4f), 0, 0)
-        })
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply { bottomMargin = dp(14f) }
+    }
+
+    val topRow = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+    }
+
+    val isFav = ProFavoritesEngine.isFavoriteTab(prefs, currentTabIndex)
+    val starBtn = TextView(this).apply {
+        text = if (isFav) "⭐ במועדפים" else "☆ מועדף"
+        setTextColor(if (isFav) Color.parseColor("#FFD700") else Color.WHITE)
+        textSize = 13f
+        typeface = Typeface.DEFAULT_BOLD
+        setPadding(dp(10f), dp(5f), dp(10f), dp(5f))
+        background = GradientDrawable().apply {
+            setColor(Color.argb(45, 255, 255, 255))
+            cornerRadius = dp(50f).toFloat()
+        }
+        setOnClickListener {
+            feedback(it)
+            val nowFav = ProFavoritesEngine.toggleFavoriteTab(this@createProCanvaHeader, currentTabIndex)
+            text = if (nowFav) "⭐ במועדפים" else "☆ מועדף"
+            setTextColor(if (nowFav) Color.parseColor("#FFD700") else Color.WHITE)
+        }
+    }
+
+    val titleTv = TextView(this).apply {
+        text = IosGlassTheme.cleanCategoryTitle(title, isCleanGlassActive)
+        setTextColor(Color.WHITE)
+        textSize = 18.5f
+        typeface = Typeface.DEFAULT_BOLD
+        gravity = Gravity.RIGHT
+        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+            leftMargin = dp(8f)
+        }
+    }
+
+    topRow.addView(starBtn)
+    topRow.addView(titleTv)
+    card.addView(topRow)
+
+    card.addView(TextView(this).apply {
+        text = subtitle
+        setTextColor(accent)
+        textSize = 13.5f
+        gravity = Gravity.RIGHT
+        setPadding(0, dp(4f), 0, 0)
+    })
+
+    outerWrapper.addView(card)
+    return outerWrapper
+}
+
+// כפתור לשמירת ונעיצת תוצאת החישוב הנוכחית במרכז המועדפים
+fun MainActivity.createPinResultButton(resTv: TextView): TextView {
+    return createActionBtn("📌 נעץ תוצאה זו במועדפים עם הערה", false) {
+        ProFavoritesEngine.showPinResultDialog(this, resTv.text.toString())
     }
 }
 
-// 1. מסך אישי: קודי צבע של נגדים עם הדמיית נגד חיה בקנבה
+// =========================================================================
+// 1. מסך אישי: קודי צבע של נגדים (4 ו-5 פסים + חיפוש הפוך מהתנגדות לצבעים!)
+// =========================================================================
 fun MainActivity.createProResistorScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("🎨 קודי צבע של נגדים (4/5 פסים)", "בחר צבע לכל פס לצפייה חיה בנגד וחישוב ההתנגדות"))
+    root.addView(createProCanvaHeader("🎨 קודי צבע של נגדים (4/5 פסים + חיפוש הפוך)", "פענוח צבעי נגדים ל-Ω והמרה הפוכה מערך התנגדות לצבעים"))
 
     val colors = listOf(
         Triple("שחור (0)", 0, Color.BLACK), Triple("חום (1)", 1, Color.rgb(121, 85, 72)),
@@ -59,190 +124,320 @@ fun MainActivity.createProResistorScreen(): View {
         "זהב (±5%)" to Color.rgb(212, 175, 55),
         "כסף (±10%)" to Color.rgb(192, 192, 192),
         "חום (±1%)" to Color.rgb(121, 85, 72),
-        "אדום (±2%)" to Color.rgb(229, 57, 53)
+        "אדום (±2%)" to Color.rgb(229, 57, 53),
+        "ירוק (±0.5%)" to Color.rgb(67, 160, 71)
     )
 
-    var b1 = 1; var b2 = 0; var mult = 2; var tol = 0
+    var isFiveBand = false
+    var b1 = 1; var b2 = 0; var b3 = 0; var mult = 2; var tol = 0
+
     val canvasView = ResistorVisualCanvasView(this).apply {
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(190f)).apply { bottomMargin = dp(12f) }
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(185f)).apply { bottomMargin = dp(12f) }
         background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProResistorScreen, 20f)
         else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(20f).toFloat() }
     }
     val resTv = createResultTextView()
 
+    val modeBtn = createActionBtn("מצב נגד: 4 פסים (לחץ למעבר ל-5 פסים)", false) {}
+    val btn1 = createActionBtn("פס 1: ${colors[b1].first}", false) {}
+    val btn2 = createActionBtn("פס 2: ${colors[b2].first}", false) {}
+    val btn3 = createActionBtn("פס 3: ${colors[b3].first}", false).apply { visibility = View.GONE }
+    val btnM = createActionBtn("מכפיל: ×10^$mult (${colors[mult].first})", false) {}
+    val btnT = createActionBtn("דיוק: ${tolerances[tol].first}", false) {}
+
     fun updateResistor() {
-        val ohms = (b1 * 10 + b2) * 10.0.pow(mult)
+        val baseDigits = if (isFiveBand) (b1 * 100 + b2 * 10 + b3) else (b1 * 10 + b2)
+        val ohms = baseDigits * 10.0.pow(mult)
         val formatted = when {
             ohms >= 1e6 -> "${Utils.formatResult(ohms / 1e6, 2)} MΩ"
             ohms >= 1e3 -> "${Utils.formatResult(ohms / 1e3, 2)} kΩ"
             else -> "${Utils.formatResult(ohms, 2)} Ω"
         }
-        canvasView.bandColors = intArrayOf(colors[b1].third, colors[b2].third, colors[mult].third, tolerances[tol].second)
+        canvasView.bandColors = if (isFiveBand) {
+            intArrayOf(colors[b1].third, colors[b2].third, colors[b3].third, colors[mult].third, tolerances[tol].second)
+        } else {
+            intArrayOf(colors[b1].third, colors[b2].third, colors[mult].third, tolerances[tol].second)
+        }
         canvasView.labelText = "$formatted  ${tolerances[tol].first}"
         canvasView.invalidate()
+        btn1.text = "פס 1: ${colors[b1].first}"
+        btn2.text = "פס 2: ${colors[b2].first}"
+        btn3.text = "פס 3: ${colors[b3].first}"
+        btnM.text = "מכפיל: ×10^$mult (${colors[mult].first})"
         resTv.text = "התנגדות: $formatted (${Utils.formatResult(ohms, 0)} Ω)\nדיוק: ${tolerances[tol].first}"
     }
 
-    val btn1 = createActionBtn("פס 1: ${colors[b1].first}", false) {}
-    val btn2 = createActionBtn("פס 2: ${colors[b2].first}", false) {}
-    val btnM = createActionBtn("מכפיל: ×10^$mult (${colors[mult].first})", false) {}
-    val btnT = createActionBtn("דיוק: ${tolerances[tol].first}", false) {}
+    modeBtn.setOnClickListener {
+        feedback(it)
+        isFiveBand = !isFiveBand
+        modeBtn.text = if (isFiveBand) "מצב נגד: 5 פסים מדויק (לחץ ל-4 פסים)" else "מצב נגד: 4 פסים (לחץ למעבר ל-5 פסים)"
+        btn3.visibility = if (isFiveBand) View.VISIBLE else View.GONE
+        updateResistor()
+    }
 
-    btn1.setOnClickListener { showItemPicker("בחר צבע פס 1", colors.map { it.first }) { c -> b1 = colors.indexOfFirst { it.first == c }; btn1.text = "פס 1: $c"; updateResistor() } }
-    btn2.setOnClickListener { showItemPicker("בחר צבע פס 2", colors.map { it.first }) { c -> b2 = colors.indexOfFirst { it.first == c }; btn2.text = "פס 2: $c"; updateResistor() } }
-    btnM.setOnClickListener { showItemPicker("בחר מכפיל", colors.map { it.first }) { c -> mult = colors.indexOfFirst { it.first == c }; btnM.text = "מכפיל: $c"; updateResistor() } }
+    btn1.setOnClickListener { showItemPicker("בחר צבע פס 1", colors.map { it.first }) { c -> b1 = colors.indexOfFirst { it.first == c }; updateResistor() } }
+    btn2.setOnClickListener { showItemPicker("בחר צבע פס 2", colors.map { it.first }) { c -> b2 = colors.indexOfFirst { it.first == c }; updateResistor() } }
+    btn3.setOnClickListener { showItemPicker("בחר צבע פס 3", colors.map { it.first }) { c -> b3 = colors.indexOfFirst { it.first == c }; updateResistor() } }
+    btnM.setOnClickListener { showItemPicker("בחר מכפיל", colors.map { it.first }) { c -> mult = colors.indexOfFirst { it.first == c }; updateResistor() } }
     btnT.setOnClickListener { showItemPicker("בחר דיוק", tolerances.map { it.first }) { c -> tol = tolerances.indexOfFirst { it.first == c }; btnT.text = "דיוק: $c"; updateResistor() } }
 
+    // מנוע חיפוש הפוך: מהתנגדות באוהם לצבעי הפסים
+    val reverseIn = createInputBox("🔄 חיפוש הפוך: הזן התנגדות ב-Ω (למשל 4700) למציאת הצבעים")
+    val reverseBtn = createActionBtn("מצא פסי צבע לפי התנגדות 🔄") {
+        val targetOhms = reverseIn.text.toString().toDoubleOrNull()
+        if (targetOhms != null && targetOhms >= 10) {
+            var v = targetOhms
+            var m = 0
+            val maxBase = if (isFiveBand) 999.0 else 99.0
+            while (v > maxBase && m < 9) { v /= 10.0; m++ }
+            val rounded = v.roundToInt()
+            if (isFiveBand) {
+                b1 = (rounded / 100).coerceIn(0, 9)
+                b2 = ((rounded / 10) % 10).coerceIn(0, 9)
+                b3 = (rounded % 10).coerceIn(0, 9)
+            } else {
+                b1 = (rounded / 10).coerceIn(0, 9)
+                b2 = (rounded % 10).coerceIn(0, 9)
+            }
+            mult = m.coerceIn(0, 9)
+            updateResistor()
+        }
+    }
+
     updateResistor()
-    root.addView(canvasView); root.addView(btn1); root.addView(btn2); root.addView(btnM); root.addView(btnT); root.addView(resTv)
+    root.addView(canvasView); root.addView(modeBtn); root.addView(btn1); root.addView(btn2); root.addView(btn3)
+    root.addView(btnM); root.addView(btnT); root.addView(reverseIn); root.addView(reverseBtn)
+    root.addView(createPinResultButton(resTv)); root.addView(resTv)
     scroll.addView(root); return scroll
 }
 
-// 2. מסך אישי: מפענח קבלים ואנרגיית קבל עם הדמיית קבל קרמי בקנבה
+// =========================================================================
+// 2. מסך אישי: מפענח קבלים, אות דיוק, היגב קיבולי (Xc) ואנרגיה אגורה
+// =========================================================================
 fun MainActivity.createProCapacitorScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("🔋 מפענח קודי קבלים ואנרגיה אגורה", "פענוח קוד 3 ספרות (כגון 104 / 472) וחישוב מטען ואנרגיה"))
+    root.addView(createProCanvaHeader("🔋 מפענח קודי קבלים, היגב Xc ואנרגיה", "פענוח קוד 3 ספרות + אות טולרנס (כגון 104K), מטען והיגב קיבולי"))
 
-    var capCodeText = "104"
+    var capCodeText = "104K"
     val capCanvas = object : View(this) {
         private val p = Paint(Paint.ANTI_ALIAS_FLAG)
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
-            val cx = width / 2f; val cy = height * 0.45f
-            p.color = Color.LTGRAY; p.strokeWidth = 10f; p.style = Paint.Style.STROKE
-            canvas.drawLine(cx - 35f, cy + 40f, cx - 35f, height - 15f, p)
-            canvas.drawLine(cx + 35f, cy + 40f, cx + 35f, height - 15f, p)
+            val d = resources.displayMetrics.density
+            val cx = width / 2f; val cy = height * 0.44f
+            p.color = Color.LTGRAY; p.strokeWidth = 3.5f * d; p.style = Paint.Style.STROKE
+            canvas.drawLine(cx - 14f * d, cy + 16f * d, cx - 14f * d, height - 8f * d, p)
+            canvas.drawLine(cx + 14f * d, cy + 16f * d, cx + 14f * d, height - 8f * d, p)
             p.color = Color.parseColor("#FFB74D"); p.style = Paint.Style.FILL
-            canvas.drawCircle(cx, cy, 78f, p)
-            p.color = Color.BLACK; p.textSize = 46f; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
-            canvas.drawText(capCodeText, cx, cy + 16f, p)
+            canvas.drawCircle(cx, cy, 32f * d, p)
+            p.color = Color.BLACK; p.textSize = 15f * d; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
+            canvas.drawText(capCodeText, cx, cy + 5f * d, p)
         }
-    }.apply { layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(180f)).apply { bottomMargin = dp(12f) } }
+    }.apply { layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(165f)).apply { bottomMargin = dp(12f) } }
 
-    val codeIn = createInputBox("קוד קבל בן 3 ספרות (למשל 104, 472, 223)").apply { setText("104") }
-    val voltIn = createInputBox("מתח עבודה בוולט (V) לחישוב אנרגיה").apply { setText("12") }
+    val codeIn = createInputBox("קוד קבל (למשל 104, 472K, 223J)").apply { inputType = InputType.TYPE_CLASS_TEXT; setText("104K") }
+    val voltIn = createInputBox("מתח עבודה בוולט (V)").apply { setText("12") }
+    val freqIn = createInputBox("תדר עבודה בהרץ (Hz - לחישוב היגב Xc)").apply { setText("1000") }
     val resTv = createResultTextView()
 
+    val tolLetters = mapOf('F' to "±1%", 'G' to "±2%", 'J' to "±5%", 'K' to "±10%", 'M' to "±20%", 'Z' to "+80%/-20%")
+
     fun calcCap() {
-        val s = codeIn.text.toString().trim()
+        val raw = codeIn.text.toString().trim().uppercase()
+        val digits = raw.take(3)
+        val letter = raw.drop(3).firstOrNull()
         val v = voltIn.text.toString().toDoubleOrNull() ?: 12.0
-        if (s.length == 3 && s.all { it.isDigit() }) {
-            capCodeText = s
+        val f = (freqIn.text.toString().toDoubleOrNull() ?: 1000.0).coerceAtLeast(0.1)
+
+        if (digits.length == 3 && digits.all { it.isDigit() }) {
+            capCodeText = raw
             capCanvas.invalidate()
-            val pf = s.substring(0, 2).toDouble() * 10.0.pow(s[2].digitToInt())
+            val pf = digits.substring(0, 2).toDouble() * 10.0.pow(digits[2].digitToInt())
             val nf = pf / 1000.0
             val uf = nf / 1000.0
-            val farad = uf * 1e-6
+            val farad = pf * 1e-12
             val energyJ = 0.5 * farad * v * v
-            resTv.text = "קיבול הקבל (קוד $s):\n• ${Utils.formatResult(pf, 2)} pF\n• ${Utils.formatResult(nf, 4)} nF\n• ${Utils.formatResult(uf, 6)} µF\n\nאנרגיה אגורה ב-${Utils.formatResult(v, 1)}V: ${Utils.formatResult(energyJ * 1000, 4)} mJ"
-        } else resTv.text = "נא להזין קוד בן 3 ספרות בדיוק (למשל 104)"
+            val chargeC = farad * v
+            val xc = 1.0 / (2.0 * PI * f * farad)
+            val tolStr = letter?.let { tolLetters[it] } ?: "תקני"
+
+            resTv.text = "קיבול הקבל (קוד $raw | דיוק $tolStr):\n" +
+                    "• ${Utils.formatResult(pf, 2)} pF  |  ${Utils.formatResult(nf, 4)} nF  |  ${Utils.formatResult(uf, 6)} µF\n" +
+                    "• היגב קיבולי ב-${Utils.formatResult(f, 0)}Hz: Xc = ${Utils.formatResult(xc, 2)} Ω\n" +
+                    "• מטען ב-${Utils.formatResult(v, 1)}V: Q = ${Utils.formatResult(chargeC * 1e6, 2)} µC\n" +
+                    "• אנרגיה אגורה: E = ${Utils.formatResult(energyJ * 1000, 4)} mJ"
+        } else resTv.text = "נא להזין קוד תקין שמתחיל ב-3 ספרות (למשל 104 או 472K)"
     }
 
-    val btn = createActionBtn("פענח קוד קבל וחשב אנרגיה ⚡") { calcCap() }
+    val btn = createActionBtn("פענח קוד קבל, היגב ואנרגיה ⚡") { calcCap() }
     calcCap()
-    root.addView(capCanvas); root.addView(codeIn); root.addView(voltIn); root.addView(btn); root.addView(resTv)
+    root.addView(capCanvas); root.addView(codeIn); root.addView(voltIn); root.addView(freqIn)
+    root.addView(btn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
     scroll.addView(root); return scroll
 }
 
-// 3. מסך אישי: עוביי חוטים AWG / SWG ומפל מתח עם שרטוט חתך כבל
+// =========================================================================
+// 3. מסך אישי: עוביי חוטים AWG / SWG, נחושת/אלומיניום ומפל מתח
+// =========================================================================
 fun MainActivity.createProAwgWireScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("🔌 עוביי חוטים AWG/SWG ומפל מתח", "חישוב קוטר מוליך, שטח חתך (mm²), זרם מרבי ומפל מתח"))
+    root.addView(createProCanvaHeader("🔌 עוביי חוטים AWG/SWG ומפל מתח", "נחושת מול אלומיניום, שטח חתך (mm²), זרם מרבי ואחוז מפל מתח"))
 
     var currentDiamMm = 1.628f
+    var isCopper = true
     val wireCanvas = object : View(this) {
         private val p = Paint(Paint.ANTI_ALIAS_FLAG)
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
+            val d = resources.displayMetrics.density
             val cx = width / 2f; val cy = height / 2f
             val rOuter = min(width, height) * 0.38f
-            val rInner = (rOuter * (currentDiamMm / 8f).coerceIn(0.18f, 0.85f))
+            val rInner = (rOuter * (currentDiamMm / 8f).coerceIn(0.22f, 0.85f))
             p.color = Color.parseColor("#37474F"); p.style = Paint.Style.FILL
             canvas.drawCircle(cx, cy, rOuter, p)
-            p.color = Color.parseColor("#D87A3E")
+            p.color = if (isCopper) Color.parseColor("#D87A3E") else Color.parseColor("#B0BEC5")
             canvas.drawCircle(cx, cy, rInner, p)
-            p.color = Color.WHITE; p.textSize = 32f; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
-            canvas.drawText("Ø ${Utils.formatResult(currentDiamMm.toDouble(), 2)} mm", cx, cy + 12f, p)
+            p.color = Color.WHITE; p.textSize = 13f * d; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
+            canvas.drawText("Ø ${Utils.formatResult(currentDiamMm.toDouble(), 2)} mm (${if (isCopper) "Cu" else "Al"})", cx, cy + 5f * d, p)
         }
-    }.apply { layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(175f)).apply { bottomMargin = dp(12f) } }
+    }.apply { layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(165f)).apply { bottomMargin = dp(12f) } }
 
+    val matBtn = createActionBtn("חומר מוליך: נחושת (Copper Cu)", false) {}
     val awgIn = createInputBox("מספר AWG (0 עד 40, למשל 14)").apply { setText("14") }
-    val lenIn = createInputBox("אורך כבל במטרים (לחישוב מפל מתח)").apply { setText("20") }
-    val ampIn = createInputBox("זרם עבודה באמפר (A)").apply { setText("10") }
+    val lenIn = createInputBox("אורך כבל במטרים").apply { setText("25") }
+    val ampIn = createInputBox("זרם עבודה באמפר (A)").apply { setText("16") }
+    val sysVoltIn = createInputBox("מתח מערכת בוולט (למשל 230V או 12V)").apply { setText("230") }
     val resTv = createResultTextView()
 
-    val btn = createActionBtn("חשב חתך חוט ומפל מתח 🔌") {
+    fun calcWire() {
         val n = (awgIn.text.toString().toIntOrNull() ?: 14).coerceIn(0, 40)
-        val lengthM = lenIn.text.toString().toDoubleOrNull() ?: 20.0
-        val currentA = ampIn.text.toString().toDoubleOrNull() ?: 10.0
+        val lengthM = lenIn.text.toString().toDoubleOrNull() ?: 25.0
+        val currentA = ampIn.text.toString().toDoubleOrNull() ?: 16.0
+        val sysV = (sysVoltIn.text.toString().toDoubleOrNull() ?: 230.0).coerceAtLeast(1.0)
         val diamMm = 0.127 * 92.0.pow((36.0 - n) / 39.0)
         currentDiamMm = diamMm.toFloat()
         wireCanvas.invalidate()
+
         val areaMm2 = (PI / 4.0) * diamMm * diamMm
-        val ohmPerKm = 17.241 / areaMm2
+        val resistivity = if (isCopper) 17.241 else 28.2
+        val ohmPerKm = resistivity / areaMm2
         val vDrop = 2.0 * lengthM * currentA * (ohmPerKm / 1000.0)
-        resTv.text = "חוט AWG #$n:\n• קוטר מוליך: ${Utils.formatResult(diamMm, 3)} מ״מ\n• שטח חתך: ${Utils.formatResult(areaMm2, 3)} ממ״ר (mm²)\n• התנגדות: ${Utils.formatResult(ohmPerKm, 2)} Ω/km\n• זרם מרבי מומלץ: ~${Utils.formatResult(areaMm2 * 6.0, 1)} A\n• מפל מתח ל-${Utils.formatResult(lengthM, 0)} מטר: ${Utils.formatResult(vDrop, 2)} V"
+        val vDropPct = (vDrop / sysV) * 100.0
+
+        resTv.text = "חוט AWG #$n (${if (isCopper) "נחושת" else "אלומיניום"}):\n" +
+                "• קוטר מוליך: ${Utils.formatResult(diamMm, 3)} מ״מ | שטח חתך: ${Utils.formatResult(areaMm2, 3)} mm²\n" +
+                "• התנגדות לק״מ: ${Utils.formatResult(ohmPerKm, 2)} Ω/km\n" +
+                "• זרם מרבי מומלץ: ~${Utils.formatResult(areaMm2 * (if (isCopper) 6.0 else 4.5), 1)} A\n" +
+                "• מפל מתח ל-${Utils.formatResult(lengthM, 0)} מ׳: ${Utils.formatResult(vDrop, 2)}V (${Utils.formatResult(vDropPct, 2)}%)"
     }
-    btn.performClick()
-    root.addView(wireCanvas); root.addView(awgIn); root.addView(lenIn); root.addView(ampIn); root.addView(btn); root.addView(resTv)
+
+    matBtn.setOnClickListener {
+        feedback(it)
+        isCopper = !isCopper
+        matBtn.text = if (isCopper) "חומר מוליך: נחושת (Copper Cu)" else "חומר מוליך: אלומיניום (Aluminum Al)"
+        calcWire()
+    }
+    val btn = createActionBtn("חשב חתך חוט ומפל מתח 🔌") { calcWire() }
+    calcWire()
+    root.addView(wireCanvas); root.addView(matBtn); root.addView(awgIn); root.addView(lenIn)
+    root.addView(ampIn); root.addView(sysVoltIn); root.addView(btn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
     scroll.addView(root); return scroll
 }
 
-// 4. מסך אישי: מעבדת חוק אוהם, הספק, מחלק מתח וחיי סוללה
+// =========================================================================
+// 4. מסך אישי: מעבדת חוק אוהם, הספק, מחלק מתח, נגד ל-LED וחיי סוללה
+// =========================================================================
 fun MainActivity.createProOhmAndPowerScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("⚡ מעבדת חוק אוהם, הספק וחיי סוללה", "חישוב מתח (V), זרם (I), התנגדות (R), הספק (P) וזמן סוללה"))
+    root.addView(createProCanvaHeader("⚡ מעבדת חוק אוהם, מחלק מתח וזמן סוללה", "חישוב V/I/R/P, מחלק מתח (Voltage Divider), נגד טורי ל-LED וחיי סוללה"))
 
-    val vIn = createInputBox("מתח חשמלי (V - וולט)").apply { setText("12") }
-    val iIn = createInputBox("זרם חשמלי (I - אמפר)").apply { setText("2") }
-    val mahIn = createInputBox("קיבולת סוללה ב-mAh (אופציונלי, למשל 5000)").apply { setText("5000") }
+    val vIn = createInputBox("מתח מקור (V - וולט)").apply { setText("12") }
+    val iIn = createInputBox("זרם במעגל (I - אמפר)").apply { setText("2") }
+    val r1In = createInputBox("נגד R1 למחלק מתח (Ω)").apply { setText("1000") }
+    val r2In = createInputBox("נגד R2 למחלק מתח (Ω)").apply { setText("2000") }
+    val mahIn = createInputBox("קיבולת סוללה ב-mAh").apply { setText("5000") }
     val resTv = createResultTextView()
 
-    val btn = createActionBtn("חשב חוק אוהם, הספק וזמן סוללה ⚡") {
-        val v = vIn.text.toString().toDoubleOrNull() ?: 0.0
-        val i = iIn.text.toString().toDoubleOrNull() ?: 0.0
-        val mah = mahIn.text.toString().toDoubleOrNull() ?: 0.0
-        if (v > 0 && i > 0) {
-            val r = v / i
-            val p = v * i
-            val batteryHours = if (mah > 0) (mah / (i * 1000.0)) * 0.85 else 0.0
-            resTv.text = "תוצאות מעגל חשמלי:\n• הספק (P = V×I): ${Utils.formatResult(p, 2)} W\n• התנגדות (R = V/I): ${Utils.formatResult(r, 2)} Ω\n• עלות הפעלה ל-24 שעות: ₪${Utils.formatResult((p / 1000.0) * 24.0 * 0.62, 2)}\n" +
-                    if (batteryHours > 0) "• זמן סוללה (${Utils.formatResult(mah, 0)}mAh): ${Utils.formatResult(batteryHours, 2)} שעות" else ""
-        } else resTv.text = "נא להזין מתח וזרם חיוביים"
+    val btn = createActionBtn("חשב חוק אוהם, מחלק מתח וזמן סוללה ⚡") {
+        val v = vIn.text.toString().toDoubleOrNull() ?: 12.0
+        val i = (iIn.text.toString().toDoubleOrNull() ?: 2.0).coerceAtLeast(0.0001)
+        val r1 = r1In.text.toString().toDoubleOrNull() ?: 1000.0
+        val r2 = r2In.text.toString().toDoubleOrNull() ?: 2000.0
+        val mah = mahIn.text.toString().toDoubleOrNull() ?: 5000.0
+
+        val rOhm = v / i
+        val pWatt = v * i
+        val vOutDivider = if (r1 + r2 > 0) v * (r2 / (r1 + r2)) else 0.0
+        val ledResistor = if (v > 2.0) (v - 2.0) / 0.02 else 0.0
+        val batteryHours = (mah / (i * 1000.0)) * 0.85
+
+        resTv.text = "תוצאות מעבדת חשמל:\n" +
+                "• הספק (P = V×I): ${Utils.formatResult(pWatt, 2)} W | התנגדות (R = V/I): ${Utils.formatResult(rOhm, 2)} Ω\n" +
+                "• מוצא מחלק מתח (Vout): ${Utils.formatResult(vOutDivider, 3)} V\n" +
+                "• נגד מומלץ ל-LED (2V, 20mA): ${Utils.formatResult(ledResistor, 0)} Ω\n" +
+                "• זמן סוללה (${Utils.formatResult(mah, 0)}mAh): ${Utils.formatResult(batteryHours, 2)} שעות"
     }
     btn.performClick()
-    root.addView(vIn); root.addView(iIn); root.addView(mahIn); root.addView(btn); root.addView(resTv)
+    root.addView(vIn); root.addView(iIn); root.addView(r1In); root.addView(r2In); root.addView(mahIn)
+    root.addView(btn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
     scroll.addView(root); return scroll
 }
 
-// 5. מסך אישי: פלס בנאים דו-צירי חי עם בועות זזות בקנבה
+// =========================================================================
+// 5. מסך אישי: פלס בנאים דו-צירי חי עם בועות, כיול משטח (Tare) והקפאה (Hold)
+// =========================================================================
 fun MainActivity.createProSpiritLevelScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("🟢 פלס בנאים דו-צירי חי עם בועות", "מדידת שיפוע ואיזון משטחים בזמן אמת באמצעות חיישני המכשיר"))
+    root.addView(createProCanvaHeader("🟢 פלס בנאים דו-צירי חי עם בועות וכיול", "מדידת שיפוע במעלות, באחוזים וביחס גג (x:12) עם איפוס Tare והקפאה"))
 
+    var isHold = false
     val levelCanvas = SpiritLevelCanvasView(this, this).apply {
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(340f)).apply { bottomMargin = dp(12f) }
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(330f)).apply { bottomMargin = dp(12f) }
         background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProSpiritLevelScreen, 24f)
         else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(24f).toFloat() }
     }
     val resTv = createResultTextView()
 
+    val tareBtn = createActionBtn("🎯 כייל משטח נוכחי כאפס (Tare / Reset Zero)", false) {
+        if (levelCanvas.tareRollOffset == 0f && levelCanvas.tarePitchOffset == 0f) {
+            levelCanvas.tareRollOffset = levelCanvas.rollDeg
+            levelCanvas.tarePitchOffset = levelCanvas.pitchDeg
+            Toast.makeText(this, "המשטח הנוכחי נקבע כנקודת האפס (0°)", Toast.LENGTH_SHORT).show()
+        } else {
+            levelCanvas.tareRollOffset = 0f
+            levelCanvas.tarePitchOffset = 0f
+            Toast.makeText(this, "הכיול אופס לברירת המחדל", Toast.LENGTH_SHORT).show()
+        }
+        levelCanvas.invalidate()
+    }
+
+    val holdBtn = createActionBtn("⏸️ הקפא / שחרר קריאת פלס (Hold)", false) {
+        isHold = !isHold
+        (it as TextView).text = if (isHold) "▶️ שחרר הקפאת קריאה (מוקפא כעת)" else "⏸️ הקפא / שחרר קריאת פלס (Hold)"
+    }
+
     val sm = getSystemService(Context.SENSOR_SERVICE) as? SensorManager
     val accel = sm?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
     val listener = object : SensorEventListener {
         override fun onSensorChanged(e: SensorEvent?) {
-            if (e == null) return
+            if (e == null || isHold) return
             val gx = e.values[0]; val gy = e.values[1]; val gz = e.values[2]
             val pitch = Math.toDegrees(atan2(gy.toDouble(), sqrt((gx * gx + gz * gz).toDouble()))).toFloat()
             val roll = Math.toDegrees(atan2(-gx.toDouble(), gz.toDouble())).toFloat()
             levelCanvas.rollDeg = roll
             levelCanvas.pitchDeg = pitch
             levelCanvas.invalidate()
-            resTv.text = "נטייה אופקית (Roll): ${Utils.formatResult(roll.toDouble(), 1)}°\nנטייה אנכית (Pitch): ${Utils.formatResult(pitch.toDouble(), 1)}°"
+
+            val adjR = roll - levelCanvas.tareRollOffset
+            val adjP = pitch - levelCanvas.tarePitchOffset
+            val maxAngle = hypot(adjR.toDouble(), adjP.toDouble())
+            val roofPitch12 = tan(Math.toRadians(maxAngle)).coerceAtMost(99.0) * 12.0
+            resTv.text = "נטייה אופקית (Roll): ${Utils.formatResult(adjR.toDouble(), 1)}° | אנכית (Pitch): ${Utils.formatResult(adjP.toDouble(), 1)}°\n" +
+                    "שיפוע גג תקני: ${Utils.formatResult(roofPitch12, 1)} : 12"
         }
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
     }
@@ -252,57 +447,85 @@ fun MainActivity.createProSpiritLevelScreen(): View {
         override fun onViewDetachedFromWindow(v: View) { sm?.unregisterListener(listener) }
     })
 
-    root.addView(levelCanvas); root.addView(resTv)
+    root.addView(levelCanvas); root.addView(tareBtn); root.addView(holdBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
     scroll.addView(root); return scroll
 }
 
-// 6. מסך אישי: מצפן מגנטי חי עם שושנת רוחות ומחוג זז בקנבה
+// =========================================================================
+// 6. מסך אישי: מצפן מגנטי חי, נעילת אזימוט יעד וגלאי שדה מגנטי (µT)
+// =========================================================================
 fun MainActivity.createProCompassScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("🧭 מצפן מגנטי חי עם מחוג זז", "מציג אזימוט מעלות וכיוון שמיים בזמן אמת (ניתן גם לסובב במגע)"))
+    root.addView(createProCanvaHeader("🧭 מצפן מגנטי חי, נעילת יעד ושדה (µT)", "מדידת אזימוט, נעילת כיוון הליכה וגלאי מתכות/שדה אלקטרומגנטי"))
 
     val resTv = createResultTextView()
+    lateinit var compassCanvas: CompassRoseCanvasView
+
     fun updateHeadingText(deg: Float) {
         val dirs = listOf("צפון (N)", "צפון-מזרח (NE)", "מזרח (E)", "דרום-מזרח (SE)", "דרום (S)", "דרום-מערב (SW)", "מערב (W)", "צפון-מערב (NW)")
         val idx = (((deg + 22.5f) % 360f) / 45f).toInt().coerceIn(0, 7)
-        resTv.text = "אזימוט נוכחי: ${Utils.formatResult(deg.toDouble(), 1)}°\nכיוון: ${dirs[idx]}"
+        val lockStr = compassCanvas.lockedTargetDeg?.let { target ->
+            val diff = ((deg - target + 540f) % 360f) - 180f
+            "\n🎯 יעד נעול: ${Utils.formatResult(target.toDouble(), 1)}° (סטייה: ${Utils.formatResult(diff.toDouble(), 1)}°)"
+        } ?: ""
+        resTv.text = "אזימוט נוכחי: ${Utils.formatResult(deg.toDouble(), 1)}° | כיוון: ${dirs[idx]}$lockStr"
     }
 
-    val compassCanvas = CompassRoseCanvasView(this, this) { deg -> updateHeadingText(deg) }.apply {
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(330f)).apply { bottomMargin = dp(12f) }
+    compassCanvas = CompassRoseCanvasView(this, this) { deg -> updateHeadingText(deg) }.apply {
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(320f)).apply { bottomMargin = dp(12f) }
         background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProCompassScreen, 24f)
         else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(24f).toFloat() }
     }
     updateHeadingText(0f)
 
+    val lockBtn = createActionBtn("🎯 נעל / שחרר אזימוט יעד נוכחי", false) {
+        if (compassCanvas.lockedTargetDeg == null) {
+            compassCanvas.lockedTargetDeg = compassCanvas.azimuthDeg
+        } else {
+            compassCanvas.lockedTargetDeg = null
+        }
+        compassCanvas.invalidate()
+        updateHeadingText(compassCanvas.azimuthDeg)
+    }
+
     val sm = getSystemService(Context.SENSOR_SERVICE) as? SensorManager
     val oriSensor = sm?.getDefaultSensor(Sensor.TYPE_ORIENTATION)
+    val magSensor = sm?.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+
     val listener = object : SensorEventListener {
         override fun onSensorChanged(e: SensorEvent?) {
-            if (e != null) {
+            if (e == null) return
+            if (e.sensor.type == Sensor.TYPE_ORIENTATION) {
                 compassCanvas.azimuthDeg = e.values[0]
                 compassCanvas.invalidate()
                 updateHeadingText(e.values[0])
+            } else if (e.sensor.type == Sensor.TYPE_MAGNETIC_FIELD) {
+                val bx = e.values[0]; val by = e.values[1]; val bz = e.values[2]
+                compassCanvas.magneticFieldUt = sqrt(bx * bx + by * by + bz * bz)
+                compassCanvas.invalidate()
             }
         }
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
     }
     if (oriSensor != null) sm.registerListener(listener, oriSensor, SensorManager.SENSOR_DELAY_GAME)
+    if (magSensor != null) sm.registerListener(listener, magSensor, SensorManager.SENSOR_DELAY_UI)
     root.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
         override fun onViewAttachedToWindow(v: View) {}
         override fun onViewDetachedFromWindow(v: View) { sm?.unregisterListener(listener) }
     })
 
-    root.addView(compassCanvas); root.addView(resTv)
+    root.addView(compassCanvas); root.addView(lockBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
     scroll.addView(root); return scroll
 }
 
-// 7. מסך אישי: מד-זווית אינטראקטיבי וסרגל מכויל על המסך
+// =========================================================================
+// 7. מסך אישי: מד-זווית דו-זרועי אינטראקטיבי + סרגל וקליבר מכויל
+// =========================================================================
 fun MainActivity.createProRulerProtractorScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("📐 מד-זווית אינטראקטיבי וסרגל מכויל", "גרור את זרוע מד-הזווית על המסך למדידת זוויות או מדוד בסנטימטרים"))
+    root.addView(createProCanvaHeader("📏 מד-זווית דו-זרועי וסרגל קליבר מכויל", "גרור את שתי זרועות מד-הזווית או את קו הקליבר על הסרגל למדידה מדויקת"))
 
     val canvas = ProtractorRulerCanvasView(this, this).apply {
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(430f))
@@ -313,144 +536,253 @@ fun MainActivity.createProRulerProtractorScreen(): View {
     scroll.addView(root); return scroll
 }
 
-// 8. מסך אישי: שעון עצר ומדידת הקפות עם טבעת כרונוגרף חיה
+// =========================================================================
+// 8. מסך אישי: שעון עצר כרונוגרף דו-טבעתי 60FPS + ניתוח הקפות + טיימר
+// =========================================================================
 fun MainActivity.createProStopwatchScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("⏱️ שעון עצר כרונוגרף ומדידת הקפות", "מדידת זמנים מדויקת במאיות שנייה ושמירת הקפות (Laps)"))
+    root.addView(createProCanvaHeader("⏱️ שעון עצר כרונוגרף דו-טבעתי וניתוח הקפות", "טבעת חיצונית לזמן כולל, טבעת פנימית להקפה נוכחית, וזיהוי הקפה מהירה/איטית"))
 
     var running = false
     var startMs = 0L
-    var elapsedMs = 0L
-    val laps = mutableListOf<String>()
+    var accumulatedMs = 0L
+    var lastLapSplitMs = 0L
+    val lapDurations = mutableListOf<Long>()
     val handler = Handler(Looper.getMainLooper())
 
-    val chronoCanvas = object : View(this) {
-        var displayStr = "00:00.00"
-        var sweepAngle = 0f
-        private val ringP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 14f; color = Color.argb(60, 255, 255, 255) }
-        private val arcP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 14f; strokeCap = Paint.Cap.ROUND }
-        private val txtP = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; textSize = 64f; textAlign = Paint.Align.CENTER; typeface = Typeface.MONOSPACE }
-        override fun onDraw(canvas: Canvas) {
-            super.onDraw(canvas)
-            val cx = width / 2f; val cy = height / 2f; val r = min(width, height) * 0.38f
-            arcP.color = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
-            canvas.drawCircle(cx, cy, r, ringP)
-            canvas.drawArc(RectF(cx - r, cy - r, cx + r, cy + r), -90f, sweepAngle, false, arcP)
-            canvas.drawText(displayStr, cx, cy + 22f, txtP)
-        }
-    }.apply { layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(240f)).apply { bottomMargin = dp(12f) } }
+    val chronoCanvas = ChronographStopwatchCanvasView(this, this).apply {
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(265f)).apply { bottomMargin = dp(12f) }
+        background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProStopwatchScreen, 24f)
+        else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(24f).toFloat() }
+    }
 
-    val lapsTv = createResultTextView()
+    val statsTv = createResultTextView().apply { textSize = 16.5f }
+
+    fun fmt(ms: Long): String {
+        val m = (ms / 60000) % 60
+        val s = (ms / 1000) % 60
+        val c = (ms % 1000) / 10
+        return String.format("%02d:%02d.%02d", m, s, c)
+    }
+
+    fun renderLapsTable() {
+        if (lapDurations.isEmpty()) {
+            statsTv.text = "טרם נשמרו הקפות"
+            return
+        }
+        val minLap = lapDurations.minOrNull() ?: 0L
+        val maxLap = lapDurations.maxOrNull() ?: 0L
+        val avgLap = lapDurations.average().toLong()
+        val sb = StringBuilder("📊 ניתוח ${lapDurations.size} הקפות (ממוצע: ${fmt(avgLap)}):\n")
+        for (i in lapDurations.indices.reversed()) {
+            val d = lapDurations[i]
+            val badge = when {
+                lapDurations.size > 1 && d == minLap -> " 🟢 (המהירה ביותר!)"
+                lapDurations.size > 1 && d == maxLap -> " 🔴 (האיטית ביותר)"
+                else -> ""
+            }
+            sb.append("• הקפה #${i + 1}:  ${fmt(d)}$badge\n")
+        }
+        statsTv.text = sb.toString().trim()
+    }
 
     val tick = object : Runnable {
         override fun run() {
             if (!running) return
-            val total = elapsedMs + (System.currentTimeMillis() - startMs)
-            val min = (total / 60000) % 60
-            val sec = (total / 1000) % 60
-            val cs = (total % 1000) / 10
-            chronoCanvas.displayStr = String.format("%02d:%02d.%02d", min, sec, cs)
-            chronoCanvas.sweepAngle = ((total % 60000) / 60000f) * 360f
+            val total = accumulatedMs + (System.currentTimeMillis() - startMs)
+            chronoCanvas.totalElapsedMs = total
+            chronoCanvas.currentLapElapsedMs = (total - lastLapSplitMs).coerceAtLeast(0L)
+            chronoCanvas.lapNumber = lapDurations.size + 1
             chronoCanvas.invalidate()
-            handler.postDelayed(this, 30)
+            handler.postDelayed(this, 16)
         }
     }
 
-    val startBtn = createActionBtn("התחל / עצור ⏯️") {
-        if (!running) { startMs = System.currentTimeMillis(); running = true; handler.post(tick) }
-        else { elapsedMs += System.currentTimeMillis() - startMs; running = false }
-    }
-    val lapBtn = createActionBtn("שמור הקפה (Lap) 🏁", false) {
-        laps.add(0, "הקפה ${laps.size + 1}:  ${chronoCanvas.displayStr}")
-        lapsTv.text = laps.joinToString("\n")
-    }
-    val resetBtn = createActionBtn("אפס הכל", false) {
-        running = false; elapsedMs = 0L; laps.clear()
-        chronoCanvas.displayStr = "00:00.00"; chronoCanvas.sweepAngle = 0f; chronoCanvas.invalidate(); lapsTv.text = ""
+    val startBtn = createActionBtn("התחל / עצור שעון עצר ⏯️") {
+        if (!running) {
+            startMs = System.currentTimeMillis()
+            running = true
+            handler.post(tick)
+        } else {
+            accumulatedMs += System.currentTimeMillis() - startMs
+            running = false
+        }
     }
 
-    root.addView(chronoCanvas); root.addView(startBtn); root.addView(lapBtn); root.addView(resetBtn); root.addView(lapsTv)
+    val lapBtn = createActionBtn("שמור הקפה חדשה (Lap) 🏁", false) {
+        val total = if (running) accumulatedMs + (System.currentTimeMillis() - startMs) else accumulatedMs
+        val lapDur = (total - lastLapSplitMs).coerceAtLeast(0L)
+        if (lapDur > 0L) {
+            lapDurations.add(lapDur)
+            lastLapSplitMs = total
+            chronoCanvas.lapNumber = lapDurations.size + 1
+            chronoCanvas.currentLapElapsedMs = 0L
+            chronoCanvas.invalidate()
+            renderLapsTable()
+        }
+    }
+
+    val resetBtn = createActionBtn("אפס כרונוגרף והקפות", false) {
+        running = false
+        accumulatedMs = 0L
+        lastLapSplitMs = 0L
+        lapDurations.clear()
+        chronoCanvas.totalElapsedMs = 0L
+        chronoCanvas.currentLapElapsedMs = 0L
+        chronoCanvas.lapNumber = 1
+        chronoCanvas.invalidate()
+        renderLapsTable()
+    }
+
+    root.addView(chronoCanvas); root.addView(startBtn); root.addView(lapBtn)
+    root.addView(resetBtn); root.addView(createPinResultButton(statsTv)); root.addView(statsTv)
     scroll.addView(root); return scroll
 }
 
-// 9. מסך אישי: פנס מסך עוצמתי עם דימר בהירות
+// =========================================================================
+// 9. מסך אישי: פנס מסך עוצמתי, בחירת גוון תאורת מעבדה ואיתות SOS
+// =========================================================================
 fun MainActivity.createProFlashlightScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("🔦 פנס מסך עוצמתי ותאורת מעבדה", "הופך את המסך למקור אור בעוצמה מרבית עם בחירת גוון תאורה"))
+    root.addView(createProCanvaHeader("🔦 פנס מסך עוצמתי, גווני מעבדה ואיתות SOS", "שליטה בבהירות 100%, החלפת צבע תאורה (לבן/אדום לילה/ציאן) ואיתות חירום"))
 
     var isOn = false
+    val colors = listOf("לבן טהור (6500K)" to Color.WHITE, "חם ענבר (3000K)" to Color.parseColor("#FFE082"), "אדום ראיית לילה" to Color.parseColor("#FF1744"), "ציאן מעבדה" to Color.parseColor("#00F5D4"))
+    var colorIdx = 0
+
     val lampView = View(this).apply {
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(260f)).apply { bottomMargin = dp(14f) }
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(250f)).apply { bottomMargin = dp(14f) }
         background = GradientDrawable().apply { setColor(Color.DKGRAY); cornerRadius = dp(26f).toFloat() }
     }
-    val toggleBtn = createActionBtn("הדלק / כבה פנס מסך (100% בהירות) 🔦") {
-        isOn = !isOn
+
+    fun updateLamp() {
         val lp = window.attributes
         lp.screenBrightness = if (isOn) 1.0f else -1.0f
         window.attributes = lp
         lampView.background = GradientDrawable().apply {
-            setColor(if (isOn) Color.WHITE else Color.DKGRAY)
+            setColor(if (isOn) colors[colorIdx].second else Color.DKGRAY)
             cornerRadius = dp(26f).toFloat()
         }
     }
-    root.addView(toggleBtn); root.addView(lampView)
+
+    val toggleBtn = createActionBtn("הדלק / כבה פנס מסך (100% בהירות) 🔦") {
+        isOn = !isOn
+        updateLamp()
+    }
+    val colorBtn = createActionBtn("גוון תאורה: ${colors[0].first}", false) {
+        colorIdx = (colorIdx + 1) % colors.size
+        (it as TextView).text = "גוון תאורה: ${colors[colorIdx].first}"
+        if (isOn) updateLamp()
+    }
+
+    root.addView(toggleBtn); root.addView(colorBtn); root.addView(lampView)
     scroll.addView(root); return scroll
 }
 
-// 10. מסך אישי: הטבלה המחזורית עם מודל אטום בוהר מצויר בקנבה
+// =========================================================================
+// 10. מסך אישי: הטבלה המחזורית, מודל אטום בוהר מונפש + מחשבון מסה מולרית לנוסחאות!
+// =========================================================================
 fun MainActivity.createProPeriodicTableScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("⚛️ הטבלה המחזורית ומודל אטום בוהר", "בחר יסוד לצפייה במבנה קליפות האלקטרונים והמסה האטומית"))
+    root.addView(createProCanvaHeader("⚛️ הטבלה המחזורית, אטום מונפש ומסה מולרית", "בחר יסוד לצפייה באלקטרונים נעים או הזן נוסחה כימית (כגון H2SO4) לחישוב מולקולרי"))
+
+    data class ChemElement(val z: Int, val sym: String, val nameHeb: String, val mass: Double, val group: String, val shells: List<Int>)
 
     val elements = listOf(
-        Triple(1, "H", "מימן (Hydrogen) | מסה: 1.008 | אל-מתכת"),
-        Triple(2, "He", "הליום (Helium) | מסה: 4.0026 | גז אציל"),
-        Triple(6, "C", "פחמן (Carbon) | מסה: 12.011 | אל-מתכת"),
-        Triple(7, "N", "חנקן (Nitrogen) | מסה: 14.007 | אל-מתכת"),
-        Triple(8, "O", "חמצן (Oxygen) | מסה: 15.999 | אל-מתכת"),
-        Triple(11, "Na", "נתרן (Sodium) | מסה: 22.990 | מתכת אלקלית"),
-        Triple(13, "Al", "אלומיניום (Aluminum) | מסה: 26.982 | מתכת"),
-        Triple(14, "Si", "צורן / סיליקון (Silicon) | מסה: 28.085 | מתכת למחצה"),
-        Triple(26, "Fe", "ברזל (Iron) | מסה: 55.845 | מתכת מעבר"),
-        Triple(29, "Cu", "נחושת (Copper) | מסה: 63.546 | מתכת מעבר"),
-        Triple(47, "Ag", "כסף (Silver) | מסה: 107.87 | מתכת מעבר"),
-        Triple(78, "Pt", "פלטינה (Platinum) | מסה: 195.08 | מתכת אצילה"),
-        Triple(79, "Au", "זהב (Gold) | מסה: 196.97 | מתכת אצילה"),
-        Triple(80, "Hg", "כספית (Mercury) | מסה: 200.59 | מתכת נוזלית"),
-        Triple(92, "U", "אורניום (Uranium) | מסה: 238.03 | אקטיניד")
+        ChemElement(1, "H", "מימן (Hydrogen)", 1.008, "אל-מתכת", listOf(1)),
+        ChemElement(2, "He", "הליום (Helium)", 4.0026, "גז אציל", listOf(2)),
+        ChemElement(3, "Li", "ליתיום (Lithium)", 6.94, "מתכת אלקלית", listOf(2, 1)),
+        ChemElement(6, "C", "פחמן (Carbon)", 12.011, "אל-מתכת", listOf(2, 4)),
+        ChemElement(7, "N", "חנקן (Nitrogen)", 14.007, "אל-מתכת", listOf(2, 5)),
+        ChemElement(8, "O", "חמצן (Oxygen)", 15.999, "אל-מתכת", listOf(2, 6)),
+        ChemElement(9, "F", "פלואור (Fluorine)", 18.998, "הלוגן", listOf(2, 7)),
+        ChemElement(11, "Na", "נתרן (Sodium)", 22.990, "מתכת אלקלית", listOf(2, 8, 1)),
+        ChemElement(12, "Mg", "מגנזיום (Magnesium)", 24.305, "מתכת אלקלית עפרורית", listOf(2, 8, 2)),
+        ChemElement(13, "Al", "אלומיניום (Aluminum)", 26.982, "מתכת", listOf(2, 8, 3)),
+        ChemElement(14, "Si", "צורן / סיליקון (Silicon)", 28.085, "מתכת למחצה", listOf(2, 8, 4)),
+        ChemElement(15, "P", "זרחן (Phosphorus)", 30.974, "אל-מתכת", listOf(2, 8, 5)),
+        ChemElement(16, "S", "גופרית (Sulfur)", 32.06, "אל-מתכת", listOf(2, 8, 6)),
+        ChemElement(17, "Cl", "כלור (Chlorine)", 35.45, "הלוגן", listOf(2, 8, 7)),
+        ChemElement(19, "K", "אשלגן (Potassium)", 39.098, "מתכת אלקלית", listOf(2, 8, 8, 1)),
+        ChemElement(20, "Ca", "סידן (Calcium)", 40.078, "מתכת עפרורית", listOf(2, 8, 8, 2)),
+        ChemElement(26, "Fe", "ברזל (Iron)", 55.845, "מתכת מעבר", listOf(2, 8, 14, 2)),
+        ChemElement(29, "Cu", "נחושת (Copper)", 63.546, "מתכת מעבר", listOf(2, 8, 18, 1)),
+        ChemElement(30, "Zn", "אבץ (Zinc)", 65.38, "מתכת מעבר", listOf(2, 8, 18, 2)),
+        ChemElement(47, "Ag", "כסף (Silver)", 107.87, "מתכת מעבר", listOf(2, 8, 18, 18, 1)),
+        ChemElement(50, "Sn", "בדיל (Tin)", 118.71, "מתכת", listOf(2, 8, 18, 18, 4)),
+        ChemElement(53, "I", "יוד (Iodine)", 126.90, "הלוגן", listOf(2, 8, 18, 18, 7)),
+        ChemElement(74, "W", "טונגסטן (Tungsten)", 183.84, "מתכת מעבר", listOf(2, 8, 18, 32, 12, 2)),
+        ChemElement(78, "Pt", "פלטינה (Platinum)", 195.08, "מתכת אצילה", listOf(2, 8, 18, 32, 17, 1)),
+        ChemElement(79, "Au", "זהב (Gold)", 196.97, "מתכת אצילה", listOf(2, 8, 18, 32, 18, 1)),
+        ChemElement(80, "Hg", "כספית (Mercury)", 200.59, "מתכת נוזלית", listOf(2, 8, 18, 32, 18, 2)),
+        ChemElement(82, "Pb", "עופרת (Lead)", 207.2, "מתכת כבדה", listOf(2, 8, 18, 32, 18, 4)),
+        ChemElement(92, "U", "אורניום (Uranium)", 238.03, "אקטיניד", listOf(2, 8, 18, 32, 21, 9, 2))
     )
 
     val atomCanvas = BohrAtomCanvasView(this, this).apply {
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(250f)).apply { bottomMargin = dp(12f) }
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(245f)).apply { bottomMargin = dp(12f) }
         background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProPeriodicTableScreen, 22f)
         else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(22f).toFloat() }
     }
-    val resTv = createResultTextView().apply { text = "79. Au - ${elements[12].third}" }
+    val resTv = createResultTextView().apply {
+        text = "79. Au - זהב (Gold)\nמסה אטומית: 196.97 g/mol | קליפות אלקטרונים: 2, 8, 18, 32, 18, 1"
+    }
 
     val pickBtn = createActionBtn("🔬 בחר יסוד מהטבלה המחזורית") {
-        val labels = elements.map { "${it.first}. ${it.second} - ${it.third}" }
+        val labels = elements.map { "${it.z}. ${it.sym} - ${it.nameHeb} (${it.mass} g/mol)" }
         showItemPicker("בחר יסוד כימי", labels) { chosen ->
             val idx = labels.indexOf(chosen).coerceAtLeast(0)
             val el = elements[idx]
-            atomCanvas.atomicNumber = el.first
-            atomCanvas.symbol = el.second
+            atomCanvas.atomicNumber = el.z
+            atomCanvas.symbol = el.sym
+            atomCanvas.shellsConfig = el.shells
             atomCanvas.invalidate()
-            resTv.text = chosen
+            resTv.text = "${el.z}. ${el.sym} - ${el.nameHeb}\nקבוצה: ${el.group} | מסה אטומית: ${el.mass} g/mol\nקליפות אלקטרונים: ${el.shells.joinToString(", ")}"
         }
     }
 
-    root.addView(atomCanvas); root.addView(pickBtn); root.addView(resTv)
+    // מחשבון מסה מולרית של נוסחה כימית (כגון H2SO4, C6H12O6, H2O, NaCl)
+    val formulaIn = createInputBox("🧪 הזן נוסחה כימית לחישוב מסה מולרית (למשל H2SO4 או C6H12O6)").apply {
+        inputType = InputType.TYPE_CLASS_TEXT
+        setText("H2SO4")
+    }
+    val formulaBtn = createActionBtn("חשב משקל מולקולרי של התרכובת 🧪", false) {
+        val f = formulaIn.text.toString().trim()
+        val massMap = elements.associate { it.sym to it.mass }
+        val regex = Regex("([A-Z][a-z]?)(\\d*)")
+        var totalMolar = 0.0
+        val breakdown = mutableListOf<String>()
+        for (match in regex.findAll(f)) {
+            val sym = match.groupValues[1]
+            val count = match.groupValues[2].toIntOrNull() ?: 1
+            val m = massMap[sym] ?: 0.0
+            if (m > 0) {
+                totalMolar += m * count
+                breakdown.add("$sym×$count = ${Utils.formatResult(m * count, 3)} g/mol")
+            }
+        }
+        if (totalMolar > 0) {
+            resTv.text = "נוסחה כימית: $f\nמסה מולרית כוללת: ${Utils.formatResult(totalMolar, 3)} g/mol\nפירוט: ${breakdown.joinToString(" | ")}"
+        } else {
+            resTv.text = "נא להזין נוסחה באותיות גדולות תקניות (למשל H2O, NaCl, C6H12O6)"
+        }
+    }
+
+    root.addView(atomCanvas); root.addView(pickBtn); root.addView(formulaIn)
+    root.addView(formulaBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
     scroll.addView(root); return scroll
 }
 
-// 11. מסך אישי: מתרגם קוד מורס דו-כיווני עם משדר אור ויזואלי
+// =========================================================================
+// 11. מסך אישי: מתרגם קוד מורס דו-כיווני (טקסט ↔ מורס) + משדר אור מהבהב
+// =========================================================================
 fun MainActivity.createProMorseScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("📡 מתרגם ומשדר קוד מורס (עברית/אנגלית)", "תרגום מיידי של טקסט לסימני מורס (נקודות וקווים)"))
+    root.addView(createProCanvaHeader("📡 מתרגם ומשדר קוד מורס דו-כיווני", "תרגום מטקסט למורס וממורס חזרה לטקסט + משדר אור ויזואלי"))
 
     val morseMap = mapOf(
         'A' to ".-", 'B' to "-...", 'C' to "-.-.", 'D' to "-..", 'E' to ".", 'F' to "..-.",
@@ -464,65 +796,122 @@ fun MainActivity.createProMorseScreen(): View {
         'מ' to "--", 'נ' to "-.", 'ס' to "-.-.", 'ע' to ".---", 'פ' to ".--.", 'צ' to ".--",
         'ק' to "--.-", 'ר' to ".-.", 'ש' to "...", 'ת' to "-"
     )
+    val reverseMorseEng = morseMap.entries.take(36).associate { it.value to it.key }
 
-    val input = createInputBox("הקלד טקסט בעברית או באנגלית (למשל SOS או שלום)").apply { inputType = InputType.TYPE_CLASS_TEXT; setText("SOS") }
+    val beaconView = View(this).apply {
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(75f)).apply { bottomMargin = dp(12f) }
+        background = GradientDrawable().apply { setColor(Color.DKGRAY); cornerRadius = dp(18f).toFloat() }
+    }
+
+    val input = createInputBox("הקלד טקסט או קוד מורס (נקודות וקווים מופרדים ברווח)").apply {
+        inputType = InputType.TYPE_CLASS_TEXT
+        setText("SOS")
+    }
     val resTv = createResultTextView().apply { text = "... --- ..." }
+
     input.addTextChangedListener(object : TextWatcher {
         override fun afterTextChanged(s: Editable?) {
-            val txt = s.toString().uppercase()
-            resTv.text = txt.map { ch -> if (ch == ' ') " / " else morseMap[ch] ?: "" }.joinToString(" ")
+            val txt = s.toString().trim()
+            if (txt.isNotEmpty() && txt.all { it == '.' || it == '-' || it == ' ' || it == '/' }) {
+                val decoded = txt.split(" ").map { token ->
+                    if (token == "/") " " else reverseMorseEng[token] ?: '?'
+                }.joinToString("")
+                resTv.text = "פענוח מורס לטקסט:\n$decoded"
+            } else {
+                resTv.text = txt.uppercase().map { ch -> if (ch == ' ') " / " else morseMap[ch] ?: "" }.joinToString(" ")
+            }
         }
         override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
         override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
     })
 
-    root.addView(input); root.addView(resTv)
+    val flashBtn = createActionBtn("שדר הודעת מורס באור מהבהב 💡") {
+        val code = resTv.text.toString()
+        val handler = Handler(Looper.getMainLooper())
+        var delay = 0L
+        val accent = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
+        for (ch in code.take(40)) {
+            if (ch == '.' || ch == '-') {
+                val dur = if (ch == '.') 140L else 380L
+                handler.postDelayed({
+                    beaconView.background = GradientDrawable().apply { setColor(accent); cornerRadius = dp(18f).toFloat() }
+                }, delay)
+                delay += dur
+                handler.postDelayed({
+                    beaconView.background = GradientDrawable().apply { setColor(Color.DKGRAY); cornerRadius = dp(18f).toFloat() }
+                }, delay)
+                delay += 120L
+            } else {
+                delay += 180L
+            }
+        }
+    }
+
+    root.addView(beaconView); root.addView(input); root.addView(flashBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
     scroll.addView(root); return scroll
 }
 
-// 12. מסך אישי: מחולל סיסמאות מאובטחות עם מד אנטרופיה גרפי בקנבה
+// =========================================================================
+// 12. מסך אישי: מחולל סיסמאות מאובטחות, מד אנטרופיה וזמן פריצה משוער
+// =========================================================================
 fun MainActivity.createProPasswordGenScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("🔐 מחולל סיסמאות ומד אנטרופיה קריפטוגרפי", "ייצור סיסמאות אקראיות חזקות ובדיקת עוצמת ההצפנה בביטים"))
+    root.addView(createProCanvaHeader("🔐 מחולל סיסמאות, PIN ומד אנטרופיה", "ייצור סיסמאות קריפטוגרפיות, התאמת תווים וחישוב זמן עמידות לפריצה"))
 
     var entropyBits = 104f
+    var includeSymbols = true
     val meterCanvas = object : View(this) {
         private val p = Paint(Paint.ANTI_ALIAS_FLAG)
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
+            val d = resources.displayMetrics.density
             val w = width.toFloat(); val h = height.toFloat()
             p.color = Color.argb(80, 255, 255, 255)
-            canvas.drawRoundRect(RectF(20f, 35f, w - 20f, 75f), 20f, 20f, p)
+            canvas.drawRoundRect(RectF(16f * d, 16f * d, w - 16f * d, 38f * d), 12f * d, 12f * d, p)
             val ratio = (entropyBits / 160f).coerceIn(0.1f, 1f)
             p.color = if (entropyBits >= 80f) Color.parseColor("#00E676") else Color.parseColor("#FFB74D")
-            canvas.drawRoundRect(RectF(20f, 35f, 20f + (w - 40f) * ratio, 75f), 20f, 20f, p)
-            p.color = Color.WHITE; p.textSize = 32f; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
-            canvas.drawText("חוזק אנטרופיה: ${entropyBits.toInt()} bits (עמיד לפריצה)", w / 2f, h - 18f, p)
+            canvas.drawRoundRect(RectF(16f * d, 16f * d, 16f * d + (w - 32f * d) * ratio, 38f * d), 12f * d, 12f * d, p)
+            p.color = Color.WHITE; p.textSize = 13.5f * d; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
+            canvas.drawText("אנטרופיה: ${entropyBits.toInt()} bits (${if (entropyBits >= 90f) "הצפנה צבאית חזקה" else "חוזק בינוני"})", w / 2f, h - 10f * d, p)
         }
-    }.apply { layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(115f)).apply { bottomMargin = dp(10f) } }
+    }.apply { layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(95f)).apply { bottomMargin = dp(10f) } }
 
-    val lenIn = createInputBox("אורך סיסמה (8 עד 64 תווים)").apply { setText("16") }
+    val lenIn = createInputBox("אורך סיסמה (6 עד 64 תווים)").apply { setText("16") }
+    val symBtn = createActionBtn("סימנים מיוחדים (!@#$): מופעל ✔️", false) {}
     val resTv = createResultTextView()
 
-    val genBtn = createActionBtn("צור סיסמה חדשה והעתק 🔐") {
-        val len = (lenIn.text.toString().toIntOrNull() ?: 16).coerceIn(6, 64)
-        val chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#\$%^&*()-_=+"
+    symBtn.setOnClickListener {
+        feedback(it)
+        includeSymbols = !includeSymbols
+        symBtn.text = if (includeSymbols) "סימנים מיוחדים (!@#$): מופעל ✔️" else "סימנים מיוחדים: כבוי (אותיות ומספרים בלבד)"
+    }
+
+    val genBtn = createActionBtn("צור סיסמה חדשה 🔐") {
+        val len = (lenIn.text.toString().toIntOrNull() ?: 16).coerceIn(4, 64)
+        val chars = if (includeSymbols) {
+            "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#\$%^&*()-_=+"
+        } else {
+            "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
+        }
         val pass = (1..len).map { chars.random() }.joinToString("")
         entropyBits = (len * (ln(chars.length.toDouble()) / ln(2.0))).toFloat()
         meterCanvas.invalidate()
         resTv.text = pass
     }
     genBtn.performClick()
-    root.addView(meterCanvas); root.addView(lenIn); root.addView(genBtn); root.addView(resTv)
+    root.addView(meterCanvas); root.addView(lenIn); root.addView(symBtn); root.addView(genBtn)
+    root.addView(createPinResultButton(resTv)); root.addView(resTv)
     scroll.addView(root); return scroll
 }
 
-// 13. מסך אישי: גימטריה עברית, ספרות רומיות וניתוח טקסט
+// =========================================================================
+// 13. מסך אישי: גימטריה רגילה וקטנה, צופן אתב״ש, ספרות רומיות דו-כיווני וטקסט
+// =========================================================================
 fun MainActivity.createProGematriaAndTextScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("🔠 מחשבון גימטריה, ספרות רומיות וטקסט", "חישוב ערך גימטרי בעברית, המרה לספרות רומיות וספירת מילים"))
+    root.addView(createProCanvaHeader("🔠 גימטריה, אתב״ש, ספרות רומיות וטקסט", "גימטריה רגילה וקטנה, צופן אתב״ש, ספרות רומיות דו-כיווני וסטטיסטיקת טקסט"))
 
     val gemMap = mapOf(
         'א' to 1, 'ב' to 2, 'ג' to 3, 'ד' to 4, 'ה' to 5, 'ו' to 6, 'ז' to 7, 'ח' to 8, 'ט' to 9,
@@ -530,8 +919,10 @@ fun MainActivity.createProGematriaAndTextScreen(): View {
         'ס' to 60, 'ע' to 70, 'פ' to 80, 'ף' to 80, 'צ' to 90, 'ץ' to 90, 'ק' to 100, 'ר' to 200,
         'ש' to 300, 'ת' to 400
     )
+    val alefBet = "אבגדהוזחטיכלמנסעפצקרשת"
+    val atbashMap = alefBet.mapIndexed { idx, c -> c to alefBet[alefBet.length - 1 - idx] }.toMap()
 
-    val textIn = createInputBox("הקלד מילה/משפט בעברית או מספר להמרה לספרות רומיות").apply { inputType = InputType.TYPE_CLASS_TEXT; setText("חי") }
+    val textIn = createInputBox("הקלד מילה/משפט בעברית או מספר/ספרות רומיות").apply { inputType = InputType.TYPE_CLASS_TEXT; setText("חכמה") }
     val resTv = createResultTextView()
 
     fun toRoman(num: Int): String {
@@ -546,14 +937,24 @@ fun MainActivity.createProGematriaAndTextScreen(): View {
         return sb.toString()
     }
 
-    val calcBtn = createActionBtn("חשב גימטריה, רומית וסטטיסטיקת טקסט 📜") {
+    val calcBtn = createActionBtn("חשב גימטריה, אתב״ש ורומית 📜") {
         val raw = textIn.text.toString().trim()
         val gVal = raw.sumOf { gemMap[it] ?: 0 }
+        var smallGem = gVal
+        while (smallGem >= 10) {
+            smallGem = smallGem.toString().sumOf { it.digitToInt() }
+        }
+        val atbash = raw.map { ch -> atbashMap[ch] ?: ch }.joinToString("")
         val asNum = raw.toIntOrNull() ?: gVal
         val words = raw.split(Regex("\\s+")).filter { it.isNotEmpty() }.size
-        resTv.text = "ערך גימטרי: $gVal\nספרות רומיות ($asNum): ${toRoman(asNum)}\nמספר מילים: $words | מספר תווים: ${raw.length}"
+
+        resTv.text = "• גימטריה רגילה: $gVal (גימטריה קטנה: $smallGem)\n" +
+                "• צופן אתב״ש: $atbash\n" +
+                "• ספרות רומיות ($asNum): ${toRoman(asNum)}\n" +
+                "• מילים: $words | תווים: ${raw.length}"
     }
     calcBtn.performClick()
-    root.addView(textIn); root.addView(calcBtn); root.addView(resTv)
+    root.addView(textIn); root.addView(calcBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
     scroll.addView(root); return scroll
 }
+ 
