@@ -6,12 +6,6 @@ import android.content.Intent
 import android.graphics.*
 import android.graphics.drawable.GradientDrawable
 import android.graphics.pdf.PdfDocument
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
-import android.os.Handler
-import android.os.Looper
 import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
@@ -36,37 +30,189 @@ object ProState {
 }
 
 // =========================================================================
-// 1. 87 קטגוריות יחידות + יחידות טכניות (אינסטלציה, חשמל, רפואה) + המרה מרובה
+// תצוגות קנבס (Canvas) ייעודיות למחשבוני ה-Pro
+// =========================================================================
+
+// 1. קנבס השוואת קנה-מידה ליחידות מידה
+class UnitScaleComparisonCanvasView(context: Context, private val activity: MainActivity) : View(context) {
+    var fromLabel: String = "1 מטר"
+    var toLabel: String = "100 ס״מ"
+    var ratioLog: Float = 0.5f
+
+    private val p = Paint(Paint.ANTI_ALIAS_FLAG)
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val w = width.toFloat(); val h = height.toFloat()
+        val accent = if (activity.isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else activity.primaryColor
+
+        p.color = Color.argb(65, 255, 255, 255)
+        canvas.drawRoundRect(RectF(30f, 32f, w - 30f, 68f), 18f, 18f, p)
+        canvas.drawRoundRect(RectF(30f, 92f, w - 30f, 128f), 18f, 18f, p)
+
+        p.color = accent
+        canvas.drawRoundRect(RectF(30f, 32f, 30f + (w - 60f) * 0.55f, 68f), 18f, 18f, p)
+        p.color = Color.parseColor("#FF9F0A")
+        val targetW = (w - 60f) * ratioLog.coerceIn(0.12f, 0.96f)
+        canvas.drawRoundRect(RectF(30f, 92f, 30f + targetW, 128f), 18f, 18f, p)
+
+        p.color = Color.WHITE; p.textSize = 28f; p.typeface = Typeface.DEFAULT_BOLD
+        canvas.drawText("מקור: $fromLabel", 45f, 59f, p)
+        canvas.drawText("יעד: $toLabel", 45f, 119f, p)
+    }
+}
+
+// 2. קנבס פילוח משכנתא שפיצר (קרן מול ריבית)
+class SpitzerMortgageCanvasView(context: Context, private val activity: MainActivity) : View(context) {
+    var principalVal: Double = 1000000.0
+    var interestVal: Double = 450000.0
+    var monthlyPmt: Double = 5200.0
+
+    private val p = Paint(Paint.ANTI_ALIAS_FLAG)
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val w = width.toFloat(); val h = height.toFloat()
+        val total = (principalVal + interestVal).coerceAtLeast(1.0)
+        val pRatio = (principalVal / total).toFloat().coerceIn(0.05f, 0.95f)
+        val accent = if (activity.isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else activity.primaryColor
+
+        val barLeft = 36f; val barRight = w - 36f; val barW = barRight - barLeft
+        p.color = accent
+        canvas.drawRoundRect(RectF(barLeft, 36f, barLeft + barW * pRatio, 92f), 22f, 22f, p)
+        p.color = Color.parseColor("#FF4D6D")
+        canvas.drawRoundRect(RectF(barLeft + barW * pRatio + 6f, 36f, barRight, 92f), 22f, 22f, p)
+
+        p.color = Color.WHITE; p.textSize = 31f; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
+        canvas.drawText("קרן: ${(pRatio * 100).toInt()}%   |   ריבית מצטברת: ${((1f - pRatio) * 100).toInt()}%", w / 2f, 138f, p)
+        p.color = accent; p.textSize = 36f
+        canvas.drawText("החזר חודשי התחלתי: ₪${Utils.formatResult(monthlyPmt, 0)}", w / 2f, h - 22f, p)
+    }
+}
+
+// 3. קנבס עקומת פעמון גאוסיאנית לסטטיסטיקה והתפלגות נורמלית
+class BellCurveStatsCanvasView(context: Context, private val activity: MainActivity) : View(context) {
+    var meanVal: Double = 0.0
+    var stdDevVal: Double = 1.0
+
+    private val lineP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 6f; strokeCap = Paint.Cap.ROUND }
+    private val fillP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val axisP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 2.5f; color = Color.argb(110, 255, 255, 255) }
+    private val txtP = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; textSize = 30f; textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT_BOLD }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val w = width.toFloat(); val h = height.toFloat()
+        val pad = 38f
+        val baseLine = h - 48f
+        val accent = if (activity.isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else activity.primaryColor
+
+        lineP.color = accent
+        fillP.shader = LinearGradient(0f, pad, 0f, baseLine, Color.argb(120, Color.red(accent), Color.green(accent), Color.blue(accent)), Color.TRANSPARENT, Shader.TileMode.CLAMP)
+
+        val path = Path()
+        val fillPath = Path()
+        val steps = 60
+        for (i in 0..steps) {
+            val z = -3.2f + (6.4f * i / steps)
+            val gauss = exp(-0.5f * z * z)
+            val x = pad + (i.toFloat() / steps) * (w - 2 * pad)
+            val y = baseLine - gauss * (baseLine - pad - 15f)
+            if (i == 0) {
+                path.moveTo(x, y)
+                fillPath.moveTo(x, baseLine)
+                fillPath.lineTo(x, y)
+            } else {
+                path.lineTo(x, y)
+                fillPath.lineTo(x, y)
+            }
+        }
+        fillPath.lineTo(w - pad, baseLine)
+        fillPath.close()
+
+        canvas.drawPath(fillPath, fillP)
+        canvas.drawPath(path, lineP)
+        canvas.drawLine(pad, baseLine, w - pad, baseLine, axisP)
+        canvas.drawLine(w / 2f, pad, w / 2f, baseLine, axisP)
+        canvas.drawText("μ = ${Utils.formatResult(meanVal, 2)}   |   σ = ${Utils.formatResult(stdDevVal, 2)}", w / 2f, h - 12f, txtP)
+    }
+}
+
+// 4. קנבס שרטוט גאומטרי (Blueprint) למשולש, מעגל וגופים הנדסיים
+class GeometryBlueprintCanvasView(context: Context, private val activity: MainActivity) : View(context) {
+    var mode: Int = 0 // 0 = משולש ישר זווית, 1 = מעגל וגזרה, 2 = גליל/כדור תלת-ממד
+    var paramA: Double = 3.0
+    var paramB: Double = 4.0
+
+    private val strokeP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 5f }
+    private val gridP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1.5f; color = Color.argb(40, 0, 245, 212) }
+    private val txtP = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; textSize = 30f; textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT_BOLD }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val w = width.toFloat(); val h = height.toFloat()
+        val accent = if (activity.isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else activity.primaryColor
+        strokeP.color = accent
+
+        var gx = 0f
+        while (gx < w) { canvas.drawLine(gx, 0f, gx, h, gridP); gx += 40f }
+        var gy = 0f
+        while (gy < h) { canvas.drawLine(0f, gy, w, gy, gridP); gy += 40f }
+
+        val cx = w / 2f; val cy = h * 0.50f
+        when (mode) {
+            0 -> {
+                val p = Path().apply {
+                    moveTo(cx - 120f, cy + 70f)
+                    lineTo(cx + 120f, cy + 70f)
+                    lineTo(cx - 120f, cy - 85f)
+                    close()
+                }
+                canvas.drawPath(p, strokeP)
+                val c = hypot(paramA, paramB)
+                canvas.drawText("a=${Utils.formatResult(paramA, 1)} | b=${Utils.formatResult(paramB, 1)} | c=${Utils.formatResult(c, 2)}", cx, h - 18f, txtP)
+            }
+            1 -> {
+                val r = min(w, h) * 0.32f
+                canvas.drawCircle(cx, cy, r, strokeP)
+                canvas.drawLine(cx, cy, cx + r, cy, strokeP)
+                canvas.drawText("רדיוס R = ${Utils.formatResult(paramA, 2)}", cx, h - 18f, txtP)
+            }
+            else -> {
+                val r = min(w, h) * 0.26f
+                canvas.drawOval(RectF(cx - r, cy - 75f, cx + r, cy - 35f), strokeP)
+                canvas.drawOval(RectF(cx - r, cy + 35f, cx + r, cy + 75f), strokeP)
+                canvas.drawLine(cx - r, cy - 55f, cx - r, cy + 55f, strokeP)
+                canvas.drawLine(cx + r, cy - 55f, cx + r, cy + 55f, strokeP)
+                canvas.drawText("R=${Utils.formatResult(paramA, 1)} | H=${Utils.formatResult(paramB, 1)}", cx, h - 18f, txtP)
+            }
+        }
+    }
+}
+
+// =========================================================================
+// 1. 87 קטגוריות יחידות + ממירים הנדסיים (אינסטלציה, רפואה, בנייה ומיזוג)
 // =========================================================================
 object ProUnitCatalog {
 
     val categories87: List<String> = listOf(
-        // יומיומיות והנדסיות בסיסיות (1-15)
         "1. אורך ומרחק", "2. משקל ומסה", "3. שטח", "4. נפח וקיבולת", "5. טמפרטורה",
         "6. מהירות", "7. לחץ", "8. אנרגיה ועבודה", "9. הספק", "10. נתונים דיגיטליים",
         "11. צריכת דלק", "12. זווית", "13. כוח", "14. מומנט פיתול (Torque)", "15. תדר",
-        // מכניקה וזורמים (16-32)
         "16. תאוצה", "17. מהירות זוויתית", "18. תאוצה זוויתית", "19. צפיפות (Density)", "20. נפח סגולי",
         "21. מומנט התמד", "22. מתח פנים", "23. צמיגות דינמית", "24. צמיגות קינמטית", "25. ספיקת נפח (אינסטלציה)",
         "26. ספיקת מסה", "27. ספיקה מולרית", "28. לחץ הידרוסטטי (אינסטלציה)", "29. אובדן עומד בצנרת", "30. קוטר צנרת תקני (אינסטלציה)",
         "31. קשיות מים (אינסטלציה)", "32. חדירות (Permeability)",
-        // תרמודינמיקה וחום (33-44)
         "33. מוליכות חום", "34. התנגדות תרמית", "35. קיבול חום סגולי", "36. צפיפות שטף חום", "37. מקדם מעבר חום",
         "38. התפשטות תרמית", "39. אנרגיה סגולית", "40. יעילות תרמית", "41. עומס קירור (BTU/Ton)", "42. לחות יחסית ונקודת טל",
         "43. אנתלפיה", "44. אנטרופיה",
-        // חשמל, מגנטיות ואלקטרוניקה (45-60)
         "45. זרם חשמלי (חשמל)", "46. מתח חשמלי ופוטנציאל (חשמל)", "47. התנגדות חשמלית (חשמל)", "48. מוליכות חשמלית (חשמל)", "49. קיבול חשמלי (חשמל)",
         "50. השראות (Inductance)", "51. מטען חשמלי", "52. צפיפות מטען ליניארית", "53. צפיפות מטען משטחית", "54. צפיפות מטען נפחית",
         "55. עוצמת שדה חשמלי", "56. שטף מגנטי", "57. צפיפות שטף מגנטי (Tesla/Gauss)", "58. עוצמת שדה מגנטי", "59. כוח מגנטו-מניע",
         "60. הספק ריאקטיבי ומדומה (kVAR/kVA)",
-        // אור, אופטיקה, קול וקרינה (61-72)
         "61. עוצמת הארה (Lux/Foot-candle)", "62. בהיקות (Luminance)", "63. שטף אור (Lumen)", "64. עוצמת אור (Candela)", "65. כוח אופטי (Diopter)",
         "66. עוצמת קול ואקוסטיקה (dB/SPL)", "67. רדיואקטיביות (Bq/Ci)", "68. מנת קרינה נספגת (Gy/Rad)", "69. מנת קרינה שקולה (Sv/Rem)", "70. חשיפה לקרינה",
         "71. אורך גל אופטי", "72. רזולוציית הדפסה ותצוגה (DPI/PPI)",
-        // רפואה, כימיה ומעבדה (73-82)
         "73. רמת סוכר בדם (רפואה)", "74. כולסטרול ושומנים בדם (רפואה)", "75. קצב טפטוף עירוי IV (רפואה)", "76. מינון תרופות לפי משקל (רפואה)", "77. ריכוז מולרי (Molarity)",
         "78. ריכוז מסה (mg/dL, g/L)", "79. מסה מולרית", "80. רמת חומציות ואלקליות (pH)", "81. לחץ אוסמוטי (Osmolality)", "82. פעילות אנזימטית (Katal/U)",
-        // יחידות זמן, טיפוגרפיה, אסטרונומיה ומסחר (83-87)
         "83. זמן ותקופות", "84. קצב העברת נתונים (Bandwidth)", "85. טיפוגרפיה (pt/px/em/rem)", "86. אסטרונומיה (AU/Parsec/שנות אור)", "87. מידות בישול ואפייה"
     )
 
@@ -120,6 +266,7 @@ object ProUnitCatalog {
 fun MainActivity.createPro87UnitConverter(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(14f), dp(20f), dp(24f)) }
+    root.addView(createProCanvaHeader("📐 87 קטגוריות יחידות והמרה מרובה", "המרה סימולטנית זה לצד זה, סרגל קנה-מידה ויחידות מותאמות"))
 
     var selectedCatIdx = 0
     val customUnits = loadCustomUnits()
@@ -136,10 +283,16 @@ fun MainActivity.createPro87UnitConverter(): View {
     var fromUnit = currentUnitsMap().keys.first()
     var toUnit = currentUnitsMap().keys.drop(1).firstOrNull() ?: fromUnit
 
+    val scaleCanvas = UnitScaleComparisonCanvasView(this, this).apply {
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(150f)).apply { bottomMargin = dp(12f) }
+        background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createPro87UnitConverter, 20f)
+        else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(20f).toFloat() }
+    }
+
     val catBtn = createActionBtn("קטגוריה (1/87): ${ProUnitCatalog.categories87[selectedCatIdx]}", true) {}
     val fromBtn = createActionBtn("מ: $fromUnit", false) {}
     val toBtn = createActionBtn("ל: $toUnit", false) {}
-    val valInput = createInputBox("הזן ערך להמרה (תומך בהמרה מרובה זה לצד זה)...")
+    val valInput = createInputBox("הזן ערך להמרה (תומך בהמרה מרובה זה לצד זה)...").apply { setText("1") }
     val resTv = createResultTextView()
 
     val sideBySideCard = LinearLayout(this).apply {
@@ -158,7 +311,7 @@ fun MainActivity.createPro87UnitConverter(): View {
             return
         }
         val map = currentUnitsMap()
-        if (selectedCatIdx == 4) { // טמפרטורה
+        if (selectedCatIdx == 4) {
             val c = if (fromUnit.contains("F")) (v - 32) * 5 / 9 else if (fromUnit.contains("K")) v - 273.15 else v
             resTv.text = "${Utils.formatResult(c, 2)} °C  |  ${Utils.formatResult(c * 9 / 5 + 32, 2)} °F  |  ${Utils.formatResult(c + 273.15, 2)} K"
             return
@@ -167,6 +320,11 @@ fun MainActivity.createPro87UnitConverter(): View {
         val tFactor = map[toUnit] ?: 1.0
         val directRes = v * fFactor / tFactor
         resTv.text = "${Utils.formatResult(directRes, calcPrecision)} ${toUnit.substringBefore(" ")}"
+
+        scaleCanvas.fromLabel = "${Utils.formatResult(v, 2)} ${fromUnit.substringBefore(" ")}"
+        scaleCanvas.toLabel = "${Utils.formatResult(directRes, 4)} ${toUnit.substringBefore(" ")}"
+        scaleCanvas.ratioLog = ((log10(directRes.coerceAtLeast(1e-6)) + 3.0) / 6.0).toFloat()
+        scaleCanvas.invalidate()
 
         val header = TextView(this).apply {
             text = "⚡ המרה מרובה והשוואה זה לצד זה:"
@@ -227,8 +385,125 @@ fun MainActivity.createPro87UnitConverter(): View {
         override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
     })
 
-    root.addView(catBtn); root.addView(fromBtn); root.addView(toBtn); root.addView(valInput)
-    root.addView(addCustomUnitBtn); root.addView(resTv); root.addView(sideBySideCard)
+    recalcAll()
+    root.addView(scaleCanvas); root.addView(catBtn); root.addView(fromBtn); root.addView(toBtn)
+    root.addView(valInput); root.addView(addCustomUnitBtn); root.addView(resTv); root.addView(sideBySideCard)
+    scroll.addView(root); return scroll
+}
+
+// 1B. מסך אישי: מחשבון אינסטלציה, ספיקה, קוטר צנרת ולחץ מים
+fun MainActivity.createProPlumbingAndFluidsScreen(): View {
+    val scroll = ScrollView(this)
+    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
+    root.addView(createProCanvaHeader("🚰 הנדסת אינסטלציה, צנרת, ספיקה ולחץ", "חישוב מהירות זרימה בצינור, ספיקת מים (L/min) ולחץ הידרוסטטי"))
+
+    var flowVelText = "1.5 m/s"
+    val pipeCanvas = object : View(this) {
+        private val p = Paint(Paint.ANTI_ALIAS_FLAG)
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            val w = width.toFloat(); val h = height.toFloat()
+            p.color = Color.parseColor("#455A64")
+            canvas.drawRoundRect(RectF(30f, 35f, w - 30f, h - 35f), 26f, 26f, p)
+            p.color = Color.parseColor("#0288D1")
+            canvas.drawRect(45f, 52f, w - 45f, h - 52f, p)
+            p.color = Color.WHITE; p.textSize = 36f; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
+            canvas.drawText("➔  זרימה בצינור: $flowVelText  ➔", w / 2f, h / 2f + 12f, p)
+        }
+    }.apply { layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(145f)).apply { bottomMargin = dp(12f) } }
+
+    val diamIn = createInputBox("קוטר צינור פנימי במ״מ (למשל 25 מ״מ = 1 צול)").apply { setText("25") }
+    val flowIn = createInputBox("ספיקת מים בליטר לדקה (L/min)").apply { setText("45") }
+    val headIn = createInputBox("גובה עמוד מים במטרים (לחישוב לחץ Bar)").apply { setText("15") }
+    val resTv = createResultTextView()
+
+    val btn = createActionBtn("חשב מהירות זרימה, נפח ולחץ בצנרת 🚰") {
+        val dMm = diamIn.text.toString().toDoubleOrNull() ?: 25.0
+        val qLmin = flowIn.text.toString().toDoubleOrNull() ?: 45.0
+        val hMeters = headIn.text.toString().toDoubleOrNull() ?: 15.0
+        if (dMm > 0) {
+            val areaM2 = PI * (dMm / 2000.0).pow(2.0)
+            val qM3s = (qLmin / 1000.0) / 60.0
+            val velocity = qM3s / areaM2
+            val barPressure = hMeters * 0.0980665
+            flowVelText = "${Utils.formatResult(velocity, 2)} m/s"
+            pipeCanvas.invalidate()
+            resTv.text = "תוצאות צנרת ואינסטלציה:\n" +
+                    "• מהירות זרימה: ${Utils.formatResult(velocity, 2)} מ׳/שנייה\n" +
+                    "• ספיקה שעתית: ${Utils.formatResult(qLmin * 0.06, 2)} מ״ק/שעה (m³/h)\n" +
+                    "• לחץ הידרוסטטי ב-${Utils.formatResult(hMeters, 1)} מ׳: ${Utils.formatResult(barPressure, 2)} Bar (${Utils.formatResult(barPressure * 14.5038, 1)} PSI)"
+        }
+    }
+    btn.performClick()
+    root.addView(pipeCanvas); root.addView(diamIn); root.addView(flowIn); root.addView(headIn); root.addView(btn); root.addView(resTv)
+    scroll.addView(root); return scroll
+}
+
+// 1C. מסך אישי: מחשבון רפואי - מינון תרופות, קצב עירוי IV, סוכר ו-BSA
+fun MainActivity.createProMedicalDosageScreen(): View {
+    val scroll = ScrollView(this)
+    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
+    root.addView(createProCanvaHeader("🩺 מחשבון רפואי: עירוי IV, מינון תרופות וסוכר", "חישוב קצב טיפות לדקה (gtt/min), מינון לפי משקל והמרת mg/dL ↔ mmol/L"))
+
+    val weightIn = createInputBox("משקל מטופל בק״ג (kg)").apply { setText("70") }
+    val doseMgKgIn = createInputBox("מינון נדרש במ״ג לק״ג (mg/kg)").apply { setText("10") }
+    val ivVolIn = createInputBox("נפח שקית עירוי במ״ל (mL)").apply { setText("500") }
+    val ivHoursIn = createInputBox("זמן הזלפת העירוי בשעות").apply { setText("4") }
+    val glucoseIn = createInputBox("רמת סוכר בדם ב-mg/dL (להמרה ל-mmol/L)").apply { setText("100") }
+    val resTv = createResultTextView()
+
+    val btn = createActionBtn("חשב מינון רפואי וקצב עירוי 🩺") {
+        val w = weightIn.text.toString().toDoubleOrNull() ?: 70.0
+        val dose = doseMgKgIn.text.toString().toDoubleOrNull() ?: 10.0
+        val vol = ivVolIn.text.toString().toDoubleOrNull() ?: 500.0
+        val hrs = (ivHoursIn.text.toString().toDoubleOrNull() ?: 4.0).coerceAtLeast(0.1)
+        val glu = glucoseIn.text.toString().toDoubleOrNull() ?: 100.0
+
+        val totalDoseMg = w * dose
+        val mlPerHour = vol / hrs
+        val dropsPerMin20 = (mlPerHour * 20.0) / 60.0
+        val gluMmol = glu / 18.0182
+
+        resTv.text = "פלט חישוב קליני:\n" +
+                "• מינון כולל למטופל: ${Utils.formatResult(totalDoseMg, 1)} מ״ג (mg)\n" +
+                "• קצב משאבת עירוי: ${Utils.formatResult(mlPerHour, 1)} mL/h\n" +
+                "• קצב טפטוף (סט 20 gtt/mL): ${Utils.formatResult(dropsPerMin20, 0)} טיפות לדקה\n" +
+                "• סוכר בדם: ${Utils.formatResult(glu, 0)} mg/dL = ${Utils.formatResult(gluMmol, 2)} mmol/L"
+    }
+    btn.performClick()
+    root.addView(weightIn); root.addView(doseMgKgIn); root.addView(ivVolIn); root.addView(ivHoursIn); root.addView(glucoseIn); root.addView(btn); root.addView(resTv)
+    scroll.addView(root); return scroll
+}
+
+// 1D. מסך אישי: מחשבון בנייה, בטון, ריצוף, צבע ומיזוג אוויר (BTU)
+fun MainActivity.createProConstructionAndAcScreen(): View {
+    val scroll = ScrollView(this)
+    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
+    root.addView(createProCanvaHeader("🏗️ מחשבון בנייה, בטון, ריצוף ומיזוג (BTU)", "חישוב תפוקת מזגן לחדר, כמות אריחים לריצוף, צבע לקירות ונפח בטון"))
+
+    val lengthIn = createInputBox("אורך החדר / המשטח במטרים").apply { setText("5") }
+    val widthIn = createInputBox("רוחב החדר / המשטח במטרים").apply { setText("4") }
+    val depthCmIn = createInputBox("עובי יציקת בטון בס״מ (למשל 15)").apply { setText("15") }
+    val resTv = createResultTextView()
+
+    val btn = createActionBtn("חשב BTU, ריצוף, צבע ונפח בטון 🏗️") {
+        val l = lengthIn.text.toString().toDoubleOrNull() ?: 5.0
+        val w = widthIn.text.toString().toDoubleOrNull() ?: 4.0
+        val depthM = (depthCmIn.text.toString().toDoubleOrNull() ?: 15.0) / 100.0
+        val area = l * w
+        val btu = area * 650.0
+        val concreteM3 = area * depthM
+        val tiles60x60 = ceil((area / 0.36) * 1.10).toInt()
+        val wallPaintLiters = ((2 * (l + w) * 2.7) / 10.0) * 2.0
+
+        resTv.text = "עבור שטח של ${Utils.formatResult(area, 2)} מ״ר:\n" +
+                "• תפוקת מזגן מומלצת: ${Utils.formatResult(btu, 0)} BTU/h (~${Utils.formatResult(btu / 9000.0, 1)} כ״ס)\n" +
+                "• נפח בטון ליציקה: ${Utils.formatResult(concreteM3, 2)} מ״ק (קוב)\n" +
+                "• כמות אריחים 60×60 (כולל 10% פחת): $tiles60x60 יחידות\n" +
+                "• כמות צבע לקירות (2 שכבות): ${Utils.formatResult(wallPaintLiters, 1)} ליטר"
+    }
+    btn.performClick()
+    root.addView(lengthIn); root.addView(widthIn); root.addView(depthCmIn); root.addView(btn); root.addView(resTv)
     scroll.addView(root); return scroll
 }
 
@@ -276,7 +551,7 @@ private fun MainActivity.showAddCustomUnitDialog(categoryName: String, onAdded: 
 }
 
 // =========================================================================
-// 2. מטבעות בזמן אמת, מתכות יקרות (זהב/כסף), גרפים (7/30/365), התראות שער
+// 2. מטבעות בזמן אמת, מתכות יקרות (זהב/כסף/פלטינה), גרפים (7/30/365), התראות שער
 // =========================================================================
 class RateHistoryChartView(context: Context) : View(context) {
     var points: List<Float> = listOf(1f, 1.02f, 1.01f, 1.04f, 1.03f, 1.06f, 1.05f)
@@ -324,6 +599,7 @@ class RateHistoryChartView(context: Context) : View(context) {
 fun MainActivity.createProCurrenciesAndMetalsHub(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(14f), dp(20f), dp(24f)) }
+    root.addView(createProCanvaHeader("🥇 מתכות יקרות, 145+ מטבעות וגרפים חיים", "מחירי זהב וכסף בזמן אמת, היסטוריית שערים (7/30/365) והתראות יעד"))
 
     val metalsCard = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL; setPadding(dp(16f), dp(16f), dp(16f), dp(16f))
@@ -408,508 +684,280 @@ fun MainActivity.createProCurrenciesAndMetalsHub(): View {
             }.setNegativeButton("ביטול", null).show()
     }
 
-    root.addView(metalsCard)
-    root.addView(chartView)
-    root.addView(periodRow)
-    root.addView(alertTargetInput)
-    root.addView(setAlertBtn)
-    root.addView(addCustomCurrBtn)
+    root.addView(metalsCard); root.addView(chartView); root.addView(periodRow)
+    root.addView(alertTargetInput); root.addView(setAlertBtn); root.addView(addCustomCurrBtn)
     root.addView(createCurrencyCalculator())
     scroll.addView(root); return scroll
 }
 
 // =========================================================================
-// 3. 48 כלים שימושיים (קודי צבע נגדים, AWG, טבלה מחזורית, פלס, מצפן, מורס, סרגל ועוד)
+// 3. מסכים אישיים למחשבונים הפיננסיים (משכנתא שפיצר, ROI/CAGR, נקודת איזון ותקציב)
 // =========================================================================
-fun MainActivity.createPro48ToolsHub(): View {
+
+// 3A. מסך אישי: מחשבון משכנתא ולוח סילוקין שפיצר עם קנבס קרן מול ריבית
+fun MainActivity.createProMortgageSpitzerScreen(): View {
     val scroll = ScrollView(this)
-    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(14f), dp(20f), dp(24f)) }
+    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
+    root.addView(createProCanvaHeader("🏠 מחשבון משכנתא ולוח סילוקין שפיצר", "חישוב החזר חודשי, סך ריבית מצטברת ופילוח קרן מול ריבית"))
 
-    val tools48 = listOf(
-        "1. קודי צבע של נגדים (4/5 פסים)", "2. קודי קבלים (פיענוח 104/472)", "3. עוביי חוטים AWG / SWG וזרם מרבי",
-        "4. חוק אוהם והספק חשמלי (V/I/R/P)", "5. מחולל סיסמאות מאובטחות Pro", "6. הטבלה המחזורית של היסודות (118 יסודות)",
-        "7. מצפן מגנטי דיגיטלי חי", "8. פלס בנאים דו-צירי חי (Spirit Level)", "9. מד-זווית וסרגל מכויל על המסך",
-        "10. שעון עצר ומדידת הקפות (Stopwatch)", "11. מתרגם קוד מורס דו-כיווני", "12. פנס מסך עוצמתי (Screen Torch)",
-        "13. מחשבון מפל מתח בכבלים", "14. מחשבון מחלק מתח (Voltage Divider)", "15. אורך חיי סוללה (mAh)",
-        "16. מחשבון תדר תהודה LC", "17. המרת דציבלים (dBm / mW)", "18. קידוד צבעים HEX / RGB / HSL",
-        "19. ספירת מילים, תווים וגימטריה", "20. המרת ספרות רומיות", "21. מחולל מספרי הגרלה אקראיים",
-        "22. מטיל קוביות והטלת מטבע", "23. מחשבון זמן הורדת קובץ", "24. מחשבון RAID ונפח אחסון",
-        "25. מחשבון רזולוציה ויחס מסך (Aspect Ratio)", "26. מחשבון צפיפות פיקסלים PPI", "27. מחשבון צריכת חשמל של מכשיר (₪)",
-        "28. מחשבון לחץ מים וספיקה בצנרת", "29. מחשבון קוטר צינור לפי ספיקה", "30. מחשבון נפח דוד / צנרת מים",
-        "31. מחשבון תפוקת מזגן מומלצת לחדר (BTU)", "32. מחשבון כמות צבע לקירות", "33. מחשבון כמות אריחים לריצוף",
-        "34. מחשבון נפח בטון ליציקה", "35. מחשבון שטח גג ושיפוע רעפים", "36. מחשבון עומק שדה בצילום (DOF)",
-        "37. מחשבון שעת הזהב וזריחה", "38. מחשבון מהירות קול באוויר לפי טמפ'", "39. מחשבון מרחק ברק לפי רעם",
-        "40. מחשבון גובה לפי לחץ אטמוספירי", "41. מחשבון נקודת רתיחה לפי גובה", "42. מחשבון אינדקס חום ועומס חום",
-        "43. מחשבון אפקט צינון רוח (Wind Chill)", "44. מחשבון שטח פני גוף (BSA רפואי)", "45. מחשבון קצב סינון כלייתי (GFR)",
-        "46. מחשבון מידות נעליים וביגוד עולמי", "47. מחשבון יחס בישול והמרת תבניות אפייה", "48. טיימר ספירה לאחור מהיר"
-    )
-
-    var currentToolIdx = 0
-    val toolSelectorBtn = createActionBtn("🧰 בחר כלי (1/48): ${tools48[0]}", true) {}
-    val toolContainer = FrameLayout(this)
-
-    fun renderSelectedTool() {
-        toolContainer.removeAllViews()
-        val view = when (currentToolIdx + 1) {
-            1 -> buildResistorTool()
-            2 -> buildCapacitorTool()
-            3 -> buildAwgTool()
-            5 -> buildPasswordGeneratorTool()
-            6 -> buildPeriodicTableTool()
-            7, 8 -> buildLiveSensorLevelAndCompassTool()
-            9 -> buildScreenRulerAndProtractorTool()
-            10 -> buildStopwatchTool()
-            11 -> buildMorseCodeTool()
-            12 -> buildScreenFlashlightTool()
-            else -> buildDynamicEngineeringTool(currentToolIdx + 1, tools48[currentToolIdx])
-        }
-        toolContainer.addView(view)
+    val spitzerCanvas = SpitzerMortgageCanvasView(this, this).apply {
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(195f)).apply { bottomMargin = dp(12f) }
+        background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProMortgageSpitzerScreen, 20f)
+        else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(20f).toFloat() }
     }
 
-    toolSelectorBtn.setOnClickListener {
-        showItemPicker("בחר מתוך 48 כלים שימושיים", tools48) { chosen ->
-            currentToolIdx = tools48.indexOf(chosen).coerceAtLeast(0)
-            toolSelectorBtn.text = "🧰 כלי (${currentToolIdx + 1}/48): $chosen"
-            renderSelectedTool()
-        }
-    }
+    val loanIn = createInputBox("סכום המשכנתא (₪)").apply { setText("1000000") }
+    val yearsIn = createInputBox("תקופה בשנים (למשל 25)").apply { setText("25") }
+    val rateIn = createInputBox("ריבית שנתית ממוצעת (%)").apply { setText("4.5") }
+    val resTv = createResultTextView()
 
-    renderSelectedTool()
-    root.addView(toolSelectorBtn); root.addView(toolContainer)
+    val btn = createActionBtn("חשב לוח סילוקין שפיצר 🏠") {
+        val p = loanIn.text.toString().toDoubleOrNull() ?: 1000000.0
+        val yrs = (yearsIn.text.toString().toDoubleOrNull() ?: 25.0).coerceAtLeast(1.0)
+        val n = yrs * 12.0
+        val r = (rateIn.text.toString().toDoubleOrNull() ?: 4.5) / 100.0 / 12.0
+        val pmt = if (r == 0.0) p / n else p * (r * (1 + r).pow(n)) / ((1 + r).pow(n) - 1)
+        val totalPaid = pmt * n
+        val totalInterest = totalPaid - p
+
+        spitzerCanvas.principalVal = p
+        spitzerCanvas.interestVal = totalInterest
+        spitzerCanvas.monthlyPmt = pmt
+        spitzerCanvas.invalidate()
+
+        val firstMonthInterest = p * r
+        val firstMonthPrincipal = pmt - firstMonthInterest
+        resTv.text = "סיכום משכנתא (${yrs.toInt()} שנים / ${n.toInt()} תשלומים):\n" +
+                "• החזר חודשי קבוע: ₪${Utils.formatResult(pmt, 2)}\n" +
+                "• סך כל ההחזרים לבנק: ₪${Utils.formatResult(totalPaid, 0)}\n" +
+                "• סך ריבית מצטברת: ₪${Utils.formatResult(totalInterest, 0)}\n" +
+                "• תשלום ראשון: קרן ₪${Utils.formatResult(firstMonthPrincipal, 0)} + ריבית ₪${Utils.formatResult(firstMonthInterest, 0)}"
+    }
+    btn.performClick()
+    root.addView(spitzerCanvas); root.addView(loanIn); root.addView(yearsIn); root.addView(rateIn); root.addView(btn); root.addView(resTv)
     scroll.addView(root); return scroll
 }
 
-private fun MainActivity.buildResistorTool(): View {
-    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-    val colors = listOf("שחור (0)" to 0, "חום (1)" to 1, "אדום (2)" to 2, "כתום (3)" to 3, "צהוב (4)" to 4, "ירוק (5)" to 5, "כחול (6)" to 6, "סגול (7)" to 7, "אפור (8)" to 8, "לבן (9)" to 9)
-    val tolerances = listOf("זהב (±5%)", "כסף (±10%)", "חום (±1%)", "אדום (±2%)")
-    var b1 = 1; var b2 = 0; var mult = 2; var tol = 0
-    val resTv = createResultTextView()
-
-    fun updateRes() {
-        val ohms = (b1 * 10 + b2) * 10.0.pow(mult)
-        val formatted = when {
-            ohms >= 1e6 -> "${Utils.formatResult(ohms / 1e6, 2)} MΩ"
-            ohms >= 1e3 -> "${Utils.formatResult(ohms / 1e3, 2)} kΩ"
-            else -> "${Utils.formatResult(ohms, 2)} Ω"
-        }
-        resTv.text = "התנגדות הנגד:\n$formatted  ${tolerances[tol]}"
-    }
-
-    val btn1 = createActionBtn("פס 1: ${colors[b1].first}", false) {}
-    val btn2 = createActionBtn("פס 2: ${colors[b2].first}", false) {}
-    val btnM = createActionBtn("מכפיל: ×10^$mult (${colors[mult].first})", false) {}
-    val btnT = createActionBtn("דיוק (Tolerance): ${tolerances[tol]}", false) {}
-
-    btn1.setOnClickListener { showItemPicker("בחר צבע פס 1", colors.map { it.first }) { c -> b1 = colors.indexOfFirst { it.first == c }; btn1.text = "פס 1: $c"; updateRes() } }
-    btn2.setOnClickListener { showItemPicker("בחר צבע פס 2", colors.map { it.first }) { c -> b2 = colors.indexOfFirst { it.first == c }; btn2.text = "פס 2: $c"; updateRes() } }
-    btnM.setOnClickListener { showItemPicker("בחר מכפיל", colors.map { it.first }) { c -> mult = colors.indexOfFirst { it.first == c }; btnM.text = "מכפיל: $c"; updateRes() } }
-    btnT.setOnClickListener { showItemPicker("בחר טולרנס", tolerances) { c -> tol = tolerances.indexOf(c); btnT.text = "דיוק: $c"; updateRes() } }
-
-    updateRes()
-    root.addView(btn1); root.addView(btn2); root.addView(btnM); root.addView(btnT); root.addView(resTv)
-    return root
-}
-
-private fun MainActivity.buildCapacitorTool(): View {
-    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-    val codeIn = createInputBox("הזן קוד קבל 3 ספרות (למשל 104 או 472)").apply { setText("104") }
-    val resTv = createResultTextView()
-    val btn = createActionBtn("פענח קוד קבל ⚡") {
-        val s = codeIn.text.toString().trim()
-        if (s.length == 3 && s.all { it.isDigit() }) {
-            val base = s.substring(0, 2).toDouble()
-            val zeros = s[2].digitToInt()
-            val pf = base * 10.0.pow(zeros)
-            val nf = pf / 1000.0
-            val uf = nf / 1000.0
-            resTv.text = "קיבול הקבל (קוד $s):\n${Utils.formatResult(pf, 2)} pF\n${Utils.formatResult(nf, 4)} nF\n${Utils.formatResult(uf, 6)} µF"
-        } else resTv.text = "נא להזין קוד בן 3 ספרות בדיוק (למשל 104)"
-    }
-    btn.performClick()
-    root.addView(codeIn); root.addView(btn); root.addView(resTv)
-    return root
-}
-
-private fun MainActivity.buildAwgTool(): View {
-    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-    val awgIn = createInputBox("הזן מספר עובי חוט AWG (0 עד 40, למשל 14)").apply { setText("14") }
-    val resTv = createResultTextView()
-    val btn = createActionBtn("חשב קוטר, שטח חתך והתנגדות 🔌") {
-        val n = awgIn.text.toString().toIntOrNull() ?: 14
-        val diamMm = 0.127 * 92.0.pow((36.0 - n) / 39.0)
-        val areaMm2 = (PI / 4.0) * diamMm * diamMm
-        val ohmPerKm = 17.241 / areaMm2
-        val maxAmpChassis = areaMm2 * 6.0
-        resTv.text = "חוט AWG #$n:\nקוטר: ${Utils.formatResult(diamMm, 3)} מ״מ\nשטח חתך: ${Utils.formatResult(areaMm2, 3)} ממ״ר (mm²)\nהתנגדות נחושת: ${Utils.formatResult(ohmPerKm, 2)} Ω/km\nזרם מרבי משוער: ~${Utils.formatResult(maxAmpChassis, 1)} A"
-    }
-    btn.performClick()
-    root.addView(awgIn); root.addView(btn); root.addView(resTv)
-    return root
-}
-
-private fun MainActivity.buildPasswordGeneratorTool(): View {
-    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-    val lenIn = createInputBox("אורך סיסמה (8 - 64)").apply { setText("16") }
-    val resTv = createResultTextView()
-    val genBtn = createActionBtn("צור סיסמה חזקה במיוחד 🔐") {
-        val len = (lenIn.text.toString().toIntOrNull() ?: 16).coerceIn(4, 64)
-        val chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#\$%^&*()-_=+"
-        val pass = (1..len).map { chars.random() }.joinToString("")
-        resTv.text = "$pass\n\n(לחץ על הסיסמה להעתקה ללוח)"
-    }
-    genBtn.performClick()
-    root.addView(lenIn); root.addView(genBtn); root.addView(resTv)
-    return root
-}
-
-private fun MainActivity.buildPeriodicTableTool(): View {
-    val elements = listOf(
-        "1. H - מימן (Hydrogen) | מסה: 1.008 | אל-מתכת",
-        "2. He - הליום (Helium) | מסה: 4.0026 | גז אציל",
-        "3. Li - ליתיום (Lithium) | מסה: 6.94 | מתכת אלקלית",
-        "6. C - פחמן (Carbon) | מסה: 12.011 | אל-מתכת",
-        "7. N - חנקן (Nitrogen) | מסה: 14.007 | אל-מתכת",
-        "8. O - חמצן (Oxygen) | מסה: 15.999 | אל-מתכת",
-        "11. Na - נתרן (Sodium) | מסה: 22.990 | מתכת אלקלית",
-        "12. Mg - מגנזיום (Magnesium) | מסה: 24.305 | מתכת עפרורית",
-        "13. Al - אלומיניום (Aluminum) | מסה: 26.982 | מתכת",
-        "14. Si - צורן / סיליקון (Silicon) | מסה: 28.085 | מתכת למחצה",
-        "17. Cl - כלור (Chlorine) | מסה: 35.45 | הלוגן",
-        "19. K - אשלגן (Potassium) | מסה: 39.098 | מתכת אלקלית",
-        "20. Ca - סידן (Calcium) | מסה: 40.078 | מתכת עפרורית",
-        "26. Fe - ברזל (Iron) | מסה: 55.845 | מתכת מעבר",
-        "29. Cu - נחושת (Copper) | מסה: 63.546 | מתכת מעבר",
-        "30. Zn - אבץ (Zinc) | מסה: 65.38 | מתכת מעבר",
-        "47. Ag - כסף (Silver) | מסה: 107.87 | מתכת מעבר",
-        "50. Sn - בדיל (Tin) | מסה: 118.71 | מתכת",
-        "74. W - טונגסטן (Tungsten) | מסה: 183.84 | מתכת מעבר",
-        "78. Pt - פלטינה (Platinum) | מסה: 195.08 | מתכת אצילה",
-        "79. Au - זהב (Gold) | מסה: 196.97 | מתכת אצילה",
-        "80. Hg - כספית (Mercury) | מסה: 200.59 | מתכת נוזלית",
-        "82. Pb - עופרת (Lead) | מסה: 207.2 | מתכת כבדה",
-        "92. U - אורניום (Uranium) | מסה: 238.03 | אקטיניד"
-    )
-    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-    val resTv = createResultTextView().apply { text = elements.first() }
-    val pickBtn = createActionBtn("🔬 חפש ובחר יסוד מהטבלה המחזורית") {
-        showItemPicker("הטבלה המחזורית של היסודות", elements) { chosen -> resTv.text = chosen }
-    }
-    root.addView(pickBtn); root.addView(resTv)
-    return root
-}
-
-private fun MainActivity.buildLiveSensorLevelAndCompassTool(): View {
-    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-    val statusTv = createResultTextView().apply { text = "קורא חיישני פלס ומצפן בזמן אמת..." }
-    val sm = getSystemService(Context.SENSOR_SERVICE) as? SensorManager
-    val accel = sm?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-
-    val listener = object : SensorEventListener {
-        override fun onSensorChanged(e: SensorEvent?) {
-            if (e == null) return
-            val gx = e.values[0]; val gy = e.values[1]; val gz = e.values[2]
-            val pitch = Math.toDegrees(atan2(gy.toDouble(), sqrt((gx * gx + gz * gz).toDouble())))
-            val roll = Math.toDegrees(atan2(-gx.toDouble(), gz.toDouble()))
-            val isLevel = abs(pitch) < 1.5 && abs(roll) < 1.5
-            statusTv.text = "📐 פלס בנאים דו-צירי חי:\n" +
-                    "נטייה אופקית (Roll): ${Utils.formatResult(roll, 1)}°\n" +
-                    "נטייה אנכית (Pitch): ${Utils.formatResult(pitch, 1)}°\n\n" +
-                    if (isLevel) "✅ המשטח מאוזן לחלוטין (0°)" else "⚠️ המשטח משופע"
-        }
-        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-    }
-    if (accel != null) sm.registerListener(listener, accel, SensorManager.SENSOR_DELAY_UI)
-    root.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-        override fun onViewAttachedToWindow(v: View) {}
-        override fun onViewDetachedFromWindow(v: View) { sm?.unregisterListener(listener) }
-    })
-    root.addView(statusTv)
-    return root
-}
-
-private fun MainActivity.buildScreenRulerAndProtractorTool(): View {
-    val dpi = resources.displayMetrics.ydpi.coerceAtLeast(160f)
-    val pxPerCm = dpi / 2.54f
-    return object : View(this) {
-        private val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; strokeWidth = 3f; textSize = 32f }
-        override fun onDraw(canvas: Canvas) {
-            super.onDraw(canvas)
-            canvas.drawColor(Utils.lightenColor(bgColor, 0.08f))
-            var cm = 0
-            var y = 40f
-            while (y < height - 20f) {
-                canvas.drawLine(0f, y, 90f, y, p)
-                canvas.drawText("${cm}cm", 105f, y + 10f, p)
-                for (mm in 1..9) {
-                    val my = y + (mm / 10f) * pxPerCm
-                    val len = if (mm == 5) 60f else 35f
-                    if (my < height) canvas.drawLine(0f, my, len, my, p)
-                }
-                cm++
-                y += pxPerCm
-            }
-        }
-    }.apply { layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, dp(420f)) }
-}
-
-private fun MainActivity.buildStopwatchTool(): View {
-    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-    var running = false
-    var startMs = 0L
-    var elapsedMs = 0L
-    val handler = Handler(Looper.getMainLooper())
-    val timeTv = createResultTextView().apply { text = "00:00.00"; textSize = 34f }
-
-    val tick = object : Runnable {
-        override fun run() {
-            if (!running) return
-            val total = elapsedMs + (System.currentTimeMillis() - startMs)
-            val min = (total / 60000) % 60
-            val sec = (total / 1000) % 60
-            val cs = (total % 1000) / 10
-            timeTv.text = String.format("%02d:%02d.%02d", min, sec, cs)
-            handler.postDelayed(this, 30)
-        }
-    }
-
-    val startStopBtn = createActionBtn("התחל / עצור שעון עצר ⏱️") {
-        if (!running) {
-            startMs = System.currentTimeMillis(); running = true; handler.post(tick)
-        } else {
-            elapsedMs += System.currentTimeMillis() - startMs; running = false
-        }
-    }
-    val resetBtn = createActionBtn("אפס", false) { running = false; elapsedMs = 0L; timeTv.text = "00:00.00" }
-    root.addView(timeTv); root.addView(startStopBtn); root.addView(resetBtn)
-    return root
-}
-
-private fun MainActivity.buildMorseCodeTool(): View {
-    val morseMap = mapOf(
-        'A' to ".-", 'B' to "-...", 'C' to "-.-.", 'D' to "-..", 'E' to ".", 'F' to "..-.",
-        'G' to "--.", 'H' to "....", 'I' to "..", 'J' to ".---", 'K' to "-.-", 'L' to ".-..",
-        'M' to "--", 'N' to "-.", 'O' to "---", 'P' to ".--.", 'Q' to "--.-", 'R' to ".-.",
-        'S' to "...", 'T' to "-", 'U' to "..-", 'V' to "...-", 'W' to ".--", 'X' to "-..-",
-        'Y' to "-.--", 'Z' to "--..", '1' to ".----", '2' to "..---", '3' to "...--", '4' to "....-",
-        '5' to ".....", '6' to "-....", '7' to "--...", '8' to "---..", '9' to "----.", '0' to "-----",
-        'א' to ".-", 'ב' to "-...", 'ג' to "--.", 'ד' to "-..", 'ה' to "---", 'ו' to ".",
-        'ז' to "--..", 'ח' to "....", 'ט' to "..-", 'י' to "..", 'כ' to "-.-", 'ל' to ".-..",
-        'מ' to "--", 'נ' to "-.", 'ס' to "-.-.", 'ע' to ".---", 'פ' to ".--.", 'צ' to ".--",
-        'ק' to "--.-", 'ר' to ".-.", 'ש' to "...", 'ת' to "-"
-    )
-    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-    val input = createInputBox("הקלד טקסט בעברית או באנגלית לתרגום למורס").apply { inputType = InputType.TYPE_CLASS_TEXT }
-    val resTv = createResultTextView()
-    input.addTextChangedListener(object : TextWatcher {
-        override fun afterTextChanged(s: Editable?) {
-            val txt = s.toString().uppercase()
-            resTv.text = txt.map { ch -> if (ch == ' ') "/" else morseMap[ch] ?: "" }.joinToString(" ")
-        }
-        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-    })
-    root.addView(input); root.addView(resTv)
-    return root
-}
-
-private fun MainActivity.buildScreenFlashlightTool(): View {
-    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-    var isTorchOn = false
-    val torchBox = View(this).apply {
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(240f)).apply { bottomMargin = dp(12f) }
-        setBackgroundColor(Color.DKGRAY)
-    }
-    val btn = createActionBtn("הדלק / כבה פנס מסך במלוא הבהירות 🔦") {
-        isTorchOn = !isTorchOn
-        val lp = window.attributes
-        lp.screenBrightness = if (isTorchOn) 1.0f else -1.0f
-        window.attributes = lp
-        torchBox.setBackgroundColor(if (isTorchOn) Color.WHITE else Color.DKGRAY)
-    }
-    root.addView(btn); root.addView(torchBox)
-    return root
-}
-
-private fun MainActivity.buildDynamicEngineeringTool(toolNumber: Int, title: String): View {
-    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-    val in1 = createInputBox("פרמטר א' עבור $title")
-    val in2 = createInputBox("פרמטר ב' (אופציונלי)")
-    val resTv = createResultTextView()
-    val btn = createActionBtn("חשב ($title) ⚡") {
-        val a = in1.text.toString().toDoubleOrNull() ?: 0.0
-        val b = in2.text.toString().toDoubleOrNull() ?: 1.0
-        val out = when (toolNumber) {
-            4 -> "הספק (P = V×I): ${Utils.formatResult(a * b, 2)} W\nהתנגדות (R = V/I): ${Utils.formatResult(if (b != 0.0) a / b else 0.0, 2)} Ω"
-            15 -> "זמן פעולה משוער של הסוללה: ${Utils.formatResult(if (b > 0) (a / b) * 0.85 else 0.0, 2)} שעות"
-            17 -> "הספק במילי-וואט: ${Utils.formatResult(10.0.pow(a / 10.0), 4)} mW"
-            27 -> "עלות צריכת חשמל משוערת: ₪${Utils.formatResult((a / 1000.0) * b * 0.62, 2)}"
-            31 -> "תפוקת מזגן מומלצת לחדר: ${Utils.formatResult(a * 650.0, 0)} BTU/h"
-            39 -> "מרחק הברק ממך: ${Utils.formatResult(a * 0.343, 2)} ק״מ (${Utils.formatResult(a * 343.0, 0)} מטר)"
-            else -> "תוצאה מחושבת: ${Utils.formatResult(a * b, 4)}\nיחס: ${Utils.formatResult(if (b != 0.0) a / b else 0.0, 4)}"
-        }
-        resTv.text = out
-    }
-    root.addView(in1); root.addView(in2); root.addView(btn); root.addView(resTv)
-    return root
-}
-
-// =========================================================================
-// 4. 20 מחשבונים פיננסיים ו-22 מחשבונים מתמטיים מתקדמים
-// =========================================================================
-fun MainActivity.createProFinancial20Suite(): View {
+// 3B. מסך אישי: מחשבון תשואת השקעה ROI, צמיחה שנתית CAGR וחוק ה-72
+fun MainActivity.createProRoiCagrScreen(): View {
     val scroll = ScrollView(this)
-    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(14f), dp(20f), dp(24f)) }
+    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
+    root.addView(createProCanvaHeader("📈 מחשבון ROI, צמיחה שנתית (CAGR) וחוק ה-72", "ניתוח תשואה על השקעות, קצב צמיחה מורכב וזמן הכפלת ההון"))
 
-    val finTools = listOf(
-        "1. מחשבון ROI (תשואה על השקעה)", "2. מחשבון CAGR (צמיחה שנתית מורכבת)", "3. מחשבון משכנתא ולוח סילוקין שפיצר",
-        "4. מחשבון ריבית פשוטה מול ריבית דריבית", "5. מחשבון מרווח רווח (Gross Margin & Markup)", "6. מחשבון נקודת איזון עסקית (Break-Even)",
-        "7. מחשבון ערך נוכחי נקי (NPV)", "8. מחשבון ערך עתידי (FV)", "9. מחשבון התאמת אינפלציה וכוח קנייה",
-        "10. מחשבון פחת קו ישר (Depreciation)", "11. מחשבון עלות שנתית אפקטיבית (APR/EAR)", "12. מחשבון הכפלת השקעה (חוק ה-72)",
-        "13. מחשבון דיבידנד ותשואת דיבידנד", "14. מחשבון יחס רווח להון (P/E Ratio)", "15. מחשבון מס רווחי הון בורסאי (25%)",
-        "16. מחשבון המרת שכר שעתי לחודשי ושנתי", "17. מחשבון תקציב חודשי (כלל 50/30/20)", "18. מחשבון קרן חירום מומלצת",
-        "19. מחשבון השוואת כדאיות שתי הלוואות", "20. מחשבון חיסכון לפרישה ופנסיה"
-    )
-    var selIdx = 0
-    val pickBtn = createActionBtn("💰 כלי פיננסי (1/20): ${finTools[0]}", true) {}
-    val in1 = createInputBox("סכום התחלתי / השקעה / קרן (₪)")
-    val in2 = createInputBox("סכום סופי / ריבית (%) / הכנסה")
-    val in3 = createInputBox("תקופה בשנים / חודשים (ברירת מחדל 5)").apply { setText("5") }
+    val startIn = createInputBox("סכום השקעה התחלתי (₪)").apply { setText("50000") }
+    val endIn = createInputBox("שווי סופי של ההשקעה (₪)").apply { setText("95000") }
+    val yearsIn = createInputBox("מספר שנות החזקה").apply { setText("5") }
     val resTv = createResultTextView()
 
-    fun calcFin() {
-        val a = in1.text.toString().toDoubleOrNull() ?: 0.0
-        val b = in2.text.toString().toDoubleOrNull() ?: 0.0
-        val c = (in3.text.toString().toDoubleOrNull() ?: 1.0).coerceAtLeast(0.0001)
-        if (a <= 0.0) { resTv.text = "הזן נתונים לחישוב פיננסי"; return }
+    val btn = createActionBtn("חשב ROI, CAGR וזמן הכפלה 📈") {
+        val a = startIn.text.toString().toDoubleOrNull() ?: 50000.0
+        val b = endIn.text.toString().toDoubleOrNull() ?: 95000.0
+        val y = (yearsIn.text.toString().toDoubleOrNull() ?: 5.0).coerceAtLeast(0.1)
+        if (a > 0 && b > 0) {
+            val roi = ((b - a) / a) * 100.0
+            val cagr = ((b / a).pow(1.0 / y) - 1.0) * 100.0
+            val doubleYears = if (cagr > 0) 72.0 / cagr else 0.0
+            val netAfterTax = (b - a) * 0.75
+            resTv.text = "ניתוח ביצועי השקעה:\n" +
+                    "• תשואה כוללת (ROI): ${Utils.formatResult(roi, 2)}%\n" +
+                    "• צמיחה שנתית מורכבת (CAGR): ${Utils.formatResult(cagr, 2)}% לשנה\n" +
+                    "• רווח נקי (אחרי 25% מס רווחי הון): ₪${Utils.formatResult(netAfterTax, 2)}\n" +
+                    if (doubleYears > 0) "• זמן הכפלת ההון (חוק ה-72): ${Utils.formatResult(doubleYears, 1)} שנים" else ""
+        }
+    }
+    btn.performClick()
+    root.addView(startIn); root.addView(endIn); root.addView(yearsIn); root.addView(btn); root.addView(resTv)
+    scroll.addView(root); return scroll
+}
 
-        resTv.text = when (selIdx + 1) {
-            1 -> { // ROI
-                val roi = ((b - a) / a) * 100.0
-                "תשואה על ההשקעה (ROI): ${Utils.formatResult(roi, 2)}%\nרווח נקי: ₪${Utils.formatResult(b - a, 2)}"
+// 3C. מסך אישי: מחשבון מרווח רווח (Margin & Markup), נקודת איזון ותקציב 50/30/20
+fun MainActivity.createProBusinessMarginScreen(): View {
+    val scroll = ScrollView(this)
+    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
+    root.addView(createProCanvaHeader("💼 מרווח רווח (Margin), נקודת איזון ותקציב", "חישוב רווח גולמי, Markup, נקודת איזון עסקית וחלוקת 50/30/20"))
+
+    val costIn = createInputBox("עלות ייצור / רכישה ליחידה (₪)").apply { setText("120") }
+    val priceIn = createInputBox("מחיר מכירה ללקוח (₪)").apply { setText("200") }
+    val fixedIn = createInputBox("הוצאות קבועות חודשיות בעסק (₪)").apply { setText("16000") }
+    val resTv = createResultTextView()
+
+    val btn = createActionBtn("חשב מרווח רווח ונקודת איזון 💼") {
+        val cost = costIn.text.toString().toDoubleOrNull() ?: 120.0
+        val price = priceIn.text.toString().toDoubleOrNull() ?: 200.0
+        val fixed = fixedIn.text.toString().toDoubleOrNull() ?: 16000.0
+        val unitProfit = price - cost
+        val margin = if (price > 0) (unitProfit / price) * 100.0 else 0.0
+        val markup = if (cost > 0) (unitProfit / cost) * 100.0 else 0.0
+        val breakEvenUnits = if (unitProfit > 0) ceil(fixed / unitProfit).toInt() else 0
+
+        resTv.text = "ניתוח רווחיות עסקית:\n" +
+                "• רווח גולמי ליחידה: ₪${Utils.formatResult(unitProfit, 2)}\n" +
+                "• מרווח רווח (Gross Margin): ${Utils.formatResult(margin, 2)}%\n" +
+                "• תוספת לעלות (Markup): ${Utils.formatResult(markup, 2)}%\n" +
+                "• נקודת איזון (Break-Even): $breakEvenUnits יחידות (פדיון: ₪${Utils.formatResult(breakEvenUnits * price, 0)})"
+    }
+    btn.performClick()
+    root.addView(costIn); root.addView(priceIn); root.addView(fixedIn); root.addView(btn); root.addView(resTv)
+    scroll.addView(root); return scroll
+}
+
+// =========================================================================
+// 4. מסכים אישיים למתמטיקה מתקדמת וסטטיסטיקה (עקומת פעמון, גאומטריה, תורת המספרים)
+// =========================================================================
+
+// 4A. מסך אישי: מעבדת סטטיסטיקה, סטיית תקן, חציון ועקומת פעמון בקנבה
+fun MainActivity.createProStatisticsBellScreen(): View {
+    val scroll = ScrollView(this)
+    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
+    root.addView(createProCanvaHeader("📊 מעבדת סטטיסטיקה ועקומת התפלגות נורמלית", "ממוצע, חציון, שונות, סטיית תקן (σ) וציור עקומת פעמון"))
+
+    val bellCanvas = BellCurveStatsCanvasView(this, this).apply {
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(200f)).apply { bottomMargin = dp(12f) }
+        background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProStatisticsBellScreen, 20f)
+        else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(20f).toFloat() }
+    }
+
+    val listIn = createInputBox("הזן רשימת מספרים מופרדים בפסיק").apply {
+        inputType = InputType.TYPE_CLASS_TEXT
+        setText("72, 85, 90, 68, 95, 88, 79, 92")
+    }
+    val resTv = createResultTextView()
+
+    val btn = createActionBtn("נתח מדגם סטטיסטי וצייר עקומה 📊") {
+        val nums = listIn.text.toString().split(",", " ").mapNotNull { it.trim().toDoubleOrNull() }.sorted()
+        if (nums.isNotEmpty()) {
+            val n = nums.size
+            val mean = nums.average()
+            val median = if (n % 2 == 1) nums[n / 2] else (nums[n / 2 - 1] + nums[n / 2]) / 2.0
+            val variance = nums.sumOf { (it - mean).pow(2.0) } / n
+            val stdDev = sqrt(variance)
+
+            bellCanvas.meanVal = mean
+            bellCanvas.stdDevVal = stdDev
+            bellCanvas.invalidate()
+
+            resTv.text = "תוצאות ניתוח סטטיסטי (N = $n):\n" +
+                    "• ממוצע (Mean μ): ${Utils.formatResult(mean, 3)}\n" +
+                    "• חציון (Median): ${Utils.formatResult(median, 3)}\n" +
+                    "• סטיית תקן (σ): ${Utils.formatResult(stdDev, 3)}\n" +
+                    "• שונות (Variance σ²): ${Utils.formatResult(variance, 3)}\n" +
+                    "• מינימום: ${nums.first()} | מקסימום: ${nums.last()} | סכום: ${Utils.formatResult(nums.sum(), 2)}"
+        } else resTv.text = "נא להזין מספרים מופרדים בפסיק"
+    }
+    btn.performClick()
+    root.addView(bellCanvas); root.addView(listIn); root.addView(btn); root.addView(resTv)
+    scroll.addView(root); return scroll
+}
+
+// 4B. מסך אישי: גאומטריה 2D/3D, פיתגורס וטריגונומטריה עם שרטוט Blueprint
+fun MainActivity.createProGeometryBlueprintScreen(): View {
+    val scroll = ScrollView(this)
+    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
+    root.addView(createProCanvaHeader("📐 גאומטריה, פיתגורס ונפחי גופים (Blueprint)", "שרטוט חי וחישוב משולש ישר-זווית, מעגל, כדור, גליל וחרוט"))
+
+    val blueprintCanvas = GeometryBlueprintCanvasView(this, this).apply {
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(210f)).apply { bottomMargin = dp(12f) }
+        background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProGeometryBlueprintScreen, 20f)
+        else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(20f).toFloat() }
+    }
+
+    val shapes = listOf("משולש ישר-זווית (פיתגורס וזוויות)", "מעגל וכדור (שטח, היקף ונפח)", "גליל וחרוט תלת-ממדי (נפח ומעטפת)")
+    var shapeIdx = 0
+    val shapeBtn = createActionBtn("צורה: ${shapes[0]}", false) {}
+    val inA = createInputBox("ניצב א' / רדיוס R").apply { setText("3") }
+    val inB = createInputBox("ניצב ב' / גובה H").apply { setText("4") }
+    val resTv = createResultTextView()
+
+    fun calcGeo() {
+        val a = inA.text.toString().toDoubleOrNull() ?: 3.0
+        val b = inB.text.toString().toDoubleOrNull() ?: 4.0
+        blueprintCanvas.mode = shapeIdx
+        blueprintCanvas.paramA = a
+        blueprintCanvas.paramB = b
+        blueprintCanvas.invalidate()
+
+        resTv.text = when (shapeIdx) {
+            0 -> {
+                val c = hypot(a, b)
+                val degA = Math.toDegrees(atan2(a, b))
+                "משולש ישר-זווית:\n• יתר (c): ${Utils.formatResult(c, 4)}\n• שטח: ${Utils.formatResult(a * b / 2.0, 4)} | היקף: ${Utils.formatResult(a + b + c, 4)}\n• זוויות חדות: α = ${Utils.formatResult(degA, 2)}°, β = ${Utils.formatResult(90.0 - degA, 2)}°"
             }
-            2 -> { // CAGR
-                val cagr = ((b / a).pow(1.0 / c) - 1.0) * 100.0
-                "קצב צמיחה שנתי מורכב (CAGR): ${Utils.formatResult(cagr, 2)}% לשנה (לאורך ${Utils.formatResult(c, 1)} שנים)"
+            1 -> {
+                val area = PI * a * a
+                val circ = 2 * PI * a
+                val sphereVol = (4.0 / 3.0) * PI * a.pow(3.0)
+                "מעגל וכדור (רדיוס R=$a):\n• שטח מעגל: ${Utils.formatResult(area, 4)}\n• היקף מעגל: ${Utils.formatResult(circ, 4)}\n• נפח כדור: ${Utils.formatResult(sphereVol, 4)}"
             }
-            5 -> { // Margin & Markup
-                val profit = b - a
-                val margin = if (b != 0.0) (profit / b) * 100.0 else 0.0
-                val markup = (profit / a) * 100.0
-                "רווח גולמי: ₪${Utils.formatResult(profit, 2)}\nמרווח רווח (Margin): ${Utils.formatResult(margin, 2)}%\nתוספת למחיר עלות (Markup): ${Utils.formatResult(markup, 2)}%"
-            }
-            12 -> "לפי חוק ה-72, בריבית של ${Utils.formatResult(a, 2)}% כספך יוכפל תוך ${Utils.formatResult(72.0 / a, 1)} שנים"
-            17 -> "חלוקת תקציב 50/30/20 להכנסה של ₪${Utils.formatResult(a, 0)}:\n• צרכים הכרחיים (50%): ₪${Utils.formatResult(a * 0.5, 0)}\n• רצונות ופנאי (30%): ₪${Utils.formatResult(a * 0.3, 0)}\n• חיסכון והשקעות (20%): ₪${Utils.formatResult(a * 0.2, 0)}"
             else -> {
-                val r = b / 100.0
-                val fv = a * (1.0 + r).pow(c)
-                "ערך עתידי משוער: ₪${Utils.formatResult(fv, 2)}\nתשואה כוללת: ₪${Utils.formatResult(fv - a, 2)}"
+                val cylVol = PI * a * a * b
+                val coneVol = cylVol / 3.0
+                "גליל וחרוט (R=$a, H=$b):\n• נפח גליל: ${Utils.formatResult(cylVol, 4)}\n• נפח חרוט: ${Utils.formatResult(coneVol, 4)}\n• שטח פנים גליל: ${Utils.formatResult(2 * PI * a * (a + b), 4)}"
             }
         }
     }
 
-    pickBtn.setOnClickListener {
-        showItemPicker("בחר מתוך 20 מחשבונים פיננסיים", finTools) { chosen ->
-            selIdx = finTools.indexOf(chosen).coerceAtLeast(0)
-            pickBtn.text = "💰 כלי (${selIdx + 1}/20): $chosen"
-            calcFin()
+    shapeBtn.setOnClickListener {
+        showItemPicker("בחר מודל גאומטרי", shapes) { chosen ->
+            shapeIdx = shapes.indexOf(chosen).coerceAtLeast(0)
+            shapeBtn.text = "צורה: $chosen"
+            calcGeo()
         }
     }
-    val calcBtn = createActionBtn("חשב תוצאה פיננסית 📊") { calcFin() }
-    root.addView(pickBtn); root.addView(in1); root.addView(in2); root.addView(in3); root.addView(calcBtn); root.addView(resTv)
+    val btn = createActionBtn("חשב ושרטט גאומטריה 📐") { calcGeo() }
+    calcGeo()
+    root.addView(blueprintCanvas); root.addView(shapeBtn); root.addView(inA); root.addView(inB); root.addView(btn); root.addView(resTv)
     scroll.addView(root); return scroll
 }
 
-fun MainActivity.createProMath22Suite(): View {
+// 4C. מסך אישי: תורת המספרים, קומבינטוריקה (nPr/nCr), GCD/LCM ופירוק לגורמים
+fun MainActivity.createProNumberTheoryScreen(): View {
     val scroll = ScrollView(this)
-    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(14f), dp(20f), dp(24f)) }
+    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
+    root.addView(createProCanvaHeader("🔢 תורת המספרים, קומבינטוריקה וגורמים", "חישוב GCD, LCM, פירוק לגורמים ראשוניים ותמורות/צירופים (nPr/nCr)"))
 
-    val mathTools = listOf(
-        "1. מחלק משותף מרבי (GCD) וכפולה משותפת מזערית (LCM)",
-        "2. תמורות וצירופים (nPr & nCr - קומבינטוריקה)",
-        "3. בדיקת מספר ראשוני ופירוק לגורמים ראשוניים",
-        "4. סטטיסטיקה (ממוצע, חציון, שונות וסטיית תקן)",
-        "5. פתרון מערכת משוואות ליניאריות 2×2",
-        "6. חישוב דטרמיננטה של מטריצה",
-        "7. משפט פיתגורס וטריגונומטריה של משולש ישר-זווית",
-        "8. חישוב שטח והיקף מעגל, גזרה וטבעת",
-        "9. נפח ושטח פנים של כדור, גליל, חרוט ופירמידה",
-        "10. סדרה חשבונית (איבר כללי וסכום Sn)",
-        "11. סדרה הנדסית (איבר כללי וסכום Sn)",
-        "12. מספרים מרוכבים (חיבור, כפל והצגה קוטבית)",
-        "13. לוגריתמים בכל בסיס (log_b(x))",
-        "14. מרחק ונקודת אמצע בין שתי נקודות במישור",
-        "15. מרחק אוקלידי במרחב תלת-ממדי 3D",
-        "16. מכפלה סקלרית ווקטורית של שני וקטורים",
-        "17. התפלגות בינומית והסתברות",
-        "18. ציון תקן סטטיסטי (Z-Score)",
-        "19. המרת קואורדינטות קרטזיות לקוטביות (Polar)",
-        "20. סדרת פיבונאצ'י ויחס הזהב",
-        "21. צמצום שברים אוטומטי והמרה למספר מעורב",
-        "22. מחשבון מודולו וחשבון שאריות (a mod b)"
-    )
-
-    var selIdx = 0
-    val pickBtn = createActionBtn("🧮 כלי מתמטי (1/22): ${mathTools[0]}", true) {}
-    val inA = createInputBox("מספר A / רשימת מספרים מופרד בפסיק")
-    val inB = createInputBox("מספר B / פרמטר שני")
+    val inN = createInputBox("מספר ראשון (n / A)").apply { setText("12") }
+    val inR = createInputBox("מספר שני (r / B)").apply { setText("5") }
     val resTv = createResultTextView()
 
     fun fact(n: Int): Double = (2..n).fold(1.0) { acc, i -> acc * i }
 
-    val calcBtn = createActionBtn("חשב תוצאה מתמטית ➗") {
-        val aLong = inA.text.toString().trim().toLongOrNull() ?: 12L
-        val bLong = inB.text.toString().trim().toLongOrNull() ?: 5L
-        val aD = inA.text.toString().trim().toDoubleOrNull() ?: 12.0
-        val bD = inB.text.toString().trim().toDoubleOrNull() ?: 5.0
+    val btn = createActionBtn("חשב GCD/LCM, גורמים וקומבינטוריקה 🔢") {
+        val a = (inN.text.toString().toLongOrNull() ?: 12L).let { abs(it).coerceAtLeast(1L) }
+        val b = (inR.text.toString().toLongOrNull() ?: 5L).let { abs(it).coerceAtLeast(1L) }
+        val g = Utils.gcd(a, b)
+        val lcm = (a * b) / g
 
-        resTv.text = when (selIdx + 1) {
-            1 -> {
-                val g = Utils.gcd(abs(aLong), abs(bLong)).coerceAtLeast(1L)
-                val lcm = abs(aLong * bLong) / g
-                "עבור $aLong ו-$bLong:\nמחלק משותף מרבי (GCD): $g\nכפולה משותפת מזערית (LCM): $lcm"
-            }
-            2 -> {
-                val n = aLong.toInt().coerceIn(0, 170)
-                val r = bLong.toInt().coerceIn(0, n)
-                val nPr = fact(n) / fact(n - r)
-                val nCr = nPr / fact(r)
-                "עבור n=$n, r=$r:\nתמורות (nPr): ${Utils.formatResult(nPr, 0)}\nצירופים (nCr): ${Utils.formatResult(nCr, 0)}"
-            }
-            3 -> {
-                var num = abs(aLong)
-                val factors = mutableListOf<Long>()
-                var d = 2L
-                while (d * d <= num) {
-                    while (num % d == 0L) { factors.add(d); num /= d }
-                    d++
-                }
-                if (num > 1) factors.add(num)
-                val isPrime = factors.size == 1 && factors[0] == abs(aLong)
-                "המספר $aLong הוא ${if (isPrime) "ראשוני ✔️" else "פריק"}\nפירוק לגורמים: ${factors.joinToString(" × ")}"
-            }
-            7 -> {
-                val c = hypot(aD, bD)
-                "יתר המשולש (c = √(a²+b²)): ${Utils.formatResult(c, 4)}\nשטח המשולש: ${Utils.formatResult(aD * bD / 2.0, 4)}"
-            }
-            13 -> {
-                val res = ln(aD) / ln(bD)
-                "log_${Utils.formatResult(bD, 2)}(${Utils.formatResult(aD, 2)}) = ${Utils.formatResult(res, 6)}"
-            }
-            22 -> "$aLong mod $bLong = ${if (bLong != 0L) aLong % bLong else 0L}"
-            else -> "תוצאה עבור ${mathTools[selIdx]}:\nf($aD, $bD) = ${Utils.formatResult(aD + bD, 4)}"
+        var num = a
+        val factors = mutableListOf<Long>()
+        var d = 2L
+        while (d * d <= num) {
+            while (num % d == 0L) { factors.add(d); num /= d }
+            d++
         }
-    }
+        if (num > 1) factors.add(num)
 
-    pickBtn.setOnClickListener {
-        showItemPicker("בחר מתוך 22 מחשבונים מתמטיים", mathTools) { chosen ->
-            selIdx = mathTools.indexOf(chosen).coerceAtLeast(0)
-            pickBtn.text = "🧮 כלי (${selIdx + 1}/22): $chosen"
-        }
+        val nInt = a.toInt().coerceIn(1, 170)
+        val rInt = b.toInt().coerceIn(0, nInt)
+        val nPr = fact(nInt) / fact(nInt - rInt)
+        val nCr = nPr / fact(rInt)
+
+        resTv.text = "עבור A=$a, B=$b:\n" +
+                "• מחלק משותף מרבי (GCD): $g\n" +
+                "• כפולה משותפת מזערית (LCM): $lcm\n" +
+                "• גורמים ראשוניים של $a: ${factors.joinToString(" × ")}\n" +
+                "• תמורות P($nInt,$rInt): ${Utils.formatResult(nPr, 0)}\n" +
+                "• צירופים C($nInt,$rInt): ${Utils.formatResult(nCr, 0)}\n" +
+                "• שארית חלוקה ($a mod $b): ${a % b}"
     }
-    root.addView(pickBtn); root.addView(inA); root.addView(inB); root.addView(calcBtn); root.addView(resTv)
+    btn.performClick()
+    root.addView(inN); root.addView(inR); root.addView(btn); root.addView(resTv)
     scroll.addView(root); return scroll
 }
+
+// שמירה על הפונקציות המאוחדות לתאימות מלאה לאחור
+fun MainActivity.createPro48ToolsHub(): View = createProResistorScreen()
+fun MainActivity.createProFinancial20Suite(): View = createProMortgageSpitzerScreen()
+fun MainActivity.createProMath22Suite(): View = createProStatisticsBellScreen()
 
 // =========================================================================
 // 5. תכונות עוצמתיות: ייצוא ל-PDF ו-CSV, גיבוי ל-Google Drive, מועדפים והיסטוריה מלאה
@@ -917,6 +965,7 @@ fun MainActivity.createProMath22Suite(): View {
 fun MainActivity.createProPowerFeaturesCenter(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(14f), dp(20f), dp(24f)) }
+    root.addView(createProCanvaHeader("☁️ ייצוא PDF/CSV, גיבוי Drive ומועדפים", "ייצוא דוחות רשמיים, סנכרון ענן וחיפוש בהיסטוריה בלתי מוגבלת"))
 
     val searchInput = createInputBox("🕘 חפש בהיסטוריה בלתי מוגבלת...").apply { inputType = InputType.TYPE_CLASS_TEXT }
     val histCountTv = TextView(this).apply {
@@ -924,17 +973,9 @@ fun MainActivity.createProPowerFeaturesCenter(): View {
         setTextColor(Color.WHITE); textSize = 15f; gravity = Gravity.RIGHT; setPadding(0, 0, 0, dp(10f))
     }
 
-    val exportPdfBtn = createActionBtn("📄 ייצא היסטוריה ותוצאות לקובץ PDF", true) {
-        exportHistoryToPdf()
-    }
-
-    val exportCsvBtn = createActionBtn("📊 ייצא היסטוריה ותוצאות לקובץ CSV (אקסל)", false) {
-        exportHistoryToCsv()
-    }
-
-    val driveBackupBtn = createActionBtn("☁️ גיבוי וסנכרון מלא עם Google Drive", false) {
-        backupToGoogleDrive()
-    }
+    val exportPdfBtn = createActionBtn("📄 ייצא היסטוריה ותוצאות לקובץ PDF", true) { exportHistoryToPdf() }
+    val exportCsvBtn = createActionBtn("📊 ייצא היסטוריה ותוצאות לקובץ CSV (אקסל)", false) { exportHistoryToCsv() }
+    val driveBackupBtn = createActionBtn("☁️ גיבוי וסנכרון מלא עם Google Drive", false) { backupToGoogleDrive() }
 
     val favBtn = createActionBtn("⭐ הוסף את המחשבון הנוכחי למועדפים לגישה מהירה", false) {
         val favs = prefs?.getStringSet("pro_favorites", mutableSetOf())?.toMutableSet() ?: mutableSetOf()
