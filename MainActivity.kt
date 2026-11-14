@@ -53,6 +53,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private val drawerItemsViews = mutableListOf<View>()
     private val drawerSeparators = mutableListOf<View>()
     private val drawerSectionHeaders = mutableListOf<Triple<Int, TextView, LinearLayout>>()
+    private val proSectionDividers = mutableMapOf<Int, View>()
     private val expandedSections = mutableSetOf<Int>()
     val keypadButtons = mutableMapOf<String, TextView>()
     var tts: TextToSpeech? = null
@@ -92,55 +93,78 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     )
 
     val categories = listOf(
-        "🧮 מחשבון רגיל",                    // 0
-        "🔬 מחשבון מדעי",                    // 1
-        "🧾 מחשבון מע״מ",                    // 2
-        "🏦 מחשבון הלוואה",                  // 3
-        "📏 המרת מרחקים",                    // 4
-        "⚖️ המרת משקלים",                    // 5
-        "🌡️ המרת טמפ׳",                     // 6
-        "💻 מחשבון מתכנתים",                 // 7
-        "📊 חישוב אחוזים",                   // 8
-        "🏷️ חישוב הנחות",                    // 9
-        "💰 חלוקת טיפים",                    // 10
-        "🏃 מדד BMI",                       // 11
-        "🎂 חישוב גיל",                      // 12
-        "💵 מטבעות לייב",                    // 13
-        "🔥 מחשבון BMR",                     // 14
-        "➗ משוואות ריבועיות",               // 15
-        "⅟ מחשבון שברים",                   // 16
-        "📈 ריבית דריבית",                   // 17
-        "🚀 המרת מהירות",                    // 18
-        "⚙️ הגדרות",                        // 19
-        "⛽ מחשבון עלות דלק",                // 20
-        "🚘 יעילות שריפת דלק",               // 21
-        "🎓 ממוצע ציונים",                   // 22
-        "🍽️ מחשבון תשר מתקדם",               // 23
-        "🛍️ מחשבון מס מכירות",               // 24
-        "🏷️ מחשבון מחיר יחידתי",             // 25
-        "🌍 ממיר שעון עולמי",                // 26
-        "🌸 מחשבון ביוץ",                    // 27
-        "🔢 ממיר הקסדצימלי",                 // 28
-        "💎 מחשבון חסכונות",                 // 29
-        "📅 מחשבון תאריך",                   // 30
-        "📐 87 קטגוריות יחידות והנדסה",      // 31 (Pro)
-        "🥇 מטבעות, מתכות יקרות וגרפים",     // 32 (Pro)
-        "🧰 48 כלים שימושיים ומעבדה",        // 33 (Pro)
-        "💰 20 מחשבונים פיננסיים Pro",       // 34 (Pro)
-        "🧮 22 מחשבונים מתמטיים Pro",        // 35 (Pro)
-        "☁️ ייצוא PDF/CSV, גיבוי ומועדפים"   // 36 (Pro)
+        "🧮 מחשבון רגיל",                        // 0
+        "🔬 מחשבון מדעי",                        // 1
+        "🧾 מחשבון מע״מ",                        // 2
+        "🏦 מחשבון הלוואה",                      // 3
+        "📏 המרת מרחקים",                        // 4
+        "⚖️ המרת משקלים",                        // 5
+        "🌡️ המרת טמפ׳",                         // 6
+        "💻 מחשבון מתכנתים",                     // 7
+        "📊 חישוב אחוזים",                       // 8
+        "🏷️ חישוב הנחות",                        // 9
+        "💰 חלוקת טיפים",                        // 10
+        "🏃 מדד BMI",                           // 11
+        "🎂 חישוב גיל",                          // 12
+        "💵 מטבעות לייב",                        // 13
+        "🔥 מחשבון BMR",                         // 14
+        "➗ משוואות ריבועיות",                   // 15
+        "⅟ מחשבון שברים",                       // 16
+        "📈 ריבית דריבית",                       // 17
+        "🚀 המרת מהירות",                        // 18
+        "⚙️ הגדרות",                            // 19
+        "⛽ מחשבון עלות דלק",                    // 20
+        "🚘 יעילות שריפת דלק",                   // 21
+        "🎓 ממוצע ציונים",                       // 22
+        "🍽️ מחשבון תשר מתקדם",                   // 23
+        "🛍️ מחשבון מס מכירות",                   // 24
+        "🏷️ מחשבון מחיר יחידתי",                 // 25
+        "🌍 ממיר שעון עולמי",                    // 26
+        "🌸 מחשבון ביוץ",                        // 27
+        "🔢 ממיר הקסדצימלי",                     // 28
+        "💎 מחשבון חסכונות",                     // 29
+        "📅 מחשבון תאריך",                       // 30
+        // --- 25 מחשבונים וכלים אישיים של מצב מקצועי (Pro Mode) ---
+        "📐 87 קטגוריות יחידות והמרה מרובה",      // 31
+        "🚰 אינסטלציה, צנרת, ספיקה ולחץ",         // 32
+        "🩺 מינון תרופות, עירוי IV וסוכר",        // 33
+        "🏗️ בנייה, בטון, ריצוף ומיזוג BTU",       // 34
+        "🎨 קודי צבע של נגדים (4/5 פסים)",        // 35
+        "🔋 מפענח קודי קבלים ואנרגיה",            // 36
+        "🔌 עוביי חוטים AWG/SWG ומפל מתח",        // 37
+        "⚡ מעבדת חוק אוהם, הספק וסוללה",         // 38
+        "🟢 פלס בנאים דו-צירי עם בועות",          // 39
+        "🧭 מצפן מגנטי חי עם מחוג זז",            // 40
+        "📏 מד-זווית אינטראקטיבי וסרגל מכויל",     // 41
+        "⏱️ שעון עצר כרונוגרף והקפות",            // 42
+        "🔦 פנס מסך עוצמתי ותאורת מעבדה",         // 43
+        "⚛️ הטבלה המחזורית ומודל אטום",           // 44
+        "📡 מתרגם ומשדר קוד מורס",                // 45
+        "🔐 מחולל סיסמאות ומד אנטרופיה",          // 46
+        "🔠 גימטריה, ספרות רומיות וטקסט",          // 47
+        "🥇 מתכות יקרות, מטבעות וגרפים",          // 48
+        "🏠 משכנתא ולוח סילוקין שפיצר",           // 49
+        "📈 תשואת ROI, צמיחה CAGR וחוק 72",       // 50
+        "💼 מרווח רווח, נקודת איזון ותקציב",       // 51
+        "📊 סטטיסטיקה, סטיית תקן ועקומת פעמון",    // 52
+        "📐 גאומטריה 2D/3D, פיתגורס ושרטוט",      // 53
+        "🔢 תורת המספרים, GCD/LCM וקומבינטוריקה", // 54
+        "☁️ ייצוא PDF/CSV, גיבוי Drive ומועדפים"  // 55
     )
 
-    // חלוקת התפריט לקטגוריות עם אייקון וקטורי לכל קטגוריה (כולל קטגוריית Pro 305)
+    // חלוקת התפריט לקטגוריות (4 קטגוריות רגילות + 6 קטגוריות Pro ממוקדות לפי שימוש)
     private val drawerSections = listOf(
         Triple(301, "📐 מתמטיקה ומדע", listOf(0, 1, 8, 15, 16, 7, 28, 22)),
         Triple(302, "💳 פיננסים וצרכנות", listOf(2, 24, 3, 17, 29, 9, 25, 10, 23, 13)),
         Triple(303, "🔄 המרות, רכב ודלק", listOf(4, 5, 6, 18, 20, 21)),
         Triple(304, "❤️ בריאות, זמן ותאריכים", listOf(11, 14, 27, 12, 30, 26)),
-        Triple(305, "🚀 מרכז מקצועי (Pro Mode)", listOf(31, 32, 33, 34, 35, 36))
+        Triple(305, "🔧 Pro: יחידות, אינסטלציה, רפואה ובנייה", listOf(31, 32, 33, 34)),
+        Triple(306, "⚡ Pro: מעבדת אלקטרוניקה וחשמל", listOf(35, 36, 37, 38)),
+        Triple(307, "🧭 Pro: חיישנים, פלס, מצפן ומדידה", listOf(39, 40, 41, 42, 43)),
+        Triple(308, "🔬 Pro: מדע, אטום, מורס, הצפנה וטקסט", listOf(44, 45, 46, 47)),
+        Triple(309, "📊 Pro: השקעות, משכנתא, זהב ועסקים", listOf(48, 49, 50, 51)),
+        Triple(310, "🧮 Pro: סטטיסטיקה, גאומטריה, PDF וענן", listOf(52, 53, 54, 55))
     )
-
-    private var proCategoryDivider: View? = null
 
     var currentInput = ""; var justCalculated = false
     var expressionView: TextView? = null; var currentView: TextView? = null; var memoryIndicator: TextView? = null
@@ -183,8 +207,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         mainContent?.addView(topHeader); mainContent?.addView(contentFrame)
 
         dimView = View(this).apply { setBackgroundColor(Color.parseColor("#B3000000")); visibility = View.GONE; alpha = 0f; layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT); setOnClickListener { if (isDrawerOpen) closeDrawer() } }
-      
-        // isFillViewport = true מבטיח שהתפריט תמיד יגיע עד סוף המסך וההגדרות יישבו בתחתית
+
         drawerScroll = ScrollView(this).apply {
             isClickable = true
             isFillViewport = true
@@ -199,12 +222,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         appLogoView = appLogo
         drawerMenu?.addView(appLogo)
 
-        // יצירת כל פריטי המחשבונים מראש לפי אינדקס
         drawerItemsViews.clear()
         for ((index, title) in categories.withIndex()) {
             val isSettings = (index == 19)
             val item = TextView(this).apply {
-                text = IosGlassTheme.cleanCategoryTitle(title, isCleanGlassActive)
+                text = IosGlassTheme.cleanCategoryTitle(title, true)
                 textSize = if (isSettings) 16.5f else 15f
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
@@ -218,9 +240,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             drawerItemsViews.add(item)
         }
 
-        // הוספת הקטגוריות לתפריט הצד כך שרק שם וסמל הקטגוריה מוצגים, ובלחיצה נפתחים המחשבונים שלה
         drawerSectionHeaders.clear()
         drawerSeparators.clear()
+        proSectionDividers.clear()
         for ((secIconCode, secTitle, itemIndices) in drawerSections) {
             val sectionItemsContainer = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
@@ -229,12 +251,12 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
             val headerTv = TextView(this).apply {
                 tag = secTitle
-                textSize = 16.5f
+                textSize = 16f
                 typeface = Typeface.DEFAULT_BOLD
                 compoundDrawablePadding = dp(12f)
-                setPadding(dp(20f), dp(15f), dp(20f), dp(15f))
+                setPadding(dp(20f), dp(14f), dp(20f), dp(14f))
                 layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                    setMargins(dp(10f), dp(4f), dp(10f), dp(4f))
+                    setMargins(dp(10f), dp(3f), dp(10f), dp(3f))
                 }
                 setOnClickListener {
                     feedback(it)
@@ -276,19 +298,17 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 }
                 setBackgroundColor(Color.TRANSPARENT)
             }
-            if (secIconCode == 305) proCategoryDivider = catSep
+            if (secIconCode in 305..310) proSectionDividers[secIconCode] = catSep
             drawerSeparators.add(catSep)
             drawerMenu?.addView(catSep)
             drawerMenu?.addView(sectionItemsContainer)
         }
 
-        // מרווח גמיש (Spacer) שדוחף את "הגדרות" תמיד לקצה התחתון של המסך גם כשכל הקטגוריות סגורות
         val bottomSpacer = Space(this).apply {
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
         }
         drawerMenu?.addView(bottomSpacer)
 
-        // הוספת "הגדרות" (אינדקס 19) בקצה התחתון של התפריט מחוץ לקטגוריות
         val settingsTopDivider = View(this).apply {
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1.5f)).apply {
                 setMargins(dp(16f), dp(14f), dp(16f), dp(6f))
@@ -306,7 +326,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     private fun getDrawerWidthPx(): Int {
         val screenW = resources.displayMetrics.widthPixels
-        return if (isCleanGlassActive && screenW > 0) (screenW * 0.75f).toInt() else dp(285f)
+        return if (isCleanGlassActive && screenW > 0) (screenW * 0.78f).toInt() else dp(295f)
     }
 
     fun updateHandednessLayout() {
@@ -485,11 +505,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         for (sep in drawerSeparators) sep.setBackgroundColor(sepColor)
 
-        // עדכון כותרות הקטגוריות המתקפלות וסמליהן בכל 3 ערכות הנושא (והצגה/הסתרה של קטגוריית ה-Pro)
+        // עדכון כותרות הקטגוריות המתקפלות וסמליהן בכל 3 ערכות הנושא (כולל 6 קטגוריות ה-Pro)
         for ((secIconCode, headerTv, container) in drawerSectionHeaders) {
-            if (secIconCode == 305) {
+            if (secIconCode in 305..310) {
                 headerTv.visibility = if (proActive) View.VISIBLE else View.GONE
-                proCategoryDivider?.visibility = if (proActive) View.VISIBLE else View.GONE
+                proSectionDividers[secIconCode]?.visibility = if (proActive) View.VISIBLE else View.GONE
                 if (!proActive) {
                     container.visibility = View.GONE
                     continue
@@ -522,18 +542,16 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             container.visibility = if (isExpanded) View.VISIBLE else View.GONE
         }
 
+        // הצגת האייקון הווקטורי הייחודי של כל כלי בכל 3 סגנונות התצוגה
         for (i in drawerItemsViews.indices) {
             val tv = drawerItemsViews[i] as TextView
             val isSelected = (i == currentTabIndex)
             val tint = if (isSelected) activeAccent else Color.WHITE
-            tv.text = IosGlassTheme.cleanCategoryTitle(categories[i], isCleanGlassActive)
-            if (isCleanGlassActive) {
-                val icon = AuroraBorealisTheme.createVectorIcon(this, i, tint, 20f, isAuroraMode)
-                if (isRightHanded) tv.setCompoundDrawables(null, null, icon, null)
-                else tv.setCompoundDrawables(icon, null, null, null)
-            } else {
-                tv.setCompoundDrawables(null, null, null, null)
-            }
+            tv.text = IosGlassTheme.cleanCategoryTitle(categories[i], true)
+            val icon = AuroraBorealisTheme.createVectorIcon(this, i, tint, 20f, isAuroraMode)
+            if (isRightHanded) tv.setCompoundDrawables(null, null, icon, null)
+            else tv.setCompoundDrawables(icon, null, null, null)
+
             if (isSelected) {
                 if (isCleanGlassActive) {
                     tv.background = AuroraBorealisTheme.createActiveDrawerCapsule(this, isAuroraMode)
@@ -557,7 +575,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         if (MiniGameEngine.isActive) MiniGameEngine.stopGame(this)
         currentTabIndex = index
-        titleText.text = categories[index].substringAfter(" ")
+        titleText.text = IosGlassTheme.cleanCategoryTitle(categories[index], true)
         updateDrawerSelection(); contentFrame.removeAllViews()
         val view = when (index) {
             0 -> createBasicCalculator(); 1 -> createScientificCalculator(); 2 -> createVatCalculator(); 3 -> createLoanCalculator()
@@ -572,7 +590,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 currentSettingsScroll = scrollObj
                 val container = scrollObj?.getChildAt(0) as? LinearLayout ?: (settingsView as? LinearLayout)
 
-                // מוודא שכפתור מתג מצב מקצועי (Pro Mode) תמיד קיים במסך ההגדרות
                 var hasProBtn = false
                 if (container != null) {
                     for (i in 0 until container.childCount) {
@@ -594,7 +611,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                             if (nextState) expandedSections.add(305)
                             Toast.makeText(
                                 this,
-                                if (nextState) "🚀 מצב מקצועי הופעל! קטגוריית Pro נפתחה בתפריט הצד" else "מצב מקצועי כובה",
+                                if (nextState) "🚀 מצב מקצועי הופעל! קטגוריות ה-Pro נוספו לתפריט הצד" else "מצב מקצועי כובה",
                                 Toast.LENGTH_SHORT
                             ).show()
                             applyTheme()
@@ -634,12 +651,32 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             28 -> createHexConverter()
             29 -> createSavingsCalculator()
             30 -> createDateAnniversaryCalculator()
+            // --- 25 המסכים המעוצבים בקנבה של מצב ה-Pro ---
             31 -> createPro87UnitConverter()
-            32 -> createProCurrenciesAndMetalsHub()
-            33 -> createPro48ToolsHub()
-            34 -> createProFinancial20Suite()
-            35 -> createProMath22Suite()
-            36 -> createProPowerFeaturesCenter()
+            32 -> createProPlumbingAndFluidsScreen()
+            33 -> createProMedicalDosageScreen()
+            34 -> createProConstructionAndAcScreen()
+            35 -> createProResistorScreen()
+            36 -> createProCapacitorScreen()
+            37 -> createProAwgWireScreen()
+            38 -> createProOhmAndPowerScreen()
+            39 -> createProSpiritLevelScreen()
+            40 -> createProCompassScreen()
+            41 -> createProRulerProtractorScreen()
+            42 -> createProStopwatchScreen()
+            43 -> createProFlashlightScreen()
+            44 -> createProPeriodicTableScreen()
+            45 -> createProMorseScreen()
+            46 -> createProPasswordGenScreen()
+            47 -> createProGematriaAndTextScreen()
+            48 -> createProCurrenciesAndMetalsHub()
+            49 -> createProMortgageSpitzerScreen()
+            50 -> createProRoiCagrScreen()
+            51 -> createProBusinessMarginScreen()
+            52 -> createProStatisticsBellScreen()
+            53 -> createProGeometryBlueprintScreen()
+            54 -> createProNumberTheoryScreen()
+            55 -> createProPowerFeaturesCenter()
             else -> createBasicCalculator()
         }
         contentFrame.addView(view)
