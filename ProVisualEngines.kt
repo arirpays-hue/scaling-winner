@@ -2,6 +2,7 @@ package com.example.calculator
 
 import android.content.Context
 import android.graphics.*
+import android.hardware.SensorManager
 import android.view.MotionEvent
 import android.view.View
 import kotlin.math.*
@@ -219,7 +220,7 @@ class ChronographStopwatchCanvasView(context: Context, private val activity: Mai
 }
 
 // =========================================================================
-// 3. קנבס מצפן חי עם שושנת רוחות, נעילת אזימוט יעד ועוצמת שדה מגנטי (µT)
+// 3. קנבס מצפן חי עם מד אמינות וכיול, פיצוי הטיה (Tilt Crosshair) ושדה מגנטי (µT)
 // =========================================================================
 class CompassRoseCanvasView(
     context: Context,
@@ -228,12 +229,16 @@ class CompassRoseCanvasView(
 ) : View(context) {
     var azimuthDeg: Float = 0f
     var lockedTargetDeg: Float? = null
-    var magneticFieldUt: Float = 45f
+    var magneticFieldUt: Float = 44f
+    var sensorAccuracy: Int = SensorManager.SENSOR_STATUS_ACCURACY_HIGH
+    var pitchTiltDeg: Float = 0f
+    var rollTiltDeg: Float = 0f
 
     private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val tickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = Color.WHITE }
     private val northPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = Color.parseColor("#FF3B30") }
     private val southPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = Color.parseColor("#B0BEC5") }
+    private val badgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         textAlign = Paint.Align.CENTER
@@ -244,7 +249,7 @@ class CompassRoseCanvasView(
         if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_MOVE) {
             parent?.requestDisallowInterceptTouchEvent(true)
             val dx = event.x - width / 2f
-            val dy = event.y - height / 2f
+            val dy = event.y - height * 0.48f
             var angle = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat() + 90f
             if (angle < 0f) angle += 360f
             azimuthDeg = angle % 360f
@@ -260,15 +265,40 @@ class CompassRoseCanvasView(
         val d = resources.displayMetrics.density
         ringPaint.strokeWidth = 2.2f * d
         tickPaint.strokeWidth = 1.5f * d
-        labelPaint.textSize = 13.5f * d
 
         val cx = width / 2f
-        val cy = height * 0.46f
-        val r = min(width, height) * 0.36f
+        val cy = height * 0.50f
+        val r = min(width, height) * 0.34f
         val accent = if (activity.isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else activity.primaryColor
 
+        // חישוב אמינות וכיול החיישן + בדיקת הפרעות מגנטיות
+        val isMagAnomaly = magneticFieldUt < 20f || magneticFieldUt > 70f
+        val (statusText, statusColor) = when {
+            isMagAnomaly -> "⚠️ הפרעה מגנטית חזקה (${Utils.formatResult(magneticFieldUt.toDouble(), 1)} µT) - הרחק מתכת/מגנט" to Color.parseColor("#FF5252")
+            sensorAccuracy == SensorManager.SENSOR_STATUS_ACCURACY_HIGH -> "🟢 אמינות מצפן גבוהה (מכויל | פיצוי הטיה 3D פעיל)" to Color.parseColor("#00E676")
+            sensorAccuracy == SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM -> "🟡 אמינות בינונית (מומלץ לסובב בתנועת 8 לכיול)" to Color.parseColor("#FFB74D")
+            else -> "🔴 אמינות נמוכה - נדרש כיול (סובב את המכשיר בצורת 8)" to Color.parseColor("#FF5252")
+        }
+
+        // סרגל חיווי אמינות בחלק העליון של הקנבס
+        badgePaint.color = Color.argb(45, Color.red(statusColor), Color.green(statusColor), Color.blue(statusColor))
+        val badgeRect = RectF(16f * d, 10f * d, width - 16f * d, 36f * d)
+        canvas.drawRoundRect(badgeRect, 13f * d, 13f * d, badgePaint)
+        labelPaint.textSize = 11.5f * d
+        labelPaint.color = statusColor
+        canvas.drawText(statusText, cx, 27.5f * d, labelPaint)
+
+        // חץ קריאה קבוע בראש המצפן (Lubber Line)
+        val lubberPath = Path().apply {
+            moveTo(cx, cy - r - 3f * d)
+            lineTo(cx - 7f * d, cy - r - 14f * d)
+            lineTo(cx + 7f * d, cy - r - 14f * d)
+            close()
+        }
+        canvas.drawPath(lubberPath, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent; style = Paint.Style.FILL })
+
         ringPaint.color = accent
-        canvas.drawCircle(cx, cy, r, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(150, 12, 20, 30) })
+        canvas.drawCircle(cx, cy, r, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(155, 12, 20, 30) })
         canvas.drawCircle(cx, cy, r, ringPaint)
 
         canvas.save()
@@ -286,6 +316,7 @@ class CompassRoseCanvasView(
             canvas.drawLine(x1, y1, x2, y2, tickPaint)
         }
 
+        labelPaint.textSize = 13.5f * d
         labelPaint.color = Color.parseColor("#FF3B30")
         canvas.drawText("N (צפון)", cx, cy - r * 0.56f, labelPaint)
         labelPaint.color = Color.WHITE
@@ -317,10 +348,20 @@ class CompassRoseCanvasView(
         canvas.drawPath(northPath, northPaint)
         canvas.restore()
 
-        canvas.drawCircle(cx, cy, r * 0.07f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent })
+        // כוונת פיצוי הטיה במרכז המצפן (מראה כמה המכשיר מוטה)
+        val tiltX = (cx + (rollTiltDeg / 45f).coerceIn(-1f, 1f) * (r * 0.22f))
+        val tiltY = (cy + (pitchTiltDeg / 45f).coerceIn(-1f, 1f) * (r * 0.22f))
+        canvas.drawCircle(cx, cy, r * 0.22f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.argb(70, 255, 255, 255)
+            style = Paint.Style.STROKE
+            strokeWidth = 1f * d
+        })
+        canvas.drawCircle(tiltX, tiltY, 4.5f * d, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent })
+
+        labelPaint.textSize = 12.5f * d
         labelPaint.color = accent
         canvas.drawText(
-            "שדה מגנטי: ${Utils.formatResult(magneticFieldUt.toDouble(), 1)} µT",
+            "שדה מגנטי: ${Utils.formatResult(magneticFieldUt.toDouble(), 1)} µT (תקין: 25-65 µT)  |  הטיה: ${Utils.formatResult(hypot(rollTiltDeg.toDouble(), pitchTiltDeg.toDouble()), 1)}°",
             cx,
             height - 10f * d,
             labelPaint
