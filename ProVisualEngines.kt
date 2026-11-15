@@ -8,6 +8,54 @@ import android.view.View
 import kotlin.math.*
 
 // =========================================================================
+// כלי עזר גרפיים לקנבס: הגנת ניגודיות (Contrast Protection) והתאמת טקסט אוטומטית (fitText)
+// =========================================================================
+object CanvasUiHelper {
+
+    // מבטיח שצבע נושא כהה מדי (במצב רגיל או זכוכית) יובהר אוטומטית כדי שלא ייבלע ברקע הקנבס הכהה
+    fun ensureReadableAccent(rawColor: Int, isAurora: Boolean): Int {
+        if (isAurora) return AuroraBorealisTheme.AURORA_PRIMARY
+        val r = Color.red(rawColor) / 255.0
+        val g = Color.green(rawColor) / 255.0
+        val b = Color.blue(rawColor) / 255.0
+        val luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        if (luminance >= 0.24) return rawColor
+
+        val boost = 0.45f
+        val nr = (Color.red(rawColor) + ((255 - Color.red(rawColor)) * boost).toInt()).coerceIn(90, 255)
+        val ng = (Color.green(rawColor) + ((255 - Color.green(rawColor)) * boost).toInt()).coerceIn(130, 255)
+        val nb = (Color.blue(rawColor) + ((255 - Color.blue(rawColor)) * boost).toInt()).coerceIn(160, 255)
+        return Color.rgb(nr, ng, nb)
+    }
+
+    // מצייר טקסט שמתאים את גודלו אוטומטית לרוחב המותר במסכים צרים או בגופנים מוגדלים
+    fun drawFittedText(
+        canvas: Canvas,
+        text: String,
+        x: Float,
+        y: Float,
+        maxWidthPx: Float,
+        preferredSizePx: Float,
+        minSizePx: Float,
+        paint: Paint
+    ) {
+        val savedSize = paint.textSize
+        var currentSize = preferredSizePx
+        paint.textSize = currentSize
+        if (maxWidthPx > 0f) {
+            var measured = paint.measureText(text)
+            while (measured > maxWidthPx && currentSize > minSizePx) {
+                currentSize -= 1.2f
+                paint.textSize = currentSize
+                measured = paint.measureText(text)
+            }
+        }
+        canvas.drawText(text, x, y, paint)
+        paint.textSize = savedSize
+    }
+}
+
+// =========================================================================
 // 1. קנבס פלס בנאים דו-צירי חי עם בועות זזות וכיול (Bullseye + Dual Spirit Tubes)
 // =========================================================================
 class SpiritLevelCanvasView(context: Context, private val activity: MainActivity) : View(context) {
@@ -31,7 +79,6 @@ class SpiritLevelCanvasView(context: Context, private val activity: MainActivity
         val d = resources.displayMetrics.density
         framePaint.strokeWidth = 2.2f * d
         gridPaint.strokeWidth = 1.1f * d
-        textPaint.textSize = 14.5f * d
 
         val w = width.toFloat()
         val h = height.toFloat()
@@ -43,10 +90,10 @@ class SpiritLevelCanvasView(context: Context, private val activity: MainActivity
         val radius = min(w, h) * 0.27f
 
         val isLevel = hypot(adjRoll.toDouble(), adjPitch.toDouble()) < 1.2
-        val accent = when {
-            isLevel -> Color.parseColor("#00E676")
-            activity.isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
-            else -> activity.primaryColor
+        val accent = if (isLevel) {
+            Color.parseColor("#00E676")
+        } else {
+            CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
         }
 
         bgPaint.color = Color.argb(155, 12, 22, 32)
@@ -116,7 +163,7 @@ class SpiritLevelCanvasView(context: Context, private val activity: MainActivity
         } else {
             "X: ${Utils.formatResult(adjRoll.toDouble(), 1)}° | Y: ${Utils.formatResult(adjPitch.toDouble(), 1)}° | שיפוע: ${Utils.formatResult(slopePct, 1)}%"
         }
-        canvas.drawText(statusTxt, w / 2f, h - 12f * d, textPaint)
+        CanvasUiHelper.drawFittedText(canvas, statusTxt, w / 2f, h - 12f * d, w - 24f * d, 14.5f * d, 9.5f * d, textPaint)
     }
 }
 
@@ -158,7 +205,7 @@ class ChronographStopwatchCanvasView(context: Context, private val activity: Mai
         val maxRadius = (min(width, height) / 2f) - (16f * d)
         val innerRadius = maxRadius * 0.82f
 
-        val accent = if (activity.isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else activity.primaryColor
+        val accent = CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
         val secondary = Color.parseColor("#FF9F0A")
 
         outerTrackPaint.strokeWidth = 7f * d
@@ -208,19 +255,20 @@ class ChronographStopwatchCanvasView(context: Context, private val activity: Mai
         canvas.drawCircle(tipX, tipY, 5.5f * d, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE })
 
         // טקסט מרכזי מותאם אוטומטית לרדיוס המעגל
-        mainTimePaint.textSize = (maxRadius * 0.28f).coerceIn(18f * d, 32f * d)
-        subTimePaint.textSize = (maxRadius * 0.13f).coerceIn(11f * d, 15f * d)
-        subTimePaint.color = secondary
+        val maxTextW = innerRadius * 1.55f
+        val prefMainSize = (maxRadius * 0.28f).coerceIn(18f * d, 32f * d)
+        val prefSubSize = (maxRadius * 0.13f).coerceIn(11f * d, 15f * d)
 
-        canvas.drawText(formatMs(totalElapsedMs), cx, cy + (4f * d), mainTimePaint)
-        canvas.drawText("הקפה #$lapNumber: ${formatMs(currentLapElapsedMs)}", cx, cy + maxRadius * 0.34f, subTimePaint)
+        CanvasUiHelper.drawFittedText(canvas, formatMs(totalElapsedMs), cx, cy + (4f * d), maxTextW, prefMainSize, 13f * d, mainTimePaint)
+        subTimePaint.color = secondary
+        CanvasUiHelper.drawFittedText(canvas, "הקפה #$lapNumber: ${formatMs(currentLapElapsedMs)}", cx, cy + maxRadius * 0.34f, maxTextW, prefSubSize, 9.5f * d, subTimePaint)
         subTimePaint.color = accent
-        canvas.drawText("CHRONOGRAPH PRO", cx, cy - maxRadius * 0.32f, subTimePaint)
+        CanvasUiHelper.drawFittedText(canvas, "CHRONOGRAPH PRO", cx, cy - maxRadius * 0.32f, maxTextW, prefSubSize, 9.5f * d, subTimePaint)
     }
 }
 
 // =========================================================================
-// 3. קנבס מצפן חי עם מד אמינות וכיול, פיצוי הטיה (Tilt Crosshair) ושדה מגנטי (µT)
+// 3. קנבס מצפן חי עם מד אמינות וכיול, fitText, הגנת ניגודיות וניהול מצב התחלתי
 // =========================================================================
 class CompassRoseCanvasView(
     context: Context,
@@ -229,8 +277,11 @@ class CompassRoseCanvasView(
 ) : View(context) {
     var azimuthDeg: Float = 0f
     var lockedTargetDeg: Float? = null
-    var magneticFieldUt: Float = 44f
-    var sensorAccuracy: Int = SensorManager.SENSOR_STATUS_ACCURACY_HIGH
+    var magneticFieldUt: Float = 0f
+    // -1 = ממתין לקריאה ראשונה מהחיישן, -2 = אין חיישן מגנטי במכשיר, 1..3 = רמת דיוק אמתית
+    var sensorAccuracy: Int = -1
+    var hasSensorHardware: Boolean = true
+    var hasReceivedFirstReading: Boolean = false
     var pitchTiltDeg: Float = 0f
     var rollTiltDeg: Float = 0f
 
@@ -249,7 +300,7 @@ class CompassRoseCanvasView(
         if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_MOVE) {
             parent?.requestDisallowInterceptTouchEvent(true)
             val dx = event.x - width / 2f
-            val dy = event.y - height * 0.48f
+            val dy = event.y - height * 0.50f
             var angle = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat() + 90f
             if (angle < 0f) angle += 360f
             azimuthDeg = angle % 360f
@@ -268,25 +319,42 @@ class CompassRoseCanvasView(
 
         val cx = width / 2f
         val cy = height * 0.50f
-        val r = min(width, height) * 0.34f
-        val accent = if (activity.isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else activity.primaryColor
+        val r = min(width, height) * 0.33f
+        // הגנת ניגודיות: אם נבחר צבע כהה מאוד בעיצוב רגיל/זכוכית, הוא יובהר אוטומטית
+        val accent = CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
 
-        // חישוב אמינות וכיול החיישן + בדיקת הפרעות מגנטיות
-        val isMagAnomaly = magneticFieldUt < 20f || magneticFieldUt > 70f
+        // ניהול מצב התחלתי אמיתי + בדיקת הפרעות מגנטיות
+        val isMagAnomaly = hasReceivedFirstReading && magneticFieldUt > 0.1f && (magneticFieldUt < 20f || magneticFieldUt > 70f)
         val (statusText, statusColor) = when {
-            isMagAnomaly -> "⚠️ הפרעה מגנטית חזקה (${Utils.formatResult(magneticFieldUt.toDouble(), 1)} µT) - הרחק מתכת/מגנט" to Color.parseColor("#FF5252")
-            sensorAccuracy == SensorManager.SENSOR_STATUS_ACCURACY_HIGH -> "🟢 אמינות מצפן גבוהה (מכויל | פיצוי הטיה 3D פעיל)" to Color.parseColor("#00E676")
-            sensorAccuracy == SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM -> "🟡 אמינות בינונית (מומלץ לסובב בתנועת 8 לכיול)" to Color.parseColor("#FFB74D")
-            else -> "🔴 אמינות נמוכה - נדרש כיול (סובב את המכשיר בצורת 8)" to Color.parseColor("#FF5252")
+            !hasSensorHardware || sensorAccuracy == -2 ->
+                "⚪ לא זוהה חיישן מצפן במכשיר (מצב סיבוב ידני במגע פעיל)" to Color.parseColor("#90CAF9")
+            !hasReceivedFirstReading || sensorAccuracy == -1 ->
+                "⏳ מאתחל חיישן מצפן תלת-ממדי... (הזז קלות את המכשיר)" to Color.parseColor("#80DEEA")
+            isMagAnomaly ->
+                "⚠️ הפרעה מגנטית (${Utils.formatResult(magneticFieldUt.toDouble(), 1)} µT) - הרחק מתכת/מגנט" to Color.parseColor("#FF5252")
+            sensorAccuracy >= SensorManager.SENSOR_STATUS_ACCURACY_HIGH ->
+                "🟢 אמינות מצפן גבוהה (מכויל | פיצוי הטיה 3D פעיל)" to Color.parseColor("#00E676")
+            sensorAccuracy == SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM ->
+                "🟡 אמינות בינונית (מומלץ לסובב בתנועת 8 לכיול)" to Color.parseColor("#FFB74D")
+            else ->
+                "🔴 אמינות נמוכה - נדרש כיול (סובב את המכשיר בצורת 8)" to Color.parseColor("#FF5252")
         }
 
-        // סרגל חיווי אמינות בחלק העליון של הקנבס
+        // סרגל חיווי אמינות בחלק העליון עם התאמת גודל טקסט אוטומטית (ללא חיתוך במסכים צרים)
         badgePaint.color = Color.argb(45, Color.red(statusColor), Color.green(statusColor), Color.blue(statusColor))
-        val badgeRect = RectF(16f * d, 10f * d, width - 16f * d, 36f * d)
+        val badgeRect = RectF(12f * d, 10f * d, width - 12f * d, 36f * d)
         canvas.drawRoundRect(badgeRect, 13f * d, 13f * d, badgePaint)
-        labelPaint.textSize = 11.5f * d
         labelPaint.color = statusColor
-        canvas.drawText(statusText, cx, 27.5f * d, labelPaint)
+        CanvasUiHelper.drawFittedText(
+            canvas,
+            statusText,
+            cx,
+            27.5f * d,
+            badgeRect.width() - 16f * d,
+            11.8f * d,
+            8.0f * d,
+            labelPaint
+        )
 
         // חץ קריאה קבוע בראש המצפן (Lubber Line)
         val lubberPath = Path().apply {
@@ -298,7 +366,7 @@ class CompassRoseCanvasView(
         canvas.drawPath(lubberPath, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent; style = Paint.Style.FILL })
 
         ringPaint.color = accent
-        canvas.drawCircle(cx, cy, r, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(155, 12, 20, 30) })
+        canvas.drawCircle(cx, cy, r, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(165, 12, 20, 30) })
         canvas.drawCircle(cx, cy, r, ringPaint)
 
         canvas.save()
@@ -348,22 +416,30 @@ class CompassRoseCanvasView(
         canvas.drawPath(northPath, northPaint)
         canvas.restore()
 
-        // כוונת פיצוי הטיה במרכז המצפן (מראה כמה המכשיר מוטה)
+        // כוונת פיצוי הטיה במרכז המצפן
         val tiltX = (cx + (rollTiltDeg / 45f).coerceIn(-1f, 1f) * (r * 0.22f))
         val tiltY = (cy + (pitchTiltDeg / 45f).coerceIn(-1f, 1f) * (r * 0.22f))
         canvas.drawCircle(cx, cy, r * 0.22f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.argb(70, 255, 255, 255)
+            color = Color.argb(75, 255, 255, 255)
             style = Paint.Style.STROKE
             strokeWidth = 1f * d
         })
         canvas.drawCircle(tiltX, tiltY, 4.5f * d, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent })
 
-        labelPaint.textSize = 12.5f * d
         labelPaint.color = accent
-        canvas.drawText(
-            "שדה מגנטי: ${Utils.formatResult(magneticFieldUt.toDouble(), 1)} µT (תקין: 25-65 µT)  |  הטיה: ${Utils.formatResult(hypot(rollTiltDeg.toDouble(), pitchTiltDeg.toDouble()), 1)}°",
+        val bottomSummary = if (magneticFieldUt > 0.1f) {
+            "שדה מגנטי: ${Utils.formatResult(magneticFieldUt.toDouble(), 1)} µT (תקין: 25-65 µT)  |  הטיה: ${Utils.formatResult(hypot(rollTiltDeg.toDouble(), pitchTiltDeg.toDouble()), 1)}°"
+        } else {
+            "אזימוט: ${Utils.formatResult(azimuthDeg.toDouble(), 1)}°  |  ניתן לסובב את המצפן גם במגע"
+        }
+        CanvasUiHelper.drawFittedText(
+            canvas,
+            bottomSummary,
             cx,
             height - 10f * d,
+            width - 24f * d,
+            12.2f * d,
+            8.2f * d,
             labelPaint
         )
     }
@@ -390,7 +466,6 @@ class ResistorVisualCanvasView(context: Context) : View(context) {
         val d = resources.displayMetrics.density
         wirePaint.strokeWidth = 5f * d
         borderPaint.strokeWidth = 1.5f * d
-        textPaint.textSize = 15f * d
 
         val w = width.toFloat()
         val h = height.toFloat()
@@ -413,7 +488,7 @@ class ResistorVisualCanvasView(context: Context) : View(context) {
             val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = bandColors[i]; style = Paint.Style.FILL }
             canvas.drawRect(bx - bandHalfW, cy - halfBodyH, bx + bandHalfW, cy + halfBodyH, p)
         }
-        canvas.drawText(labelText, w / 2f, h - 14f * d, textPaint)
+        CanvasUiHelper.drawFittedText(canvas, labelText, w / 2f, h - 14f * d, w - 24f * d, 15f * d, 10f * d, textPaint)
     }
 }
 
@@ -424,6 +499,7 @@ class BohrAtomCanvasView(context: Context, private val activity: MainActivity) :
     var symbol: String = "Au"
     var atomicNumber: Int = 79
     var shellsConfig: List<Int> = listOf(2, 8, 18, 32, 18, 1)
+    var subtitleFormula: String = ""
     private var phaseAngle: Float = 0f
 
     private val orbitPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
@@ -439,9 +515,9 @@ class BohrAtomCanvasView(context: Context, private val activity: MainActivity) :
         val d = resources.displayMetrics.density
         orbitPaint.strokeWidth = 1.3f * d
         val cx = width / 2f
-        val cy = height / 2f
-        val maxR = min(width, height) * 0.43f
-        val accent = if (activity.isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else activity.primaryColor
+        val cy = if (subtitleFormula.isNotEmpty()) height * 0.46f else height / 2f
+        val maxR = min(width, height) * 0.40f
+        val accent = CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
 
         orbitPaint.color = Color.argb(105, Color.red(accent), Color.green(accent), Color.blue(accent))
         electronPaint.color = accent
@@ -469,8 +545,14 @@ class BohrAtomCanvasView(context: Context, private val activity: MainActivity) :
                 color = Color.argb(215, Color.red(accent), Color.green(accent), Color.blue(accent))
             }
         )
-        textPaint.textSize = (nucR * 0.85f).coerceAtLeast(14f * d)
+        textPaint.color = Color.WHITE
+        textPaint.textSize = (nucR * 0.82f).coerceAtLeast(13f * d)
         canvas.drawText(symbol, cx, cy + textPaint.textSize * 0.34f, textPaint)
+
+        if (subtitleFormula.isNotEmpty()) {
+            textPaint.color = accent
+            CanvasUiHelper.drawFittedText(canvas, subtitleFormula, cx, height - 10f * d, width - 24f * d, 12.5f * d, 9f * d, textPaint)
+        }
 
         phaseAngle = (phaseAngle + 1.4f) % 360f
         if (isAttachedToWindow) {
@@ -480,29 +562,56 @@ class BohrAtomCanvasView(context: Context, private val activity: MainActivity) :
 }
 
 // =========================================================================
-// 6. קנבס מד-זווית דו-זרועי אינטראקטיבי + סרגל קליבר נגרר
+// 6. קנבס מד-זווית דו-זרועי + סרגל וקליבר מכויל פיזית מול כרטיס אשראי (ISO 85.60mm / 53.98mm)
 // =========================================================================
-class ProtractorRulerCanvasView(context: Context, private val activity: MainActivity) : View(context) {
+class ProtractorRulerCanvasView(
+    context: Context,
+    private val activity: MainActivity,
+    private val onMeasurementChanged: ((Float, Float, Float) -> Unit)? = null
+) : View(context) {
     var angleArmA: Float = 25f
     var angleArmB: Float = 115f
-    var caliperCm: Float = 3.5f
+    var caliperCm: Float = 5.398f // ברירת מחדל: רוחב קצר של כרטיס אשראי תקני (53.98 מ״מ)
+    var calibrationScaleFactor: Float = 1.0f
+    var isCreditCardCalibrationMode: Boolean = false
 
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; style = Paint.Style.STROKE }
     private val armAPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
     private val armBPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; color = Color.parseColor("#FF9F0A") }
+    private val cardOverlayPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = Color.argb(48, 0, 230, 118) }
+    private val cardBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = Color.parseColor("#00E676") }
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; typeface = Typeface.DEFAULT_BOLD }
+
+    fun getEffectivePxPerCm(): Float {
+        val rawDpi = resources.displayMetrics.ydpi.let {
+            if (it in 120f..640f) it else resources.displayMetrics.densityDpi.toFloat()
+        }
+        return (rawDpi / 2.54f) * calibrationScaleFactor.coerceIn(0.65f, 1.45f)
+    }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_MOVE) {
             parent?.requestDisallowInterceptTouchEvent(true)
             val d = resources.displayMetrics.density
-            if (event.x < 95f * d) {
-                val dpi = resources.displayMetrics.ydpi.coerceAtLeast(160f)
-                val pxPerCm = dpi / 2.54f
-                caliperCm = ((event.y - 20f * d) / pxPerCm).coerceIn(0.1f, 12f)
+            val topOffset = 24f * d
+            val pxPerCm = getEffectivePxPerCm()
+
+            if (isCreditCardCalibrationMode || event.x < 105f * d) {
+                if (isCreditCardCalibrationMode) {
+                    // במצב כיול פיזי: המשתמש גורר את הקו התחתון להתאמה מדויקת לגובה כרטיס אשראי (5.398 ס"מ)
+                    val rawDpi = resources.displayMetrics.ydpi.let {
+                        if (it in 120f..640f) it else resources.displayMetrics.densityDpi.toFloat()
+                    }
+                    val basePxForCard = (rawDpi / 2.54f) * 5.398f
+                    val draggedPx = (event.y - topOffset).coerceIn(basePxForCard * 0.70f, basePxForCard * 1.35f)
+                    calibrationScaleFactor = (draggedPx / basePxForCard).coerceIn(0.70f, 1.35f)
+                    caliperCm = 5.398f
+                } else {
+                    caliperCm = ((event.y - topOffset) / pxPerCm).coerceIn(0.05f, 14f)
+                }
             } else {
-                val ox = width * 0.62f
-                val oy = height * 0.72f
+                val ox = width * 0.63f
+                val oy = height * 0.70f
                 val dx = event.x - ox
                 val dy = oy - event.y
                 val deg = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat().coerceIn(0f, 180f)
@@ -512,6 +621,7 @@ class ProtractorRulerCanvasView(context: Context, private val activity: MainActi
                     angleArmB = deg
                 }
             }
+            onMeasurementChanged?.invoke(abs(angleArmB - angleArmA), caliperCm, calibrationScaleFactor)
             invalidate()
             return true
         }
@@ -521,25 +631,39 @@ class ProtractorRulerCanvasView(context: Context, private val activity: MainActi
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val d = resources.displayMetrics.density
-        val accent = if (activity.isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else activity.primaryColor
+        val accent = CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
         linePaint.strokeWidth = 1.4f * d
         armAPaint.strokeWidth = 3.2f * d
         armAPaint.color = accent
         armBPaint.strokeWidth = 3.2f * d
+        cardBorderPaint.strokeWidth = 2.2f * d
+
+        val pxPerCm = getEffectivePxPerCm()
+        val topOffset = 24f * d
+
+        // אם מצב כיול כרטיס אשראי פעיל – מצייר תבנית כרטיס אשראי תקני (53.98 מ״מ = 5.398 ס״מ)
+        if (isCreditCardCalibrationMode) {
+            val cardBottomY = topOffset + 5.398f * pxPerCm
+            val cardRect = RectF(0f, topOffset, width * 0.52f, cardBottomY)
+            canvas.drawRoundRect(cardRect, 8f * d, 8f * d, cardOverlayPaint)
+            canvas.drawRoundRect(cardRect, 8f * d, 8f * d, cardBorderPaint)
+            textPaint.color = Color.parseColor("#00E676")
+            textPaint.textSize = 11f * d
+            canvas.drawText("💳 הנח כרטיס אשראי לאורך הקו העליון", 12f * d, topOffset + 22f * d, textPaint)
+            canvas.drawText("וגרור קו זה לקצה התחתון של הכרטיס (53.98 מ״מ)", 12f * d, cardBottomY - 8f * d, textPaint)
+        }
 
         // סרגל מכויל בצד שמאל + קליבר מדידה
-        val dpi = resources.displayMetrics.ydpi.coerceAtLeast(160f)
-        val pxPerCm = dpi / 2.54f
-        val topOffset = 20f * d
         var y = topOffset
         var cm = 0
+        textPaint.color = Color.WHITE
         textPaint.textSize = 11f * d
-        while (y < height - 15f * d) {
+        while (y < height - 22f * d) {
             canvas.drawLine(0f, y, 36f * d, y, linePaint)
             canvas.drawText("${cm}cm", 40f * d, y + 4f * d, textPaint)
             for (mm in 1..9) {
                 val my = y + (mm / 10f) * pxPerCm
-                if (my < height) {
+                if (my < height - 22f * d) {
                     canvas.drawLine(0f, my, if (mm == 5) 25f * d else 14f * d, my, linePaint)
                 }
             }
@@ -547,14 +671,16 @@ class ProtractorRulerCanvasView(context: Context, private val activity: MainActi
             y += pxPerCm
         }
 
-        // קו קליבר נגרר על הסרגל
+        // קו אפס עליון וקו קליבר תחתון נגרר על הסרגל
+        canvas.drawLine(0f, topOffset, 92f * d, topOffset, armAPaint)
         val caliperY = topOffset + caliperCm * pxPerCm
-        canvas.drawLine(0f, caliperY, 85f * d, caliperY, armBPaint)
+        canvas.drawLine(0f, caliperY, 92f * d, caliperY, armBPaint)
+        canvas.drawCircle(85f * d, caliperY, 5.5f * d, armBPaint)
 
         // מד-זווית דו-זרועי במרכז-ימין
-        val ox = width * 0.62f
-        val oy = height * 0.72f
-        val r = min(width * 0.34f, height * 0.52f)
+        val ox = width * 0.63f
+        val oy = height * 0.70f
+        val r = min(width * 0.33f, height * 0.48f)
         canvas.drawArc(RectF(ox - r, oy - r, ox + r, oy + r), 180f, 180f, true, linePaint)
 
         for (deg in 0..180 step 15) {
@@ -573,12 +699,18 @@ class ProtractorRulerCanvasView(context: Context, private val activity: MainActi
         canvas.drawCircle(ox, oy, 5f * d, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent })
 
         val deltaAngle = abs(angleArmB - angleArmA)
-        textPaint.textSize = 13.5f * d
+        val mmVal = caliperCm * 10f
         textPaint.textAlign = Paint.Align.CENTER
-        canvas.drawText(
-            "Δ זווית: ${Utils.formatResult(deltaAngle.toDouble(), 1)}°  |  קליבר: ${Utils.formatResult(caliperCm.toDouble(), 2)} ס״מ (${Utils.formatResult(caliperCm / 2.54, 2)}\")",
-            ox - r * 0.1f,
-            height - 12f * d,
+        textPaint.color = Color.WHITE
+        val summaryLine = "Δ זווית: ${Utils.formatResult(deltaAngle.toDouble(), 1)}°  |  קליבר: ${Utils.formatResult(mmVal.toDouble(), 1)} מ״מ (${Utils.formatResult(caliperCm.toDouble(), 2)} ס״מ)"
+        CanvasUiHelper.drawFittedText(
+            canvas,
+            summaryLine,
+            width / 2f,
+            height - 8f * d,
+            width - 20f * d,
+            12.8f * d,
+            8.5f * d,
             textPaint
         )
         textPaint.textAlign = Paint.Align.LEFT
