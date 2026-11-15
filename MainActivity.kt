@@ -51,7 +51,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private lateinit var historyBtn: TextView
     private lateinit var favHeaderBtn: TextView
     private var appLogoView: TextView? = null
-    private var favoritesDrawerContainer: LinearLayout? = null
     private val drawerItemsViews = mutableListOf<View>()
     private val drawerSeparators = mutableListOf<View>()
     private val drawerSectionHeaders = mutableListOf<Triple<Int, TextView, LinearLayout>>()
@@ -136,10 +135,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         "🔌 עוביי חוטים AWG/SWG ומפל מתח",        // 37
         "⚡ מעבדת חוק אוהם, מחלק מתח וסוללה",     // 38
         "🟢 פלס בנאים דו-צירי עם בועות וכיול",    // 39
-        "🧭 מצפן מגנטי חי, נעילת יעד ושדה µT",    // 40
-        "📏 מד-זווית דו-זרועי וסרגל קליבר",       // 41
+        "🧭 מצפן 3D מכויל, מד אמינות ושדה µT",    // 40
+        "📏 מד-זווית דו-זרועי וסרגל מכויל פיזית", // 41
         "⏱️ שעון עצר כרונוגרף דו-טבעתי והקפות",   // 42
-        "🔦 פנס מסך עוצמתי וגווני מעבדה",         // 43
+        "🔦 פנס LED פיזי, מסך מלא ואיתות SOS",    // 43
         "⚛️ הטבלה המחזורית, אטום ומסה מולרית",    // 44
         "📡 מתרגם ומשדר קוד מורס דו-כיווני",      // 45
         "🔐 מחולל סיסמאות ומד אנטרופיה",          // 46
@@ -152,7 +151,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         "📐 גאומטריה 2D/3D, פיתגורס ושרטוט",      // 53
         "🔢 תורת המספרים, GCD/LCM וקומבינטוריקה", // 54
         "☁️ ייצוא PDF/CSV, גיבוי Drive והיסטוריה",// 55
-        "⭐ מרכז המועדפים וחישובים נעוצים",        // 56
+        "⭐ מרכז המועדפים וחישובים נעוצים",        // 56 (נגיש בלחיצה ארוכה על הכוכב בסרגל העליון)
         "⚙️ ממירי מכניקה, כוח, מומנט ותאוצה",     // 57
         "💧 ממירי זורמים, צמיגות, ספיקה וצנרת",   // 58
         "🔥 ממירי תרמודינמיקה, חום ומיזוג",       // 59
@@ -164,9 +163,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         "🧮 מטריצות, דטרמיננטה ומערכת משוואות"    // 65
     )
 
-    // חלוקת התפריט לקטגוריות (מועדפים + 4 קטגוריות רגילות + 7 קטגוריות Pro ממוקדות לפי שימוש)
+    // חלוקת התפריט לקטגוריות (ללא קטגוריית מועדפים בתפריט הצד – המועדפים נגישים בלחיצה ארוכה על הכוכב בכותרת)
     private val drawerSections = listOf(
-        Triple(300, "⭐ מועדפים וגישה מהירה", listOf(56)),
         Triple(301, "📐 מתמטיקה ומדע", listOf(0, 1, 8, 15, 16, 7, 28, 22)),
         Triple(302, "💳 פיננסים וצרכנות", listOf(2, 24, 3, 17, 29, 9, 25, 10, 23, 13)),
         Triple(303, "🔄 המרות, רכב ודלק", listOf(4, 5, 6, 18, 20, 21)),
@@ -212,6 +210,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         menuBtn = TextView(this).apply { text = "☰"; setTextColor(Color.WHITE); textSize = 28f; setPadding(dp(8f), 0, dp(8f), 0); setOnClickListener { feedback(it); if (isDrawerOpen) closeDrawer() else openDrawer() } }
         titleText = TextView(this).apply { text = "מחשבון פרימיום"; setTextColor(Color.WHITE); textSize = 20f; typeface = Typeface.DEFAULT_BOLD; layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(dp(8f), 0, dp(8f), 0) } }
 
+        // כפתור הכוכב בסרגל העליון: לחיצה קצרה מוסיפה/מסירה מחשבון מהמועדפים, לחיצה ארוכה פותחת את מרכז המועדפים (56)
         favHeaderBtn = TextView(this).apply {
             text = "☆"
             textSize = 21f
@@ -219,14 +218,17 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             setPadding(dp(6f), dp(6f), dp(6f), dp(6f))
             setOnClickListener {
                 feedback(it)
+                if (currentTabIndex == ProFavoritesEngine.FAVORITES_CENTER_TAB_INDEX) {
+                    return@setOnClickListener
+                }
                 ProFavoritesEngine.toggleFavoriteTab(this@MainActivity, currentTabIndex)
                 refreshFavHeaderIcon()
-                rebuildFavoritesDrawerSection()
                 if (currentTabIndex >= 31) switchTab(currentTabIndex)
             }
             setOnLongClickListener {
                 feedback(it)
-                switchTab(56)
+                if (isDrawerOpen) closeDrawer()
+                switchTab(ProFavoritesEngine.FAVORITES_CENTER_TAB_INDEX)
                 true
             }
         }
@@ -281,9 +283,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 orientation = LinearLayout.VERTICAL
                 visibility = View.GONE
             }
-            if (secIconCode == 300) {
-                favoritesDrawerContainer = sectionItemsContainer
-            }
 
             val headerTv = TextView(this).apply {
                 tag = secTitle
@@ -313,18 +312,16 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 }
             }
 
-            if (secIconCode != 300) {
-                for (idx in itemIndices) {
-                    sectionItemsContainer.addView(drawerItemsViews[idx])
-                    val sep = View(this).apply {
-                        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1f)).apply {
-                            setMargins(dp(28f), 0, dp(28f), 0)
-                        }
-                        setBackgroundColor(Color.TRANSPARENT)
+            for (idx in itemIndices) {
+                sectionItemsContainer.addView(drawerItemsViews[idx])
+                val sep = View(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1f)).apply {
+                        setMargins(dp(28f), 0, dp(28f), 0)
                     }
-                    drawerSeparators.add(sep)
-                    sectionItemsContainer.addView(sep)
+                    setBackgroundColor(Color.TRANSPARENT)
                 }
+                drawerSeparators.add(sep)
+                sectionItemsContainer.addView(sep)
             }
 
             drawerSectionHeaders.add(Triple(secIconCode, headerTv, sectionItemsContainer))
@@ -357,53 +354,18 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         drawerMenu?.addView(settingsTopDivider)
         drawerMenu?.addView(drawerItemsViews[19])
 
-        rebuildFavoritesDrawerSection()
         drawerScroll.addView(drawerMenu); rootFrame.addView(mainContent); rootFrame.addView(dimView); rootFrame.addView(drawerScroll)
         updateHandednessLayout()
         setContentView(rootFrame); setupShortcuts(); handleIntent(intent)
     }
 
-    fun rebuildFavoritesDrawerSection() {
-        val container = favoritesDrawerContainer ?: return
-        container.removeAllViews()
-        val activeAccent = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
-
-        // קישור קבוע למרכז המועדפים והחישובים הנעוצים (56) + כל המחשבונים שסומנו בכוכב
-        val favIndices = mutableListOf(56)
-        favIndices.addAll(ProFavoritesEngine.getFavoriteTabIndices(prefs).sorted().filter { it != 56 && it in categories.indices })
-
-        for (idx in favIndices) {
-            val isSelected = (idx == currentTabIndex)
-            val tint = if (isSelected) activeAccent else Color.WHITE
-            val favItem = TextView(this).apply {
-                text = IosGlassTheme.cleanCategoryTitle(categories[idx], true)
-                textSize = 15f
-                typeface = Typeface.DEFAULT_BOLD
-                gravity = (if (isRightHanded) Gravity.RIGHT else Gravity.LEFT) or Gravity.CENTER_VERTICAL
-                compoundDrawablePadding = dp(12f)
-                setPadding(dp(28f), dp(12f), dp(28f), dp(12f))
-                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                    setMargins(dp(10f), dp(2f), dp(10f), dp(2f))
-                }
-                val icon = AuroraBorealisTheme.createVectorIcon(this@MainActivity, idx, tint, 20f, isAuroraMode)
-                if (isRightHanded) setCompoundDrawables(null, null, icon, null)
-                else setCompoundDrawables(icon, null, null, null)
-                setTextColor(tint)
-                if (isSelected) {
-                    background = AuroraBorealisTheme.createActiveDrawerCapsule(this@MainActivity, isAuroraMode)
-                }
-                setOnClickListener {
-                    feedback(it)
-                    settingsScrollY = 0
-                    switchTab(idx)
-                    closeDrawer()
-                }
-            }
-            container.addView(favItem)
-        }
-    }
-
     private fun refreshFavHeaderIcon() {
+        // הסתרת כפתור הכוכב כאשר אנו נמצאים בתוך מסך "מרכז המועדפים" עצמו (56) כדי שלא יהיה ניתן להוסיפו למועדפים
+        if (currentTabIndex == ProFavoritesEngine.FAVORITES_CENTER_TAB_INDEX) {
+            favHeaderBtn.visibility = View.GONE
+            return
+        }
+        favHeaderBtn.visibility = View.VISIBLE
         val isFav = ProFavoritesEngine.isFavoriteTab(prefs, currentTabIndex)
         val starCol = if (isFav) Color.parseColor("#FFD700") else if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else Color.WHITE
         if (isCleanGlassActive) {
@@ -557,7 +519,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     private fun openDrawer() {
-        rebuildFavoritesDrawerSection()
         updateHandednessLayout()
         if (isCleanGlassActive) IosGlassTheme.applyRealtimeGlassBlur(mainContent, true)
         dimView.visibility = View.VISIBLE; dimView.animate().alpha(1f).setDuration(250).start()
@@ -601,8 +562,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             else -> Color.argb(25, 255, 255, 255)
         }
         for (sep in drawerSeparators) sep.setBackgroundColor(sepColor)
-
-        rebuildFavoritesDrawerSection()
 
         for ((secIconCode, headerTv, container) in drawerSectionHeaders) {
             if (secIconCode in 305..311) {
