@@ -1,4 +1,4 @@
-name: Build Swiss Army Knife Pro APK
+name: Build Native Kotlin APK
 
 on:
   push:
@@ -19,20 +19,22 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          accept-android-sdk-licenses: true
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.5'
 
-      - name: Prepare Project Structure, Fixed Keystore, Widget XMLs & Manifest
+      - name: Accept Preinstalled Android SDK Licenses
+        run: |
+          SDK_DIR="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          mkdir -p "$SDK_DIR/licenses"
+          printf "\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n" > "$SDK_DIR/licenses/android-sdk-license"
+          printf "\n84831b9409646a918e30573bab4c9c91346d8abd\n" > "$SDK_DIR/licenses/android-sdk-preview-license"
+
+      - name: Generate Lightweight Native Kotlin Project
         run: |
           mkdir -p /tmp/audio_backup
-          find . -type f -name "*.mp3" -exec cp {} /tmp/audio_backup/ \; 2>/dev/null || true
+          find . -type f \( -iname "*.mp3" -o -iname "*.wav" -o -iname "*.ogg" \) -exec cp {} /tmp/audio_backup/ \; 2>/dev/null || true
 
           mkdir -p app/src/main/java/com/example/calculator
           mkdir -p app/src/main/res/drawable
@@ -42,12 +44,37 @@ jobs:
           mkdir -p app/src/main/res/raw
           mkdir -p app/keystore
 
-          # 1. יצירת Keystore קבוע לחלוטין לצורך עדכון ישיר של האפליקציה ללא הסרה
+          # יצירת מפתח חתימה קבוע (PKCS12) כדי שכל עדכון יותקן ישירות בלי להסיר את האפליקציה
           echo "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" | base64 -d > app/keystore/fixed_app.p12
 
-          cp *.kt app/src/main/java/com/example/calculator/ 2>/dev/null || true
-          cp /tmp/audio_backup/*.mp3 app/src/main/res/raw/ 2>/dev/null || true
-          find app/src/main/res/raw/ -type f ! -name "*.mp3" -delete || true
+          # העתקת כל קובצי ה-Kotlin לתיקיית החבילה הנכונה
+          find . -maxdepth 3 -name "*.kt" -not -path "./app/src/main/java/com/example/calculator/*" -exec cp {} app/src/main/java/com/example/calculator/ \; 2>/dev/null || true
+
+          # מניעת כפילות אם קיימים גם ProLabAndScienceTools.kt וגם ProInteractiveTools.kt
+          if [ -f "app/src/main/java/com/example/calculator/ProLabAndScienceTools.kt" ] && [ -f "app/src/main/java/com/example/calculator/ProInteractiveTools.kt" ]; then
+            if grep -q "CompassHomeWidgetProvider" "app/src/main/java/com/example/calculator/ProInteractiveTools.kt" && ! grep -q "CompassHomeWidgetProvider" "app/src/main/java/com/example/calculator/ProLabAndScienceTools.kt"; then
+              rm -f "app/src/main/java/com/example/calculator/ProLabAndScienceTools.kt"
+            else
+              rm -f "app/src/main/java/com/example/calculator/ProInteractiveTools.kt"
+            fi
+          fi
+
+          # העתקת קובצי סאונד עם המרה לאותיות קטנות (מונע שגיאות משאבים ב-aapt2)
+          for f in /tmp/audio_backup/*; do
+            [ -f "$f" ] || continue
+            base=$(basename "$f")
+            lower=$(echo "$base" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9_.]//g')
+            if [[ ! "$lower" =~ ^[a-z] ]]; then
+              lower="snd_$lower"
+            fi
+            cp "$f" "app/src/main/res/raw/$lower" 2>/dev/null || true
+          done
+
+          find app/src/main/res/raw/ -type f ! \( -name "*.mp3" -o -name "*.wav" -o -name "*.ogg" \) -delete || true
+
+          if [ -f "app/src/main/res/raw/sound1.mp3" ] && [ ! -f "app/src/main/res/raw/ac_sound.mp3" ] && [ ! -f "app/src/main/res/raw/ac_sound.wav" ]; then
+            cp "app/src/main/res/raw/sound1.mp3" "app/src/main/res/raw/ac_sound.mp3"
+          fi
 
           cat << 'EOF' > app/src/main/res/drawable/ic_calc_tile.xml
           <?xml version="1.0" encoding="utf-8"?>
@@ -118,6 +145,35 @@ jobs:
           </shape>
           EOF
 
+          cat << 'EOF' > app/src/main/res/layout/compass_widget_layout.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:padding="2dp">
+              <ImageView
+                  android:id="@+id/widget_compass_img"
+                  android:layout_width="match_parent"
+                  android:layout_height="match_parent"
+                  android:scaleType="fitCenter"
+                  android:adjustViewBounds="true"
+                  android:contentDescription="מצפן 3D חי" />
+          </FrameLayout>
+          EOF
+
+          cat << 'EOF' > app/src/main/res/xml/compass_widget_info.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+              android:minWidth="150dp"
+              android:minHeight="150dp"
+              android:targetCellWidth="2"
+              android:targetCellHeight="2"
+              android:updatePeriodMillis="1800000"
+              android:initialLayout="@layout/compass_widget_layout"
+              android:resizeMode="horizontal|vertical"
+              android:widgetCategory="home_screen" />
+          EOF
+
           cat << 'EOF' > app/src/main/java/com/example/calculator/CalculatorWidget.kt
           package com.example.calculator
           import android.app.PendingIntent
@@ -184,12 +240,15 @@ jobs:
           include ':app'
           EOF
 
+          cat << 'EOF' > build.gradle
+          plugins { id 'com.android.application' version '8.2.2' apply false; id 'org.jetbrains.kotlin.android' version '1.9.22' apply false }
+          EOF
+
           cat << 'EOF' > gradle.properties
-          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          org.gradle.jvmargs=-Xmx3072m -Dfile.encoding=UTF-8
           android.useAndroidX=true
           EOF
 
-          # 8. יצירת app/build.gradle עם חתימה קבועה ומספר גרסה עולה אוטומטית לעדכון חלק
           RUN_NUM=${{ github.run_number }}
           VER_CODE=$((1000 + RUN_NUM))
 
@@ -203,7 +262,7 @@ jobs:
                   minSdk 26
                   targetSdk 34
                   versionCode $VER_CODE
-                  versionName "13.0-$RUN_NUM"
+                  versionName "13.$RUN_NUM-Pro"
               }
               signingConfigs {
                   fixedConfig {
@@ -235,8 +294,14 @@ jobs:
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
               <uses-permission android:name="android.permission.VIBRATE" />
-              <application android:allowBackup="true" android:label="מחשבון Pro" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher" android:supportsRtl="false" android:theme="@android:style/Theme.Material.NoActionBar">
-                  <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask" android:supportsPictureInPicture="true" android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation">
+
+              <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
+              <uses-feature android:name="android.hardware.sensor.compass" android:required="false" />
+              <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
+              <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false" />
+
+              <application android:allowBackup="true" android:hardwareAccelerated="true" android:label="מחשבון Pro" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher" android:supportsRtl="false" android:theme="@android:style/Theme.Material.NoActionBar">
+                  <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask" android:supportsPictureInPicture="true" android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|keyboardHidden">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
@@ -245,13 +310,23 @@ jobs:
                           <action android:name="ACTION_CALC" />
                           <action android:name="ACTION_SCI" />
                           <action android:name="ACTION_COIN" />
+                          <action android:name="ACTION_OPEN_COMPASS" />
                           <category android:name="android.intent.category.DEFAULT" />
                       </intent-filter>
                   </activity>
 
-                  <receiver android:name=".CalculatorWidget" android:exported="true">
+                  <receiver android:name=".CalculatorWidget" android:exported="true" android:label="קיצורי מחשבון Pro">
                       <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
                       <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_info" />
+                  </receiver>
+
+                  <receiver android:name=".CompassHomeWidgetProvider" android:exported="true" android:label="מצפן 3D חי (Canva Pro)">
+                      <intent-filter>
+                          <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                          <action android:name="com.example.calculator.ACTION_REFRESH_COMPASS_WIDGET" />
+                          <action android:name="android.intent.action.USER_PRESENT" />
+                      </intent-filter>
+                      <meta-data android:name="android.appwidget.provider" android:resource="@xml/compass_widget_info" />
                   </receiver>
 
                   <service android:name=".MiniCalcTileService" android:icon="@drawable/ic_calc_tile" android:label="מיני מחשבון" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE" android:exported="true">
