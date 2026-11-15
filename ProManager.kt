@@ -30,7 +30,7 @@ object ProState {
 }
 
 // =========================================================================
-// תצוגות קנבס (Canvas) ייעודיות למחשבוני ה-Pro (מותאמות לצפיפות מסך ללא חיתוך)
+// תצוגות קנבס (Canvas) ייעודיות למחשבוני ה-Pro (כולל הגנת ניגודיות ו-fitText)
 // =========================================================================
 
 // 1. קנבס השוואת קנה-מידה ליחידות מידה
@@ -44,7 +44,7 @@ class UnitScaleComparisonCanvasView(context: Context, private val activity: Main
         super.onDraw(canvas)
         val d = resources.displayMetrics.density
         val w = width.toFloat()
-        val accent = if (activity.isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else activity.primaryColor
+        val accent = CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
 
         val bar1Top = 14f * d; val bar1Bot = 34f * d
         val bar2Top = 44f * d; val bar2Bot = 64f * d
@@ -61,10 +61,9 @@ class UnitScaleComparisonCanvasView(context: Context, private val activity: Main
         canvas.drawRoundRect(RectF(padX, bar2Top, padX + targetW, bar2Bot), 10f * d, 10f * d, p)
 
         p.color = Color.WHITE
-        p.textSize = 12.5f * d
         p.typeface = Typeface.DEFAULT_BOLD
-        canvas.drawText("מקור: $fromLabel", padX + 10f * d, bar1Bot - 5.5f * d, p)
-        canvas.drawText("יעד: $toLabel", padX + 10f * d, bar2Bot - 5.5f * d, p)
+        CanvasUiHelper.drawFittedText(canvas, "מקור: $fromLabel", padX + 10f * d, bar1Bot - 5.5f * d, w - 2 * padX - 20f * d, 12.5f * d, 8.5f * d, p)
+        CanvasUiHelper.drawFittedText(canvas, "יעד: $toLabel", padX + 10f * d, bar2Bot - 5.5f * d, w - 2 * padX - 20f * d, 12.5f * d, 8.5f * d, p)
     }
 }
 
@@ -81,7 +80,7 @@ class SpitzerMortgageCanvasView(context: Context, private val activity: MainActi
         val w = width.toFloat(); val h = height.toFloat()
         val total = (principalVal + interestVal).coerceAtLeast(1.0)
         val pRatio = (principalVal / total).toFloat().coerceIn(0.08f, 0.92f)
-        val accent = if (activity.isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else activity.primaryColor
+        val accent = CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
 
         val barLeft = 18f * d; val barRight = w - 18f * d; val barW = barRight - barLeft
         p.color = accent
@@ -89,10 +88,11 @@ class SpitzerMortgageCanvasView(context: Context, private val activity: MainActi
         p.color = Color.parseColor("#FF4D6D")
         canvas.drawRoundRect(RectF(barLeft + barW * pRatio + 3f * d, 16f * d, barRight, 42f * d), 11f * d, 11f * d, p)
 
-        p.color = Color.WHITE; p.textSize = 13f * d; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
-        canvas.drawText("קרן: ${(pRatio * 100).toInt()}% (₪${Utils.formatResult(principalVal, 0)})  |  ריבית: ${((1f - pRatio) * 100).toInt()}% (₪${Utils.formatResult(interestVal, 0)})", w / 2f, 62f * d, p)
-        p.color = accent; p.textSize = 15f * d
-        canvas.drawText("החזר חודשי התחלתי: ₪${Utils.formatResult(monthlyPmt, 0)}", w / 2f, h - 12f * d, p)
+        p.color = Color.WHITE; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
+        val splitLine = "קרן: ${(pRatio * 100).toInt()}% (₪${Utils.formatResult(principalVal, 0)})  |  ריבית: ${((1f - pRatio) * 100).toInt()}% (₪${Utils.formatResult(interestVal, 0)})"
+        CanvasUiHelper.drawFittedText(canvas, splitLine, w / 2f, 62f * d, w - 24f * d, 13f * d, 8.5f * d, p)
+        p.color = accent
+        CanvasUiHelper.drawFittedText(canvas, "החזר חודשי התחלתי: ₪${Utils.formatResult(monthlyPmt, 0)}", w / 2f, h - 12f * d, w - 24f * d, 15f * d, 10f * d, p)
     }
 }
 
@@ -114,7 +114,6 @@ class BreakEvenChartCanvasView(context: Context, private val activity: MainActiv
         revPaint.strokeWidth = 2.5f * d
         costPaint.strokeWidth = 2.5f * d
         axisPaint.strokeWidth = 1.2f * d
-        txtPaint.textSize = 12.5f * d
 
         val w = width.toFloat(); val h = height.toFloat()
         val padL = 24f * d; val padR = w - 24f * d
@@ -123,19 +122,16 @@ class BreakEvenChartCanvasView(context: Context, private val activity: MainActiv
         canvas.drawLine(padL, padB, padR, padB, axisPaint)
         canvas.drawLine(padL, padT, padL, padB, axisPaint)
 
-        // קו הכנסות (0 עד 2*BE)
         canvas.drawLine(padL, padB, padR, padT + 10f * d, revPaint)
-        // קו הוצאות (הוצאות קבועות עד 2*BE)
         val fixedY = padB - (padB - padT) * 0.35f
         canvas.drawLine(padL, fixedY, padR, padT + (padB - padT) * 0.22f, costPaint)
 
-        // נקודת איזון במרכז
         val beX = (padL + padR) / 2f
         val beY = (padB + padT + 10f * d) / 2f
-        val accent = if (activity.isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else activity.primaryColor
+        val accent = CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
         canvas.drawCircle(beX, beY, 5.5f * d, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent })
 
-        canvas.drawText("נקודת איזון: $breakEvenUnits יח׳ (ירוק = פדיון | אדום = עלויות)", w / 2f, h - 8f * d, txtPaint)
+        CanvasUiHelper.drawFittedText(canvas, "נקודת איזון: $breakEvenUnits יח׳ (ירוק = פדיון | אדום = עלויות)", w / 2f, h - 8f * d, w - 20f * d, 12.5f * d, 8.5f * d, txtPaint)
     }
 }
 
@@ -154,12 +150,11 @@ class BellCurveStatsCanvasView(context: Context, private val activity: MainActiv
         val d = resources.displayMetrics.density
         lineP.strokeWidth = 2.5f * d
         axisP.strokeWidth = 1.2f * d
-        txtP.textSize = 12.5f * d
 
         val w = width.toFloat(); val h = height.toFloat()
         val pad = 18f * d
         val baseLine = h - 24f * d
-        val accent = if (activity.isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else activity.primaryColor
+        val accent = CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
 
         lineP.color = accent
         fillP.shader = LinearGradient(0f, pad, 0f, baseLine, Color.argb(120, Color.red(accent), Color.green(accent), Color.blue(accent)), Color.TRANSPARENT, Shader.TileMode.CLAMP)
@@ -188,7 +183,7 @@ class BellCurveStatsCanvasView(context: Context, private val activity: MainActiv
         canvas.drawPath(path, lineP)
         canvas.drawLine(pad, baseLine, w - pad, baseLine, axisP)
         canvas.drawLine(w / 2f, pad, w / 2f, baseLine, axisP)
-        canvas.drawText("μ = ${Utils.formatResult(meanVal, 2)}   |   σ = ${Utils.formatResult(stdDevVal, 2)}", w / 2f, h - 6f * d, txtP)
+        CanvasUiHelper.drawFittedText(canvas, "μ = ${Utils.formatResult(meanVal, 2)}   |   σ = ${Utils.formatResult(stdDevVal, 2)}", w / 2f, h - 6f * d, w - 20f * d, 12.5f * d, 8.5f * d, txtP)
     }
 }
 
@@ -207,10 +202,9 @@ class GeometryBlueprintCanvasView(context: Context, private val activity: MainAc
         val d = resources.displayMetrics.density
         strokeP.strokeWidth = 2.2f * d
         gridP.strokeWidth = 0.8f * d
-        txtP.textSize = 12.5f * d
 
         val w = width.toFloat(); val h = height.toFloat()
-        val accent = if (activity.isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else activity.primaryColor
+        val accent = CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
         strokeP.color = accent
 
         val step = 18f * d
@@ -230,13 +224,13 @@ class GeometryBlueprintCanvasView(context: Context, private val activity: MainAc
                 }
                 canvas.drawPath(p, strokeP)
                 val c = hypot(paramA, paramB)
-                canvas.drawText("a=${Utils.formatResult(paramA, 1)} | b=${Utils.formatResult(paramB, 1)} | c=${Utils.formatResult(c, 2)}", cx, h - 8f * d, txtP)
+                CanvasUiHelper.drawFittedText(canvas, "a=${Utils.formatResult(paramA, 1)} | b=${Utils.formatResult(paramB, 1)} | c=${Utils.formatResult(c, 2)}", cx, h - 8f * d, w - 20f * d, 12.5f * d, 8.5f * d, txtP)
             }
             1 -> {
                 val r = min(w, h) * 0.30f
                 canvas.drawCircle(cx, cy, r, strokeP)
                 canvas.drawLine(cx, cy, cx + r, cy, strokeP)
-                canvas.drawText("רדיוס R = ${Utils.formatResult(paramA, 2)}", cx, h - 8f * d, txtP)
+                CanvasUiHelper.drawFittedText(canvas, "רדיוס R = ${Utils.formatResult(paramA, 2)}", cx, h - 8f * d, w - 20f * d, 12.5f * d, 8.5f * d, txtP)
             }
             else -> {
                 val r = min(w, h) * 0.24f
@@ -244,7 +238,7 @@ class GeometryBlueprintCanvasView(context: Context, private val activity: MainAc
                 canvas.drawOval(RectF(cx - r, cy + 16f * d, cx + r, cy + 34f * d), strokeP)
                 canvas.drawLine(cx - r, cy - 25f * d, cx - r, cy + 25f * d, strokeP)
                 canvas.drawLine(cx + r, cy - 25f * d, cx + r, cy + 25f * d, strokeP)
-                canvas.drawText("R=${Utils.formatResult(paramA, 1)} | H=${Utils.formatResult(paramB, 1)}", cx, h - 8f * d, txtP)
+                CanvasUiHelper.drawFittedText(canvas, "R=${Utils.formatResult(paramA, 1)} | H=${Utils.formatResult(paramB, 1)}", cx, h - 8f * d, w - 20f * d, 12.5f * d, 8.5f * d, txtP)
             }
         }
     }
@@ -261,14 +255,13 @@ class MatrixLinearCanvasView(context: Context, private val activity: MainActivit
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val d = resources.displayMetrics.density
-        val accent = if (activity.isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else activity.primaryColor
+        val accent = CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
         bracketP.strokeWidth = 2.5f * d
         bracketP.color = accent
 
         val cx = width / 2f; val cy = height * 0.42f
         val bw = 75f * d; val bh = 36f * d
 
-        // סוגריים מרובעים של המטריצה
         canvas.drawLine(cx - bw, cy - bh, cx - bw + 12f * d, cy - bh, bracketP)
         canvas.drawLine(cx - bw, cy - bh, cx - bw, cy + bh, bracketP)
         canvas.drawLine(cx - bw, cy + bh, cx - bw + 12f * d, cy + bh, bracketP)
@@ -284,9 +277,8 @@ class MatrixLinearCanvasView(context: Context, private val activity: MainActivit
         canvas.drawText(a21, cx - 35f * d, cy + 24f * d, txtP)
         canvas.drawText(a22, cx + 35f * d, cy + 24f * d, txtP)
 
-        txtP.textSize = 13.5f * d
         txtP.color = accent
-        canvas.drawText(detText, cx, height - 10f * d, txtP)
+        CanvasUiHelper.drawFittedText(canvas, detText, cx, height - 10f * d, width - 20f * d, 13.5f * d, 9f * d, txtP)
     }
 }
 
@@ -311,8 +303,8 @@ fun MainActivity.createProPlumbingAndFluidsScreen(): View {
             canvas.drawRoundRect(RectF(16f * d, 16f * d, w - 16f * d, h - 16f * d), 14f * d, 14f * d, p)
             p.color = Color.parseColor("#0288D1")
             canvas.drawRect(24f * d, 25f * d, w - 24f * d, h - 25f * d, p)
-            p.color = Color.WHITE; p.textSize = 14f * d; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
-            canvas.drawText("➔  מהירות זורם בצינור: $flowVelText  ➔", w / 2f, h / 2f + 5f * d, p)
+            p.color = Color.WHITE; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
+            CanvasUiHelper.drawFittedText(canvas, "➔  מהירות זורם בצינור: $flowVelText  ➔", w / 2f, h / 2f + 5f * d, w - 56f * d, 14f * d, 9.5f * d, p)
         }
     }.apply { layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(135f)).apply { bottomMargin = dp(12f) } }
 
@@ -348,41 +340,43 @@ fun MainActivity.createProPlumbingAndFluidsScreen(): View {
     scroll.addView(root); return scroll
 }
 
-// 1B. מסך אישי: מחשבון רפואי - מינון תרופות, קצב עירוי IV, שטח פני גוף BSA וסוכר
+// 1B. מסך אישי: מחשבון רפואי קליני - מינון תרופות, עירוי IV, BSA והמרת סוכר בדם מדויקת (18.0182)
 fun MainActivity.createProMedicalDosageScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("🩺 מחשבון רפואי: עירוי IV, מינון, BSA וסוכר", "קצב טיפות לדקה (gtt/min), שטח פני גוף (Mosteller BSA) והמרת סוכר בדם"))
+    root.addView(createProCanvaHeader("🩺 מחשבון רפואי: עירוי IV, מינון, BSA וסוכר", "קצב טיפות לדקה (gtt/min), שטח פני גוף (Mosteller BSA) והמרת סוכר קלינית (18.0182)"))
 
     val weightIn = createInputBox("משקל מטופל בק״ג (kg)").apply { setText("70") }
     val heightCmIn = createInputBox("גובה מטופל בס״מ (לחישוב BSA)").apply { setText("175") }
     val doseMgKgIn = createInputBox("מינון נדרש במ״ג לק״ג (mg/kg)").apply { setText("10") }
     val ivVolIn = createInputBox("נפח שקית עירוי במ״ל (mL)").apply { setText("500") }
     val ivHoursIn = createInputBox("זמן הזלפת העירוי בשעות").apply { setText("4") }
-    val glucoseIn = createInputBox("רמת סוכר בדם ב-mg/dL (להמרה ל-mmol/L)").apply { setText("100") }
+    val glucoseIn = createInputBox("רמת סוכר בדם ב-mg/dL (להמרה קלינית ל-mmol/L)").apply { setText("100") }
     val resTv = createResultTextView()
 
-    val btn = createActionBtn("חשב מינון רפואי, BSA וקצב עירוי 🩺") {
+    val btn = createActionBtn("חשב מינון רפואי, BSA, עירוי וסוכר קליני 🩺") {
         val w = weightIn.text.toString().toDoubleOrNull() ?: 70.0
         val hCm = heightCmIn.text.toString().toDoubleOrNull() ?: 175.0
         val dose = doseMgKgIn.text.toString().toDoubleOrNull() ?: 10.0
         val vol = ivVolIn.text.toString().toDoubleOrNull() ?: 500.0
         val hrs = (ivHoursIn.text.toString().toDoubleOrNull() ?: 4.0).coerceAtLeast(0.1)
-        val glu = glucoseIn.text.toString().toDoubleOrNull() ?: 100.0
+        val gluMgDl = glucoseIn.text.toString().toDoubleOrNull() ?: 100.0
 
         val totalDoseMg = w * dose
         val bsa = sqrt((w * hCm) / 3600.0)
         val mlPerHour = vol / hrs
         val dropsPerMin20 = (mlPerHour * 20.0) / 60.0
         val microDrops60 = mlPerHour
-        val gluMmol = glu / 18.0182
+        val gluMmol = gluMgDl / ProUnitCatalog.GLUCOSE_MGDL_PER_MMOL
+        val estA1c = (gluMgDl + 46.7) / 28.7
 
-        resTv.text = "פלט חישוב קליני:\n" +
-                "• מינון כולל למטופל: ${Utils.formatResult(totalDoseMg, 1)} מ״ג (mg)\n" +
-                "• שטח פני גוף (BSA Mosteller): ${Utils.formatResult(bsa, 2)} מ״ר (m²)\n" +
-                "• קצב משאבת עירוי: ${Utils.formatResult(mlPerHour, 1)} mL/h\n" +
+        resTv.text = "פלט חישוב קליני מבוקר:\n" +
+                "• מינון כולל למטופל: ${ProUnitCatalog.formatClinicalNumber(totalDoseMg)} מ״ג (mg)\n" +
+                "• שטח פני גוף (BSA Mosteller): ${ProUnitCatalog.formatClinicalNumber(bsa)} מ״ר (m²)\n" +
+                "• קצב משאבת עירוי: ${ProUnitCatalog.formatClinicalNumber(mlPerHour)} mL/h\n" +
                 "• קצב טפטוף: ${Utils.formatResult(dropsPerMin20, 0)} gtt/min (סט 20) | ${Utils.formatResult(microDrops60, 0)} µgtt/min (סט 60)\n" +
-                "• סוכר בדם: ${Utils.formatResult(glu, 0)} mg/dL = ${Utils.formatResult(gluMmol, 2)} mmol/L"
+                "• סוכר בדם (מקדם 18.0182): ${ProUnitCatalog.formatClinicalNumber(gluMgDl)} mg/dL = ${ProUnitCatalog.formatClinicalNumber(gluMmol)} mmol/L\n" +
+                "• אומדן HbA1c משוער (eAG): ${ProUnitCatalog.formatClinicalNumber(estA1c)}%"
     }
     btn.performClick()
     root.addView(weightIn); root.addView(heightCmIn); root.addView(doseMgKgIn); root.addView(ivVolIn)
@@ -442,15 +436,15 @@ class RateHistoryChartView(context: Context) : View(context) {
         if (points.size < 2) return
         val d = resources.displayMetrics.density
         linePaint.strokeWidth = 2.4f * d
-        textPaint.textSize = 11.5f * d
 
         val w = width.toFloat(); val h = height.toFloat()
         val pad = 18f * d
         val minV = points.minOrNull() ?: 0f
         val maxV = (points.maxOrNull() ?: 1f).let { if (it == minV) minV + 1f else it }
 
-        linePaint.color = accentColor
-        fillPaint.shader = LinearGradient(0f, pad, 0f, h - pad, Color.argb(110, Color.red(accentColor), Color.green(accentColor), Color.blue(accentColor)), Color.TRANSPARENT, Shader.TileMode.CLAMP)
+        val safeAccent = CanvasUiHelper.ensureReadableAccent(accentColor, false)
+        linePaint.color = safeAccent
+        fillPaint.shader = LinearGradient(0f, pad, 0f, h - pad, Color.argb(110, Color.red(safeAccent), Color.green(safeAccent), Color.blue(safeAccent)), Color.TRANSPARENT, Shader.TileMode.CLAMP)
 
         val path = Path()
         val fillPath = Path()
@@ -471,7 +465,16 @@ class RateHistoryChartView(context: Context) : View(context) {
         fillPath.close()
         canvas.drawPath(fillPath, fillPaint)
         canvas.drawPath(path, linePaint)
-        canvas.drawText("מגמת שער ($periodLabel): מינימום ${Utils.formatResult(minV.toDouble(), 3)} | מקסימום ${Utils.formatResult(maxV.toDouble(), 3)}", pad, 14f * d, textPaint)
+        CanvasUiHelper.drawFittedText(
+            canvas,
+            "מגמת שער ($periodLabel): מינימום ${Utils.formatResult(minV.toDouble(), 3)} | מקסימום ${Utils.formatResult(maxV.toDouble(), 3)}",
+            pad,
+            14f * d,
+            w - 2 * pad,
+            11.5f * d,
+            8.0f * d,
+            textPaint
+        )
     }
 }
 
@@ -506,7 +509,6 @@ fun MainActivity.createProCurrenciesAndMetalsHub(): View {
     }
     metalsCard.addView(metalsTv)
 
-    // מחשבון שווי תכשיטים ומטילי זהב לפי משקל בגרמים
     val weightGramsIn = createInputBox("⚖️ הזן משקל זהב/תכשיט בגרמים לחישוב שווי שוק (למשל 15)").apply { setText("10") }
     val jewelryResTv = createResultTextView()
     val calcGoldBtn = createActionBtn("חשב שווי זהב לפי קראט (24K / 18K / 14K) 💍") {
@@ -597,7 +599,6 @@ fun MainActivity.createProMortgageSpitzerScreen(): View {
         val totalPaid = pmt * n
         val totalInterest = totalPaid - p
 
-        // חישוב קרן שווה להשוואה
         val equalPrincipalFirstPmt = (p / n) + (p * r)
         val equalPrincipalTotalInterest = p * r * (n + 1) / 2.0
 
@@ -716,7 +717,7 @@ fun MainActivity.createProBusinessMarginScreen(): View {
     scroll.addView(root); return scroll
 }
 
-// 3D. מסך אישי חדש: מחשבון שכר שעתי/חודשי, שעות נוספות (125%/150%), פנסיה ונטו
+// 3D. מסך אישי: מחשבון שכר שעתי/חודשי, שעות נוספות (125%/150%), פנסיה ונטו
 fun MainActivity.createProSalaryAndTaxScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
@@ -912,7 +913,7 @@ fun MainActivity.createProNumberTheoryScreen(): View {
     scroll.addView(root); return scroll
 }
 
-// 4D. מסך אישי חדש: מטריצות, דטרמיננטה ופתרון מערכת משוואות ליניאריות (Cramer's Rule)
+// 4D. מסך אישי: מטריצות, דטרמיננטה ופתרון מערכת משוואות ליניאריות (Cramer's Rule)
 fun MainActivity.createProMatrixAndEquationsScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
@@ -976,7 +977,7 @@ fun MainActivity.createProFinancial20Suite(): View = createProMortgageSpitzerScr
 fun MainActivity.createProMath22Suite(): View = createProStatisticsBellScreen()
 
 // =========================================================================
-// 5. תכונות עוצמתיות: ייצוא ל-PDF ו-CSV, גיבוי ל-Google Drive, מועדפים והיסטוריה מלאה
+// 5. תכונות עוצמתיות: ייצוא ל-PDF ו-CSV, גיבוי ל-Google Drive והיסטוריה מלאה
 // =========================================================================
 fun MainActivity.createProPowerFeaturesCenter(): View {
     val scroll = ScrollView(this)
