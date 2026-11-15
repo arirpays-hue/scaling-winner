@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.calculator">
+
+    <!-- הרשאות רשת (לשערי מטבעות ומתכות בזמן אמת) ורטט -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- הגדרת רכיבי חומרה כלא-חובה כדי שהאפליקציה תותקן על כל מכשיר -->
+    <uses-feature
+        android:name="android.hardware.camera.flash"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.sensor.compass"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.sensor.accelerometer"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.sensor.gyroscope"
+        android:required="false" />
+
+    <application
+        android:allowBackup="true"
+        android:hardwareAccelerated="true"
+        android:icon="@android:drawable/sym_def_app_icon"
+        android:label="אולר שווייצרי Pro fx-991"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+
+        <!-- מסך ראשי: כולל תמיכה בחלון צף (PiP), סיבוב מסך וקיצורי דרך -->
+        <activity
+            android:name=".MainActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:supportsPictureInPicture="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- פעולות קיצורי דרך ופתיחה ישירה מווידג'טים -->
+            <intent-filter>
+                <action android:name="ACTION_CALC" />
+                <action android:name="ACTION_SCI" />
+                <action android:name="ACTION_COIN" />
+                <action android:name="ACTION_OPEN_COMPASS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- אריח מחשבון מהיר בווילון ההתראות (Quick Settings Tile) -->
+        <service
+            android:name=".MiniCalcTileService"
+            android:exported="true"
+            android:icon="@android:drawable/ic_dialog_dialer"
+            android:label="מיני מחשבון"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <!-- וידג'ט מצפן 3D פעיל למסך הבית מעוצב בקנבה -->
+        <receiver
+            android:name=".CompassHomeWidgetProvider"
+            android:exported="true"
+            android:label="מצפן 3D חי (Canva Pro)">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.calculator.ACTION_REFRESH_COMPASS_WIDGET" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/compass_widget_info" />
+        </receiver>
+
+    </application>
+
+</manifest>
