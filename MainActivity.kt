@@ -28,6 +28,7 @@ import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.SoundEffectConstants
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
@@ -52,8 +53,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private lateinit var favHeaderBtn: TextView
     private var appLogoView: TextView? = null
     private val drawerItemsViews = mutableListOf<View>()
+    private val drawerItemRowsMap = mutableMapOf<Int, Pair<View, View>>()
     private val drawerSeparators = mutableListOf<View>()
     private val drawerSectionHeaders = mutableListOf<Triple<Int, TextView, LinearLayout>>()
+    private val sectionDividersMap = mutableMapOf<Int, View>()
     private val proSectionDividers = mutableMapOf<Int, View>()
     private val expandedSections = mutableSetOf<Int>()
     val keypadButtons = mutableMapOf<String, TextView>()
@@ -64,12 +67,16 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     var acSoundId = 0
 
     var useHaptic = true; var useSound = true; var useAnimations = true; var keepScreenOn = false; var soundType = 0
+    var useCustomAcSound = true
     var isRightHanded = true
     var isIosGlassMode = false
     var isAuroraMode = false
     val isCleanGlassActive: Boolean get() = isIosGlassActiveOrAurora
 
     private val isIosGlassActiveOrAurora: Boolean get() = isIosGlassMode || isAuroraMode
+
+    private val hiddenDrawerTabs = mutableSetOf<Int>()
+    private var isDrawerChecklistExpanded = false
 
     var settingsScrollY = 0
     var currentSettingsScroll: ScrollView? = null
@@ -164,7 +171,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     )
 
     // חלוקת התפריט לקטגוריות (ללא קטגוריית מועדפים בתפריט הצד – המועדפים נגישים בלחיצה ארוכה על הכוכב בכותרת)
-    private val drawerSections = listOf(
+    val drawerSections = listOf(
         Triple(301, "📐 מתמטיקה ומדע", listOf(0, 1, 8, 15, 16, 7, 28, 22)),
         Triple(302, "💳 פיננסים וצרכנות", listOf(2, 24, 3, 17, 29, 9, 25, 10, 23, 13)),
         Triple(303, "🔄 המרות, רכב ודלק", listOf(4, 5, 6, 18, 20, 21)),
@@ -258,6 +265,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         drawerMenu?.addView(appLogo)
 
         drawerItemsViews.clear()
+        drawerItemRowsMap.clear()
         for ((index, title) in categories.withIndex()) {
             val isSettings = (index == 19)
             val item = TextView(this).apply {
@@ -277,6 +285,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         drawerSectionHeaders.clear()
         drawerSeparators.clear()
+        sectionDividersMap.clear()
         proSectionDividers.clear()
         for ((secIconCode, secTitle, itemIndices) in drawerSections) {
             val sectionItemsContainer = LinearLayout(this).apply {
@@ -321,6 +330,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     setBackgroundColor(Color.TRANSPARENT)
                 }
                 drawerSeparators.add(sep)
+                drawerItemRowsMap[idx] = drawerItemsViews[idx] to sep
                 sectionItemsContainer.addView(sep)
             }
 
@@ -333,6 +343,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 }
                 setBackgroundColor(Color.TRANSPARENT)
             }
+            sectionDividersMap[secIconCode] = catSep
             if (secIconCode in 305..311) proSectionDividers[secIconCode] = catSep
             drawerSeparators.add(catSep)
             drawerMenu?.addView(catSep)
@@ -357,6 +368,19 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         drawerScroll.addView(drawerMenu); rootFrame.addView(mainContent); rootFrame.addView(dimView); rootFrame.addView(drawerScroll)
         updateHandednessLayout()
         setContentView(rootFrame); setupShortcuts(); handleIntent(intent)
+        CompassHomeWidgetHelper.updateAllWidgets(this)
+    }
+
+    fun isCalculatorVisibleInDrawer(tabIndex: Int): Boolean {
+        if (tabIndex == 19) return true
+        return !hiddenDrawerTabs.contains(tabIndex)
+    }
+
+    fun setCalculatorVisibleInDrawer(tabIndex: Int, visible: Boolean) {
+        if (tabIndex == 19) return
+        if (visible) hiddenDrawerTabs.remove(tabIndex) else hiddenDrawerTabs.add(tabIndex)
+        savePreferences()
+        updateDrawerSelection()
     }
 
     private fun refreshFavHeaderIcon() {
@@ -420,8 +444,30 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     override fun onInit(status: Int) { if (status == TextToSpeech.SUCCESS) tts?.language = Locale("he", "IL") }
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration?) { super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig); if (isInPictureInPictureMode) { topHeader.visibility = View.GONE; if (isDrawerOpen) closeDrawer() } else { topHeader.visibility = View.VISIBLE } }
     override fun onNewIntent(intent: Intent?) { super.onNewIntent(intent); handleIntent(intent) }
-    private fun handleIntent(intent: Intent?) { when (intent?.action) { "ACTION_CALC" -> { currentTabIndex = 0; applyTheme() }; "ACTION_SCI" -> { currentTabIndex = 1; applyTheme() }; "ACTION_COIN" -> { currentTabIndex = 13; applyTheme() }; else -> applyTheme() } }
-    private fun setupShortcuts() { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) { val sm = getSystemService(ShortcutManager::class.java); val s1 = ShortcutInfo.Builder(this, "coin").setShortLabel("מטבעות").setIcon(Icon.createWithResource(this, android.R.drawable.star_on)).setIntent(Intent(this, MainActivity::class.java).apply { action = "ACTION_COIN" }).build(); val s2 = ShortcutInfo.Builder(this, "sci").setShortLabel("מדעית").setIcon(Icon.createWithResource(this, android.R.drawable.ic_menu_edit)).setIntent(Intent(this, MainActivity::class.java).apply { action = "ACTION_SCI" }).build(); sm.dynamicShortcuts = listOf(s1, s2) } }
+    private fun handleIntent(intent: Intent?) {
+        when (intent?.action) {
+            "ACTION_CALC" -> { currentTabIndex = 0; applyTheme() }
+            "ACTION_SCI" -> { currentTabIndex = 1; applyTheme() }
+            "ACTION_COIN" -> { currentTabIndex = 13; applyTheme() }
+            "ACTION_OPEN_COMPASS" -> {
+                ProState.setProEnabled(prefs, true)
+                expandedSections.add(308)
+                currentTabIndex = 40
+                applyTheme()
+            }
+            else -> applyTheme()
+        }
+    }
+
+    private fun setupShortcuts() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
+            val sm = getSystemService(ShortcutManager::class.java)
+            val s1 = ShortcutInfo.Builder(this, "coin").setShortLabel("מטבעות").setIcon(Icon.createWithResource(this, android.R.drawable.star_on)).setIntent(Intent(this, MainActivity::class.java).apply { action = "ACTION_COIN" }).build()
+            val s2 = ShortcutInfo.Builder(this, "sci").setShortLabel("מדעית").setIcon(Icon.createWithResource(this, android.R.drawable.ic_menu_edit)).setIntent(Intent(this, MainActivity::class.java).apply { action = "ACTION_SCI" }).build()
+            val s3 = ShortcutInfo.Builder(this, "compass").setShortLabel("מצפן 3D").setIcon(Icon.createWithResource(this, android.R.drawable.ic_menu_compass)).setIntent(Intent(this, MainActivity::class.java).apply { action = "ACTION_OPEN_COMPASS" }).build()
+            sm.dynamicShortcuts = listOf(s1, s2, s3)
+        }
+    }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
@@ -450,6 +496,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         useHaptic = prefs?.getBoolean("useHaptic", true) ?: true; useSound = prefs?.getBoolean("useSound", true) ?: true; useAnimations = prefs?.getBoolean("useAnimations", true) ?: true
         keepScreenOn = prefs?.getBoolean("keepScreenOn", false) ?: false
         soundType = (prefs?.getInt("soundType", 0) ?: 0).coerceIn(0, 3)
+        useCustomAcSound = prefs?.getBoolean("useCustomAcSound", true) ?: true
         isRightHanded = prefs?.getBoolean("isRightHanded", true) ?: true
         isIosGlassMode = prefs?.getBoolean("isIosGlassMode", false) ?: false
         isAuroraMode = prefs?.getBoolean("isAuroraMode", false) ?: false
@@ -464,14 +511,51 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         fromWeight = prefs?.getString("fromWeight", "קילוגרם (kg)") ?: "קילוגרם (kg)"; toWeight = prefs?.getString("toWeight", "פאונד (lbs)") ?: "פאונד (lbs)"
         fromTemp = prefs?.getString("fromTemp", "צלזיוס (°C)") ?: "צלזיוס (°C)"; toTemp = prefs?.getString("toTemp", "פרנהייט (°F)") ?: "פרנהייט (°F)"
         fromSpeed = prefs?.getString("fromSpeed", "קמ״ש (km/h)") ?: "קמ״ש (km/h)"; toSpeed = prefs?.getString("toSpeed", "מייל לשעה (mph)") ?: "מייל לשעה (mph)"
+
+        hiddenDrawerTabs.clear()
+        val rawHidden = prefs?.getString("hidden_drawer_tabs", "") ?: ""
+        if (rawHidden.isNotBlank()) {
+            rawHidden.split(",").mapNotNull { it.trim().toIntOrNull() }.forEach {
+                if (it != 19) hiddenDrawerTabs.add(it)
+            }
+        }
+
         historyList.clear(); if (savedHist.isNotEmpty()) historyList.addAll(savedHist.split("||")); updateKeepScreenOn()
     }
 
     fun savePreferences() {
         IosGlassTheme.saveIosPrefs(prefs)
         val maxHist = if (ProState.isProEnabled(prefs)) 500 else 30
-        prefs?.edit()?.putBoolean("useHaptic", useHaptic)?.putBoolean("useSound", useSound)?.putBoolean("useAnimations", useAnimations)?.putBoolean("keepScreenOn", keepScreenOn)?.putBoolean("isRightHanded", isRightHanded)?.putBoolean("isIosGlassMode", isIosGlassMode)?.putBoolean("isAuroraMode", isAuroraMode)?.putInt("soundType", soundType.coerceIn(0, 3))?.putInt("calcPrecision", calcPrecision)?.putFloat("buttonCornerStyle", buttonCornerStyle)?.putInt("primaryColor", primaryColor)?.putInt("bgColor", bgColor)?.putLong("memoryValue", memoryValue.toRawBits())?.putString("fromCurrency", fromCurrency)?.putString("toCurrency", toCurrency)?.putString("fromDist", fromDist)?.putString("toDist", toDist)?.putString("fromWeight", fromWeight)?.putString("toWeight", toWeight)?.putString("fromTemp", fromTemp)?.putString("toTemp", toTemp)?.putString("fromSpeed", fromSpeed)?.putString("toSpeed", toSpeed)?.putString("history", historyList.take(maxHist).joinToString("||"))?.apply()
+        prefs?.edit()
+            ?.putBoolean("useHaptic", useHaptic)
+            ?.putBoolean("useSound", useSound)
+            ?.putBoolean("useAnimations", useAnimations)
+            ?.putBoolean("keepScreenOn", keepScreenOn)
+            ?.putBoolean("useCustomAcSound", useCustomAcSound)
+            ?.putBoolean("isRightHanded", isRightHanded)
+            ?.putBoolean("isIosGlassMode", isIosGlassMode)
+            ?.putBoolean("isAuroraMode", isAuroraMode)
+            ?.putInt("soundType", soundType.coerceIn(0, 3))
+            ?.putInt("calcPrecision", calcPrecision)
+            ?.putFloat("buttonCornerStyle", buttonCornerStyle)
+            ?.putInt("primaryColor", primaryColor)
+            ?.putInt("bgColor", bgColor)
+            ?.putLong("memoryValue", memoryValue.toRawBits())
+            ?.putString("fromCurrency", fromCurrency)
+            ?.putString("toCurrency", toCurrency)
+            ?.putString("fromDist", fromDist)
+            ?.putString("toDist", toDist)
+            ?.putString("fromWeight", fromWeight)
+            ?.putString("toWeight", toWeight)
+            ?.putString("fromTemp", fromTemp)
+            ?.putString("toTemp", toTemp)
+            ?.putString("fromSpeed", fromSpeed)
+            ?.putString("toSpeed", toSpeed)
+            ?.putString("hidden_drawer_tabs", hiddenDrawerTabs.joinToString(","))
+            ?.putString("history", historyList.take(maxHist).joinToString("||"))
+            ?.apply()
     }
+
     fun updateKeepScreenOn() { if (keepScreenOn) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
 
     fun applyTheme() {
@@ -516,6 +600,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         refreshFavHeaderIcon()
         AuroraBorealisTheme.applyHeaderMetallicGradient(appLogoView, isAuroraMode, isIosGlassMode)
         updateHandednessLayout(); updateDrawerSelection(); switchTab(currentTabIndex)
+        CompassHomeWidgetHelper.updateAllWidgets(this)
     }
 
     private fun openDrawer() {
@@ -540,7 +625,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     fun feedback(view: View, symbol: String = "") {
         if (useHaptic) view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
         if (useSound && !MiniGameEngine.isAnimalParty) {
-            if (symbol == "AC" && acSoundId != 0) {
+            if (symbol == "AC" && useCustomAcSound && acSoundId != 0) {
                 soundPool.play(acSoundId, 1f, 1f, 0, 0, 1f)
             } else if (soundType == 0) {
                 view.playSoundEffect(SoundEffectConstants.CLICK)
@@ -564,13 +649,32 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         for (sep in drawerSeparators) sep.setBackgroundColor(sepColor)
 
         for ((secIconCode, headerTv, container) in drawerSectionHeaders) {
-            if (secIconCode in 305..311) {
-                headerTv.visibility = if (proActive) View.VISIBLE else View.GONE
-                proSectionDividers[secIconCode]?.visibility = if (proActive) View.VISIBLE else View.GONE
-                if (!proActive) {
-                    container.visibility = View.GONE
-                    continue
-                }
+            val secItemIndices = drawerSections.find { it.first == secIconCode }?.third ?: emptyList()
+
+            for (idx in secItemIndices) {
+                val pair = drawerItemRowsMap[idx]
+                val vis = if (isCalculatorVisibleInDrawer(idx)) View.VISIBLE else View.GONE
+                pair?.first?.visibility = vis
+                pair?.second?.visibility = vis
+            }
+
+            val hasVisibleCalculators = secItemIndices.any { isCalculatorVisibleInDrawer(it) }
+
+            if (secIconCode in 305..311 && !proActive) {
+                headerTv.visibility = View.GONE
+                proSectionDividers[secIconCode]?.visibility = View.GONE
+                container.visibility = View.GONE
+                continue
+            }
+
+            if (!hasVisibleCalculators) {
+                headerTv.visibility = View.GONE
+                sectionDividersMap[secIconCode]?.visibility = View.GONE
+                container.visibility = View.GONE
+                continue
+            } else {
+                headerTv.visibility = View.VISIBLE
+                sectionDividersMap[secIconCode]?.visibility = View.VISIBLE
             }
 
             val rawSecTitle = headerTv.tag as? String ?: ""
@@ -579,7 +683,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             val arrow = if (isExpanded) "▾" else if (isRightHanded) "◂" else "▸"
             headerTv.text = if (isRightHanded) "$cleanTitle  $arrow" else "$arrow  $cleanTitle"
 
-            val hasActiveChild = drawerSections.find { it.first == secIconCode }?.third?.contains(currentTabIndex) == true
+            val hasActiveChild = secItemIndices.contains(currentTabIndex) && isCalculatorVisibleInDrawer(currentTabIndex)
             val headerTint = if (isExpanded || hasActiveChild) activeAccent else Color.WHITE
             headerTv.setTextColor(headerTint)
 
@@ -622,6 +726,171 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
+    // מציג את האפשרות "צורת כפתורים" רק בערכת נושא רגילה, ומוסיף את הגדרת "צליל AC" מיד מתחת ל"סוג צליל"
+    private fun applyButtonShapeVisibilityAndInsertAcSoundSetting(root: View?) {
+        if (root == null) return
+        if (root is ViewGroup) {
+            var i = 0
+            while (i < root.childCount) {
+                val ch = root.getChildAt(i)
+                if (ch is TextView) {
+                    val txt = ch.text.toString()
+                    if (txt.contains("צורת כפתורים")) {
+                        // מוצג אך ורק בערכת נושא רגילה (!isCleanGlassActive)
+                        ch.visibility = if (!isCleanGlassActive) View.VISIBLE else View.GONE
+                    } else if (txt.contains("סוג צליל")) {
+                        val nextChild = if (i + 1 < root.childCount) root.getChildAt(i + 1) else null
+                        val alreadyAdded = (nextChild is TextView && nextChild.tag == "AC_SOUND_MODE_BTN")
+                        if (!alreadyAdded) {
+                            val acModeText = if (useCustomAcSound) {
+                                "צליל AC: צליל ה-AC הרגיל של המחשבון"
+                            } else {
+                                "צליל AC: לפי הצליל המוגדר בכפתור הצלילים"
+                            }
+                            val acSoundBtn = createActionBtn(acModeText, false) {
+                                useCustomAcSound = !useCustomAcSound
+                                savePreferences()
+                                feedback(it, "AC")
+                                switchTab(19)
+                            }.apply {
+                                tag = "AC_SOUND_MODE_BTN"
+                            }
+                            root.addView(acSoundBtn, i + 1)
+                            i++
+                        }
+                    }
+                } else if (ch is ViewGroup) {
+                    applyButtonShapeVisibilityAndInsertAcSoundSetting(ch)
+                }
+                i++
+            }
+        }
+    }
+
+    // רשימת סימון (Checklist) מלאה בהגדרות לבחירת המחשבונים שיופיעו בתפריט הצד
+    private fun createDrawerCalculatorsChecklistSection(): View {
+        val accent = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
+        val proActive = ProState.isProEnabled(prefs)
+        val availableSections = drawerSections.filter { (secCode, _, _) ->
+            proActive || secCode !in 305..311
+        }
+        val allSelectableIndices = availableSections.flatMap { it.third }
+        val visibleCount = allSelectableIndices.count { isCalculatorVisibleInDrawer(it) }
+
+        val wrapper = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(6f); bottomMargin = dp(10f) }
+        }
+
+        val listContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = if (isDrawerChecklistExpanded) View.VISIBLE else View.GONE
+            setPadding(dp(14f), dp(12f), dp(14f), dp(12f))
+            background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@MainActivity, 20f)
+            else GradientDrawable().apply {
+                setColor(Utils.lightenColor(bgColor, 0.06f))
+                cornerRadius = dp(20f).toFloat()
+                setStroke(dp(1f), Utils.lightenColor(bgColor, 0.16f))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = dp(8f) }
+        }
+
+        val toggleHeaderBtn = createActionBtn(
+            "☑️ רשימת סימון: מחשבונים בתפריט הצד ($visibleCount/${allSelectableIndices.size}) ${if (isDrawerChecklistExpanded) "▴" else "▾"}",
+            false
+        ) {
+            isDrawerChecklistExpanded = !isDrawerChecklistExpanded
+            switchTab(19)
+        }
+
+        val actionsRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = dp(8f) }
+        }
+
+        val selectAllBtn = createActionBtn("סמן הכל ✔️", false) {
+            for (idx in allSelectableIndices) hiddenDrawerTabs.remove(idx)
+            savePreferences()
+            updateDrawerSelection()
+            switchTab(19)
+        }.apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                rightMargin = dp(4f)
+            }
+        }
+
+        val deselectAllBtn = createActionBtn("נקה הכל (למעט רגיל)", false) {
+            for (idx in allSelectableIndices) {
+                if (idx != 0) hiddenDrawerTabs.add(idx) else hiddenDrawerTabs.remove(0)
+            }
+            savePreferences()
+            updateDrawerSelection()
+            switchTab(19)
+        }.apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                leftMargin = dp(4f)
+            }
+        }
+
+        actionsRow.addView(selectAllBtn)
+        actionsRow.addView(deselectAllBtn)
+        listContainer.addView(actionsRow)
+
+        val checkBoxesList = mutableListOf<Pair<Int, CheckBox>>()
+
+        fun updateHeaderCounterText() {
+            val curVis = allSelectableIndices.count { isCalculatorVisibleInDrawer(it) }
+            val rawLabel = "☑️ רשימת סימון: מחשבונים בתפריט הצד ($curVis/${allSelectableIndices.size}) ${if (isDrawerChecklistExpanded) "▴" else "▾"}"
+            toggleHeaderBtn.text = IosGlassTheme.cleanCategoryTitle(rawLabel, isCleanGlassActive)
+        }
+
+        for ((_, secTitle, itemIndices) in availableSections) {
+            val secTitleTv = TextView(this).apply {
+                text = IosGlassTheme.cleanCategoryTitle(secTitle, isCleanGlassActive)
+                setTextColor(accent)
+                textSize = 15f
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.RIGHT
+                setPadding(dp(4f), dp(10f), dp(4f), dp(4f))
+            }
+            listContainer.addView(secTitleTv)
+
+            for (tabIdx in itemIndices) {
+                val cb = CheckBox(this).apply {
+                    text = "  ${IosGlassTheme.cleanCategoryTitle(categories[tabIdx], isCleanGlassActive)}"
+                    setTextColor(Color.WHITE)
+                    textSize = 14.5f
+                    typeface = Typeface.DEFAULT_BOLD
+                    buttonTintList = ColorStateList.valueOf(accent)
+                    layoutDirection = View.LAYOUT_DIRECTION_RTL
+                    gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
+                    isChecked = isCalculatorVisibleInDrawer(tabIdx)
+                    setPadding(dp(8f), dp(8f), dp(8f), dp(8f))
+                    setOnCheckedChangeListener { buttonView, isChecked ->
+                        feedback(buttonView)
+                        setCalculatorVisibleInDrawer(tabIdx, isChecked)
+                        updateHeaderCounterText()
+                    }
+                }
+                checkBoxesList.add(tabIdx to cb)
+                listContainer.addView(cb)
+            }
+        }
+
+        wrapper.addView(toggleHeaderBtn)
+        wrapper.addView(listContainer)
+        return wrapper
+    }
+
     fun switchTab(index: Int) {
         val wasInSettings = (currentTabIndex == 19 && index == 19)
         if (wasInSettings) {
@@ -643,6 +912,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             19 -> {
                 val settingsView = createSettingsPage()
                 enhanceSettingsHierarchy(settingsView)
+                // הסתרת "צורת כפתורים" בערכות הנושא המיוחדות + הוספת כפתור "צליל AC"
+                applyButtonShapeVisibilityAndInsertAcSoundSetting(settingsView)
+
                 val scrollObj = settingsView as? ScrollView
                 currentSettingsScroll = scrollObj
                 val container = scrollObj?.getChildAt(0) as? LinearLayout ?: (settingsView as? LinearLayout)
@@ -689,6 +961,16 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     switchTab(19)
                 }
                 container?.addView(handBtn)
+
+                // כפתור להוספת וידג'ט מצפן פעיל מעוצב בקנבה למסך הבית
+                val compassWidgetBtn = createActionBtn("🧭 הוסף וידג'ט מצפן פעיל (Canva) למסך הבית", false) {
+                    CompassHomeWidgetHelper.requestPinOrUpdateCompassWidget(this)
+                }
+                container?.addView(compassWidgetBtn)
+
+                // רשימת סימון עם המחשבונים שהמשתמש בוחר שיופיעו בתפריט הצד
+                container?.addView(createDrawerCalculatorsChecklistSection())
+
                 scrollObj?.viewTreeObserver?.addOnScrollChangedListener {
                     if (currentTabIndex == 19) settingsScrollY = scrollObj.scrollY
                 }
