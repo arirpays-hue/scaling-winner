@@ -371,6 +371,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         CompassHomeWidgetHelper.updateAllWidgets(this)
     }
 
+    override fun onResume() {
+        super.onResume()
+        CompassHomeWidgetHelper.updateAllWidgets(this)
+    }
+
     fun isCalculatorVisibleInDrawer(tabIndex: Int): Boolean {
         if (tabIndex == 19) return true
         return !hiddenDrawerTabs.contains(tabIndex)
@@ -767,7 +772,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
-    // רשימת סימון (Checklist) מלאה בהגדרות לבחירת המחשבונים שיופיעו בתפריט הצד
+    // רשימת סימון (Checklist) מוסתרת שנפתחת בלחיצה על הכפתור ונסגרת בלחיצה על כפתור "סיום"
     private fun createDrawerCalculatorsChecklistSection(): View {
         val accent = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
         val proActive = ProState.isProEnabled(prefs)
@@ -785,10 +790,44 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             ).apply { topMargin = dp(6f); bottomMargin = dp(10f) }
         }
 
-        val listContainer = LinearLayout(this).apply {
+        lateinit var openChecklistBtn: TextView
+        lateinit var listContainer: LinearLayout
+        val checkBoxesList = mutableListOf<Pair<Int, CheckBox>>()
+
+        fun updateOpenBtnCounterText() {
+            val curVis = allSelectableIndices.count { isCalculatorVisibleInDrawer(it) }
+            val rawLabel = "☑️ רשימת סימון: מחשבונים בתפריט הצד ($curVis/${allSelectableIndices.size})"
+            openChecklistBtn.text = IosGlassTheme.cleanCategoryTitle(rawLabel, isCleanGlassActive)
+        }
+
+        fun closeChecklist() {
+            isDrawerChecklistExpanded = false
+            listContainer.visibility = View.GONE
+            openChecklistBtn.visibility = View.VISIBLE
+            updateOpenBtnCounterText()
+            savePreferences()
+            updateDrawerSelection()
+        }
+
+        openChecklistBtn = createActionBtn(
+            "☑️ רשימת סימון: מחשבונים בתפריט הצד ($visibleCount/${allSelectableIndices.size})",
+            false
+        ) {
+            isDrawerChecklistExpanded = true
+            openChecklistBtn.visibility = View.GONE
+            listContainer.visibility = View.VISIBLE
+            if (useAnimations) {
+                listContainer.alpha = 0f
+                listContainer.animate().alpha(1f).setDuration(200).start()
+            }
+        }.apply {
+            visibility = if (isDrawerChecklistExpanded) View.GONE else View.VISIBLE
+        }
+
+        listContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             visibility = if (isDrawerChecklistExpanded) View.VISIBLE else View.GONE
-            setPadding(dp(14f), dp(12f), dp(14f), dp(12f))
+            setPadding(dp(14f), dp(14f), dp(14f), dp(14f))
             background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@MainActivity, 20f)
             else GradientDrawable().apply {
                 setColor(Utils.lightenColor(bgColor, 0.06f))
@@ -801,13 +840,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             ).apply { bottomMargin = dp(8f) }
         }
 
-        val toggleHeaderBtn = createActionBtn(
-            "☑️ רשימת סימון: מחשבונים בתפריט הצד ($visibleCount/${allSelectableIndices.size}) ${if (isDrawerChecklistExpanded) "▴" else "▾"}",
-            false
-        ) {
-            isDrawerChecklistExpanded = !isDrawerChecklistExpanded
-            switchTab(19)
+        // כפתור "סיום" עליון לסגירת הרשימה מיידית
+        val topDoneBtn = createActionBtn("סיום ✔️", true) {
+            closeChecklist()
         }
+        listContainer.addView(topDoneBtn)
 
         val actionsRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -817,11 +854,16 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             ).apply { bottomMargin = dp(8f) }
         }
 
+        var isBulkUpdating = false
+
         val selectAllBtn = createActionBtn("סמן הכל ✔️", false) {
+            isBulkUpdating = true
             for (idx in allSelectableIndices) hiddenDrawerTabs.remove(idx)
+            for ((_, cb) in checkBoxesList) cb.isChecked = true
+            isBulkUpdating = false
             savePreferences()
             updateDrawerSelection()
-            switchTab(19)
+            updateOpenBtnCounterText()
         }.apply {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
                 rightMargin = dp(4f)
@@ -829,12 +871,15 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
 
         val deselectAllBtn = createActionBtn("נקה הכל (למעט רגיל)", false) {
+            isBulkUpdating = true
             for (idx in allSelectableIndices) {
                 if (idx != 0) hiddenDrawerTabs.add(idx) else hiddenDrawerTabs.remove(0)
             }
+            for ((idx, cb) in checkBoxesList) cb.isChecked = (idx == 0)
+            isBulkUpdating = false
             savePreferences()
             updateDrawerSelection()
-            switchTab(19)
+            updateOpenBtnCounterText()
         }.apply {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
                 leftMargin = dp(4f)
@@ -844,14 +889,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         actionsRow.addView(selectAllBtn)
         actionsRow.addView(deselectAllBtn)
         listContainer.addView(actionsRow)
-
-        val checkBoxesList = mutableListOf<Pair<Int, CheckBox>>()
-
-        fun updateHeaderCounterText() {
-            val curVis = allSelectableIndices.count { isCalculatorVisibleInDrawer(it) }
-            val rawLabel = "☑️ רשימת סימון: מחשבונים בתפריט הצד ($curVis/${allSelectableIndices.size}) ${if (isDrawerChecklistExpanded) "▴" else "▾"}"
-            toggleHeaderBtn.text = IosGlassTheme.cleanCategoryTitle(rawLabel, isCleanGlassActive)
-        }
 
         for ((_, secTitle, itemIndices) in availableSections) {
             val secTitleTv = TextView(this).apply {
@@ -876,9 +913,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     isChecked = isCalculatorVisibleInDrawer(tabIdx)
                     setPadding(dp(8f), dp(8f), dp(8f), dp(8f))
                     setOnCheckedChangeListener { buttonView, isChecked ->
+                        if (isBulkUpdating) return@setOnCheckedChangeListener
                         feedback(buttonView)
                         setCalculatorVisibleInDrawer(tabIdx, isChecked)
-                        updateHeaderCounterText()
+                        updateOpenBtnCounterText()
                     }
                 }
                 checkBoxesList.add(tabIdx to cb)
@@ -886,7 +924,18 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
         }
 
-        wrapper.addView(toggleHeaderBtn)
+        // כפתור "סיום" תחתון לסגירת הרשימה לאחר גלילה
+        val bottomDoneBtn = createActionBtn("סיום ✔️", true) {
+            closeChecklist()
+        }.apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(10f) }
+        }
+        listContainer.addView(bottomDoneBtn)
+
+        wrapper.addView(openChecklistBtn)
         wrapper.addView(listContainer)
         return wrapper
     }
@@ -897,6 +946,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             settingsScrollY = currentSettingsScroll?.scrollY ?: settingsScrollY
         } else if (index != 19) {
             settingsScrollY = 0
+            isDrawerChecklistExpanded = false
+        } else {
+            // בכניסה ראשונה להגדרות, רשימת הסימון תמיד מתחילה מוסתרת
+            isDrawerChecklistExpanded = false
         }
         if (MiniGameEngine.isActive) MiniGameEngine.stopGame(this)
         currentTabIndex = index
@@ -962,13 +1015,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 }
                 container?.addView(handBtn)
 
-                // כפתור להוספת וידג'ט מצפן פעיל מעוצב בקנבה למסך הבית
-                val compassWidgetBtn = createActionBtn("🧭 הוסף וידג'ט מצפן פעיל (Canva) למסך הבית", false) {
-                    CompassHomeWidgetHelper.requestPinOrUpdateCompassWidget(this)
-                }
-                container?.addView(compassWidgetBtn)
-
-                // רשימת סימון עם המחשבונים שהמשתמש בוחר שיופיעו בתפריט הצד
+                // רשימת סימון מוסתרת שנפתחת בלחיצה על הכפתור ונסגרת בלחיצה על כפתור "סיום"
                 container?.addView(createDrawerCalculatorsChecklistSection())
 
                 scrollObj?.viewTreeObserver?.addOnScrollChangedListener {
