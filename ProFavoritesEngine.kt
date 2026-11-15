@@ -8,7 +8,6 @@ import android.graphics.drawable.GradientDrawable
 import android.text.InputType
 import android.view.Gravity
 import android.view.View
-import android.view.animation.OvershootInterpolator
 import android.widget.*
 import org.json.JSONArray
 import org.json.JSONObject
@@ -26,20 +25,34 @@ data class PinnedCalculation(
 
 object ProFavoritesEngine {
 
+    const val FAVORITES_CENTER_TAB_INDEX = 56
     private const val KEY_FAV_TABS = "pro_fav_tab_indices"
     private const val KEY_PINNED_CALCS = "pro_pinned_calculations_json"
 
     fun getFavoriteTabIndices(prefs: SharedPreferences?): MutableSet<Int> {
         val raw = prefs?.getString(KEY_FAV_TABS, "") ?: ""
         if (raw.isBlank()) return mutableSetOf()
-        return raw.split(",").mapNotNull { it.trim().toIntOrNull() }.toMutableSet()
+        // מניעה מוחלטת של הימצאות מרכז המועדפים (56) או מסך ההגדרות (19) בתוך רשימת המועדפים
+        return raw.split(",")
+            .mapNotNull { it.trim().toIntOrNull() }
+            .filter { it != FAVORITES_CENTER_TAB_INDEX && it != 19 }
+            .toMutableSet()
     }
 
     fun isFavoriteTab(prefs: SharedPreferences?, tabIndex: Int): Boolean {
+        if (tabIndex == FAVORITES_CENTER_TAB_INDEX || tabIndex == 19) return false
         return getFavoriteTabIndices(prefs).contains(tabIndex)
     }
 
     fun toggleFavoriteTab(activity: MainActivity, tabIndex: Int): Boolean {
+        if (tabIndex == FAVORITES_CENTER_TAB_INDEX) {
+            Toast.makeText(activity, "⭐ הינך נמצא במרכז המועדפים", Toast.LENGTH_SHORT).show()
+            return false
+        }
+        if (tabIndex == 19) {
+            Toast.makeText(activity, "לחץ לחיצה ארוכה על הכוכב לפתיחת מרכז המועדפים ⭐", Toast.LENGTH_SHORT).show()
+            return false
+        }
         val set = getFavoriteTabIndices(activity.prefs)
         val nowFav = if (set.contains(tabIndex)) {
             set.remove(tabIndex)
@@ -55,7 +68,8 @@ object ProFavoritesEngine {
         )
         Toast.makeText(
             activity,
-            if (nowFav) "⭐ '$title' נוסף למועדפים!" else "הוסר מהמועדפים: $title",
+            if (nowFav) "⭐ '$title' נוסף למועדפים! (לחיצה ארוכה על הכוכב = מרכז המועדפים)"
+            else "הוסר מהמועדפים: $title",
             Toast.LENGTH_SHORT
         ).show()
         return nowFav
@@ -97,7 +111,7 @@ object ProFavoritesEngine {
         val nowStr = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
         list.add(0, PinnedCalculation(System.currentTimeMillis(), tabIndex, calcTitle, note, resultText, nowStr))
         persistPinnedList(activity.prefs, list)
-        Toast.makeText(activity, "📌 החישוב נשמר במועדפים!", Toast.LENGTH_SHORT).show()
+        Toast.makeText(activity, "📌 החישוב נשמר במרכז המועדפים! (נגיש בלחיצה ארוכה על הכוכב)", Toast.LENGTH_SHORT).show()
     }
 
     fun deletePinnedCalculation(prefs: SharedPreferences?, id: Long) {
@@ -178,7 +192,7 @@ fun MainActivity.createFavoritesQuickChipsBar(): View {
     }
 
     for (idx in favIndices) {
-        if (idx !in categories.indices) continue
+        if (idx !in categories.indices || idx == ProFavoritesEngine.FAVORITES_CENTER_TAB_INDEX) continue
         val isCurrent = (idx == currentTabIndex)
         val chip = TextView(this).apply {
             text = "⭐ ${IosGlassTheme.cleanCategoryTitle(categories[idx], true)}"
@@ -207,7 +221,7 @@ fun MainActivity.createFavoritesQuickChipsBar(): View {
     return wrapper
 }
 
-// מסך מרכז המועדפים והחישובים השמורים
+// מסך מרכז המועדפים והחישובים השמורים (נגיש בלחיצה ארוכה על כפתור הכוכב בראש כל מחשבון)
 fun MainActivity.createProFavoritesCenterScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply {
@@ -217,7 +231,7 @@ fun MainActivity.createProFavoritesCenterScreen(): View {
     root.addView(
         createProCanvaHeader(
             "⭐ מרכז המועדפים והחישובים השמורים",
-            "גישה מהירה למחשבונים המועדפים שלך ולחישובים שנעצת עם הערות"
+            "לחיצה קצרה על הכוכב בכל מחשבון מוסיפה/מסירה אותו • לחיצה ארוכה פותחת מסך זה"
         )
     )
 
@@ -236,7 +250,7 @@ fun MainActivity.createProFavoritesCenterScreen(): View {
 
     if (favSet.isEmpty()) {
         root.addView(TextView(this).apply {
-            text = "טרם סימנת מחשבונים במועדפים.\nלחץ על סמל הכוכב (☆) בכותרת של כל מחשבון כדי להוסיף אותו לכאן!"
+            text = "טרם סימנת מחשבונים במועדפים.\nלחץ לחיצה קצרה על סמל הכוכב (☆) בסרגל העליון של כל מחשבון כדי להוסיף אותו לכאן!"
             setTextColor(Color.LTGRAY)
             textSize = 14.5f
             gravity = Gravity.RIGHT
@@ -244,7 +258,7 @@ fun MainActivity.createProFavoritesCenterScreen(): View {
         })
     } else {
         for (idx in favSet.sorted()) {
-            if (idx !in categories.indices) continue
+            if (idx !in categories.indices || idx == ProFavoritesEngine.FAVORITES_CENTER_TAB_INDEX) continue
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -344,6 +358,12 @@ fun MainActivity.createProFavoritesCenterScreen(): View {
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.RIGHT
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                setOnClickListener {
+                    if (item.tabIndex in categories.indices) {
+                        feedback(it)
+                        switchTab(item.tabIndex)
+                    }
+                }
             }
             topBar.addView(delBtn)
             topBar.addView(noteTv)
