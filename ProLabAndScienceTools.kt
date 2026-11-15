@@ -1,7 +1,12 @@
 package com.example.calculator
 
 import android.app.Dialog
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.graphics.*
 import android.graphics.drawable.GradientDrawable
 import android.hardware.Sensor
@@ -13,6 +18,7 @@ import android.hardware.camera2.CameraManager
 import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.Editable
@@ -468,7 +474,7 @@ fun MainActivity.createProSpiritLevelScreen(): View {
 }
 
 // =========================================================================
-// 6. מסך אישי: מצפן TYPE_ROTATION_VECTOR עם פיצוי הטיה 3D, מד אמינות וכיול חי!
+// 6. מסך אישי: מצפן TYPE_ROTATION_VECTOR עם פיצוי הטיה 3D, מד אמינות, כיול חי ווידג'ט מסך הבית!
 // =========================================================================
 fun MainActivity.createProCompassScreen(): View {
     val scroll = ScrollView(this)
@@ -479,6 +485,7 @@ fun MainActivity.createProCompassScreen(): View {
     val israelDeclinationDeg = 5.2f // נטייה מגנטית בישראל (+5.2° מזרחה)
     val resTv = createResultTextView()
     lateinit var compassCanvas: CompassRoseCanvasView
+    var lastWidgetSyncMs = 0L
 
     fun updateHeadingText(deg: Float) {
         val dirs = listOf("צפון (N)", "צפון-מזרח (NE)", "מזרח (E)", "דרום-מזרח (SE)", "דרום (S)", "דרום-מערב (SW)", "מערב (W)", "צפון-מערב (NW)")
@@ -499,6 +506,17 @@ fun MainActivity.createProCompassScreen(): View {
         resTv.text = "אזימוט (${if (useTrueNorth) "צפון גאוגרפי אמיתי" else "צפון מגנטי"}): \u200E${Utils.formatResult(deg.toDouble(), 1)}°\u200E | ${dirs[idx]}\n" +
                 "אזימוט חוזר (Back-Azimuth): \u200E${Utils.formatResult(backAzimuth.toDouble(), 1)}°\u200E\n" +
                 "רמת דיוק וכיול חיישן: $accName$lockStr"
+
+        val now = System.currentTimeMillis()
+        if (now - lastWidgetSyncMs > 900L) {
+            lastWidgetSyncMs = now
+            CompassHomeWidgetHelper.saveAndPushReading(
+                this@createProCompassScreen,
+                deg,
+                compassCanvas.magneticFieldUt,
+                compassCanvas.sensorAccuracy
+            )
+        }
     }
 
     val sm = getSystemService(Context.SENSOR_SERVICE) as? SensorManager
@@ -530,6 +548,10 @@ fun MainActivity.createProCompassScreen(): View {
         }
         compassCanvas.invalidate()
         updateHeadingText(compassCanvas.azimuthDeg)
+    }
+
+    val addWidgetBtn = createActionBtn("📲 הוסף וידג'ט מצפן פעיל (Canva) למסך הבית", false) {
+        CompassHomeWidgetHelper.requestPinOrUpdateCompassWidget(this)
     }
 
     val rotationMatrix = FloatArray(9)
@@ -614,7 +636,7 @@ fun MainActivity.createProCompassScreen(): View {
         override fun onViewDetachedFromWindow(v: View) { sm?.unregisterListener(listener) }
     })
 
-    root.addView(compassCanvas); root.addView(northModeBtn); root.addView(lockBtn)
+    root.addView(compassCanvas); root.addView(northModeBtn); root.addView(lockBtn); root.addView(addWidgetBtn)
     root.addView(createPinResultButton(resTv)); root.addView(resTv)
     scroll.addView(root); return scroll
 }
@@ -1618,5 +1640,454 @@ fun MainActivity.createProGematriaAndTextScreen(): View {
     calcBtn.performClick()
     root.addView(textIn); root.addView(calcBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
     scroll.addView(root); return scroll
+}
+
+// =========================================================================
+// 14. וידג'ט מצפן פעיל למסך הבית מעוצב בקנבה (Active Canva Compass Home Widget)
+// =========================================================================
+object CompassHomeWidgetHelper {
+    const val ACTION_REFRESH_WIDGET = "com.example.calculator.ACTION_REFRESH_COMPASS_WIDGET"
+    private const val PREF_HEADING = "widget_compass_heading_deg"
+    private const val PREF_MAG_UT = "widget_compass_mag_ut"
+    private const val PREF_ACCURACY = "widget_compass_accuracy"
+
+    private var activeSessionListener: SensorEventListener? = null
+    private val sessionHandler = Handler(Looper.getMainLooper())
+    private var isLiveSessionRunning = false
+    private var lastTapTimestampMs = 0L
+
+    fun saveAndPushReading(
+        context: Context,
+        headingDeg: Float,
+        magUt: Float,
+        accuracy: Int,
+        isLiveActive: Boolean = isLiveSessionRunning
+    ) {
+        val prefs = context.getSharedPreferences("CalcProPrefs", Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(PREF_HEADING, headingDeg)
+            .putFloat(PREF_MAG_UT, magUt)
+            .putInt(PREF_ACCURACY, accuracy)
+            .apply()
+        renderCurrentStateToWidgets(context, isLiveActive)
+    }
+
+    fun requestPinOrUpdateCompassWidget(context: Context) {
+        updateAllWidgets(context)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val awm = context.getSystemService(AppWidgetManager::class.java)
+            val provider = ComponentName(context, CompassHomeWidgetProvider::class.java)
+            if (awm != null && awm.isRequestPinAppWidgetSupported) {
+                val successIntent = Intent(context, MainActivity::class.java).apply {
+                    action = "ACTION_OPEN_COMPASS"
+                }
+                val flags = PendingIntent.FLAG_UPDATE_CURRENT or
+                        (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+                val callback = PendingIntent.getActivity(context, 4040, successIntent, flags)
+                val requested = awm.requestPinAppWidget(provider, null, callback)
+                if (requested) {
+                    Toast.makeText(context, "🧭 אשר הוספת וידג'ט מצפן פעיל למסך הבית", Toast.LENGTH_SHORT).show()
+                    return
+                }
+            }
+        }
+        Toast.makeText(
+            context,
+            "🧭 הווידג'ט מוכן! לחץ לחיצה ארוכה על מסך הבית -> וידג'טים -> מצפן 3D חי",
+            Toast.LENGTH_LONG
+        ).show()
+    }
+
+    fun updateAllWidgets(context: Context) {
+        renderCurrentStateToWidgets(context, isLiveSessionRunning)
+        startLiveSensorTrackingSession(context.applicationContext, durationMs = 4500L)
+    }
+
+    fun onWidgetTapped(context: Context) {
+        val now = System.currentTimeMillis()
+        if (now - lastTapTimestampMs < 1400L) {
+            // לחיצה כפולה מהירה על הווידג'ט פותחת את מסך המצפן המלא באפליקציה
+            lastTapTimestampMs = 0L
+            val openAppIntent = Intent(context, MainActivity::class.java).apply {
+                action = "ACTION_OPEN_COMPASS"
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            context.startActivity(openAppIntent)
+            return
+        }
+        lastTapTimestampMs = now
+        // לחיצה רגילה מפעילה מעקב מצפן חי ורציף על מסך הבית למשך 30 שניות
+        startLiveSensorTrackingSession(context.applicationContext, durationMs = 30000L)
+    }
+
+    fun startLiveSensorTrackingSession(context: Context, durationMs: Long = 30000L) {
+        val sm = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+        if (sm == null) {
+            renderCurrentStateToWidgets(context, false)
+            return
+        }
+        val rotSensor = sm.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+        val magSensor = sm.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+        val accelSensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        if (rotSensor == null && (magSensor == null || accelSensor == null)) {
+            renderCurrentStateToWidgets(context, false)
+            return
+        }
+
+        // אם כבר רץ סשן, נאפס ונאריך אותו
+        activeSessionListener?.let {
+            try { sm.unregisterListener(it) } catch (_: Exception) {}
+        }
+        sessionHandler.removeCallbacksAndMessages(null)
+        isLiveSessionRunning = true
+        renderCurrentStateToWidgets(context, true)
+
+        val rotMatrix = FloatArray(9)
+        val orientAngles = FloatArray(3)
+        val grav = FloatArray(3)
+        val geomag = FloatArray(3)
+        var hasG = false
+        var hasM = false
+        var smoothedSin = 0f
+        var smoothedCos = 1f
+        var isFirstSample = true
+        var lastPushedDeg = -999f
+        var lastPushTimeMs = 0L
+        var latestUt = 47.0f
+        var latestAcc = SensorManager.SENSOR_STATUS_ACCURACY_HIGH
+
+        fun processAzimuthRad(rad: Float) {
+            if (isFirstSample) {
+                smoothedSin = sin(rad)
+                smoothedCos = cos(rad)
+                isFirstSample = false
+            } else {
+                val alpha = 0.25f
+                smoothedSin += alpha * (sin(rad) - smoothedSin)
+                smoothedCos += alpha * (cos(rad) - smoothedCos)
+            }
+            var deg = Math.toDegrees(atan2(smoothedSin.toDouble(), smoothedCos.toDouble())).toFloat()
+            if (deg < 0f) deg += 360f
+            deg = (deg + 5.2f) % 360f // צפון גאוגרפי אמיתי בישראל (+5.2°)
+
+            val now = System.currentTimeMillis()
+            val angleDiff = abs(((deg - lastPushedDeg + 540f) % 360f) - 180f)
+            if (lastPushedDeg < 0f || (angleDiff >= 1.2f && now - lastPushTimeMs >= 110L) || now - lastPushTimeMs >= 800L) {
+                lastPushedDeg = deg
+                lastPushTimeMs = now
+                saveAndPushReading(context, deg, latestUt, latestAcc, isLiveActive = true)
+            }
+        }
+
+        val listener = object : SensorEventListener {
+            override fun onSensorChanged(e: SensorEvent?) {
+                if (e == null) return
+                when (e.sensor.type) {
+                    Sensor.TYPE_ROTATION_VECTOR -> {
+                        if (e.accuracy > 0) latestAcc = e.accuracy
+                        SensorManager.getRotationMatrixFromVector(rotMatrix, e.values)
+                        SensorManager.getOrientation(rotMatrix, orientAngles)
+                        processAzimuthRad(orientAngles[0])
+                    }
+                    Sensor.TYPE_MAGNETIC_FIELD -> {
+                        System.arraycopy(e.values, 0, geomag, 0, 3)
+                        hasM = true
+                        val bx = e.values[0]; val by = e.values[1]; val bz = e.values[2]
+                        latestUt = sqrt(bx * bx + by * by + bz * bz)
+                        if (e.accuracy > 0) latestAcc = e.accuracy
+                        if (rotSensor == null && hasG && SensorManager.getRotationMatrix(rotMatrix, null, grav, geomag)) {
+                            SensorManager.getOrientation(rotMatrix, orientAngles)
+                            processAzimuthRad(orientAngles[0])
+                        }
+                    }
+                    Sensor.TYPE_ACCELEROMETER -> {
+                        System.arraycopy(e.values, 0, grav, 0, 3)
+                        hasG = true
+                        if (rotSensor == null && hasM && SensorManager.getRotationMatrix(rotMatrix, null, grav, geomag)) {
+                            SensorManager.getOrientation(rotMatrix, orientAngles)
+                            processAzimuthRad(orientAngles[0])
+                        }
+                    }
+                }
+            }
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+                if (accuracy > 0) latestAcc = accuracy
+            }
+        }
+
+        activeSessionListener = listener
+        if (rotSensor != null) sm.registerListener(listener, rotSensor, SensorManager.SENSOR_DELAY_UI)
+        if (magSensor != null) sm.registerListener(listener, magSensor, SensorManager.SENSOR_DELAY_UI)
+        if (rotSensor == null && accelSensor != null) sm.registerListener(listener, accelSensor, SensorManager.SENSOR_DELAY_UI)
+
+        sessionHandler.postDelayed({
+            try { sm.unregisterListener(listener) } catch (_: Exception) {}
+            if (activeSessionListener === listener) {
+                activeSessionListener = null
+                isLiveSessionRunning = false
+                renderCurrentStateToWidgets(context, false)
+            }
+        }, durationMs)
+    }
+
+    fun renderCurrentStateToWidgets(context: Context, isLiveActive: Boolean = isLiveSessionRunning) {
+        val awm = AppWidgetManager.getInstance(context) ?: return
+        val provider = ComponentName(context, CompassHomeWidgetProvider::class.java)
+        val ids = awm.getAppWidgetIds(provider)
+        if (ids == null || ids.isEmpty()) return
+
+        val prefs = context.getSharedPreferences("CalcProPrefs", Context.MODE_PRIVATE)
+        val heading = prefs.getFloat(PREF_HEADING, 0f)
+        val magUt = prefs.getFloat(PREF_MAG_UT, 46.5f)
+        val acc = prefs.getInt(PREF_ACCURACY, SensorManager.SENSOR_STATUS_ACCURACY_HIGH)
+        val isAurora = prefs.getBoolean("isAuroraMode", false)
+        val primaryCol = prefs.getInt("primaryColor", Color.parseColor("#64B5F6"))
+
+        val bmp = drawCanvaCompassWidgetBitmap(heading, magUt, acc, isAurora, primaryCol, isLiveActive)
+
+        // בדיקה דינמית אם קיים קובץ layout ייעודי (compass_widget_layout), ואם לא - שימוש ב-Layout מובנה של אנדרואיד
+        val customLayoutId = context.resources.getIdentifier("compass_widget_layout", "layout", context.packageName)
+        val customImgId = context.resources.getIdentifier("widget_compass_img", "id", context.packageName)
+
+        val pFlags = PendingIntent.FLAG_UPDATE_CURRENT or
+                (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+        val refreshIntent = Intent(context, CompassHomeWidgetProvider::class.java).apply {
+            action = ACTION_REFRESH_WIDGET
+        }
+        val refreshPending = PendingIntent.getBroadcast(context, 7071, refreshIntent, pFlags)
+
+        val views = if (customLayoutId != 0 && customImgId != 0) {
+            RemoteViews(context.packageName, customLayoutId).apply {
+                setImageViewBitmap(customImgId, bmp)
+                setOnClickPendingIntent(customImgId, refreshPending)
+            }
+        } else {
+            RemoteViews(context.packageName, android.R.layout.activity_list_item).apply {
+                setViewVisibility(android.R.id.text1, View.GONE)
+                setImageViewBitmap(android.R.id.icon, bmp)
+                setOnClickPendingIntent(android.R.id.icon, refreshPending)
+            }
+        }
+
+        for (id in ids) {
+            awm.updateAppWidget(id, views)
+        }
+    }
+
+    private fun drawCanvaCompassWidgetBitmap(
+        headingDeg: Float,
+        magUt: Float,
+        accuracy: Int,
+        isAurora: Boolean,
+        primaryColor: Int,
+        isLiveActive: Boolean
+    ): Bitmap {
+        val w = 520
+        val h = 520
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bmp)
+        val accent = CanvasUiHelper.ensureReadableAccent(primaryColor, isAurora)
+
+        // 1. כרטיס קנבה מעוגל עם גרדיאנט עמוק והברקת מסגרת
+        val cardRect = RectF(10f, 10f, w - 10f, h - 10f)
+        val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            shader = LinearGradient(
+                0f, 0f, w.toFloat(), h.toFloat(),
+                if (isAurora) intArrayOf(
+                    AuroraBorealisTheme.EMERALD_NIGHT,
+                    AuroraBorealisTheme.ARCTIC_BLUE,
+                    AuroraBorealisTheme.COSMIC_PURPLE
+                ) else intArrayOf(
+                    Color.parseColor("#121A28"),
+                    Color.parseColor("#0A0F18"),
+                    Color.parseColor("#162234")
+                ),
+                null,
+                Shader.TileMode.CLAMP
+            )
+        }
+        canvas.drawRoundRect(cardRect, 64f, 64f, bgPaint)
+
+        val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = if (isLiveActive) 4.5f else 3.2f
+            color = if (isLiveActive) Color.parseColor("#00E676")
+            else Color.argb(180, Color.red(accent), Color.green(accent), Color.blue(accent))
+        }
+        canvas.drawRoundRect(cardRect, 64f, 64f, borderPaint)
+
+        // 2. קפסולת מצב עליונה בעיצוב Canva
+        val pillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            color = if (isLiveActive) Color.argb(55, 0, 230, 118)
+            else Color.argb(45, Color.red(accent), Color.green(accent), Color.blue(accent))
+        }
+        val topPill = RectF(36f, 28f, w - 36f, 74f)
+        canvas.drawRoundRect(topPill, 24f, 24f, pillPaint)
+
+        val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = if (isLiveActive) Color.parseColor("#00E676") else accent
+            textSize = 20.5f
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        val headerStatus = if (isLiveActive) {
+            "🟢 מצפן חי פעיל (הקש שוב לפתיחת האפליקציה)"
+        } else {
+            val accDot = if (accuracy >= SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM) "🟢" else "🟡"
+            "🧭 מצפן 3D Canva • הקש למעקב חי $accDot"
+        }
+        CanvasUiHelper.drawFittedText(canvas, headerStatus, w / 2f, 58f, topPill.width() - 24f, 20.5f, 14f, titlePaint)
+
+        // 3. חוגת שושנת הרוחות במרכז
+        val cx = w / 2f
+        val cy = 246f
+        val r = 136f
+
+        val dialBg = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            color = Color.argb(185, 8, 14, 22)
+        }
+        canvas.drawCircle(cx, cy, r, dialBg)
+
+        val ringStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = 4.2f
+            color = accent
+        }
+        canvas.drawCircle(cx, cy, r, ringStroke)
+
+        // חץ קריאה עליון (Lubber Triangle)
+        val lubber = Path().apply {
+            moveTo(cx, cy - r - 4f)
+            lineTo(cx - 12f, cy - r - 22f)
+            lineTo(cx + 12f, cy - r - 22f)
+            close()
+        }
+        canvas.drawPath(lubber, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent; style = Paint.Style.FILL })
+
+        canvas.save()
+        canvas.rotate(-headingDeg, cx, cy)
+
+        val tickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            style = Paint.Style.STROKE
+        }
+        for (deg in 0 until 360 step 15) {
+            val rad = Math.toRadians((deg - 90).toDouble())
+            val major = (deg % 90 == 0)
+            tickPaint.strokeWidth = if (major) 3.5f else 1.8f
+            tickPaint.alpha = if (major) 255 else 135
+            val innerR = if (major) r * 0.78f else r * 0.88f
+            canvas.drawLine(
+                (cx + cos(rad) * innerR).toFloat(),
+                (cy + sin(rad) * innerR).toFloat(),
+                (cx + cos(rad) * r).toFloat(),
+                (cy + sin(rad) * r).toFloat(),
+                tickPaint
+            )
+        }
+
+        val dirPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            textSize = 24f
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        dirPaint.color = Color.parseColor("#FF3B30")
+        canvas.drawText("N", cx, cy - r * 0.54f, dirPaint)
+        dirPaint.color = Color.WHITE
+        canvas.drawText("S", cx, cy + r * 0.68f, dirPaint)
+        canvas.drawText("E", cx + r * 0.62f, cy + 8f, dirPaint)
+        canvas.drawText("W", cx - r * 0.62f, cy + 8f, dirPaint)
+
+        // מחט צפון (אדומה) ומחט דרום (כסופה)
+        val northNeedle = Path().apply {
+            moveTo(cx, cy - r * 0.46f)
+            lineTo(cx - r * 0.10f, cy)
+            lineTo(cx + r * 0.10f, cy)
+            close()
+        }
+        val southNeedle = Path().apply {
+            moveTo(cx, cy + r * 0.46f)
+            lineTo(cx - r * 0.10f, cy)
+            lineTo(cx + r * 0.10f, cy)
+            close()
+        }
+        canvas.drawPath(southNeedle, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#B0BEC5"); style = Paint.Style.FILL })
+        canvas.drawPath(northNeedle, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#FF3B30"); style = Paint.Style.FILL })
+        canvas.restore()
+
+        canvas.drawCircle(cx, cy, 8f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; style = Paint.Style.FILL })
+
+        // 4. תצוגת מעלות, כיוון ושדה מגנטי בתחתית הווידג'ט
+        val dirsHeb = listOf("צפון (N)", "צפון-מזרח (NE)", "מזרח (E)", "דרום-מזרח (SE)", "דרום (S)", "דרום-מערב (SW)", "מערב (W)", "צפון-מערב (NW)")
+        val dirIdx = (((headingDeg + 22.5f) % 360f) / 45f).toInt().coerceIn(0, 7)
+
+        val degPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textSize = 35f
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        CanvasUiHelper.drawFittedText(
+            canvas,
+            "\u200E${Utils.formatResult(headingDeg.toDouble(), 1)}°\u200E  •  ${dirsHeb[dirIdx]}",
+            cx,
+            436f,
+            w - 48f,
+            35f,
+            22f,
+            degPaint
+        )
+
+        val subPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = accent
+            textSize = 19.5f
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        CanvasUiHelper.drawFittedText(
+            canvas,
+            "שדה מגנטי: \u200E${Utils.formatResult(magUt.toDouble(), 1)} µT\u200E  |  צפון אמיתי (+5.2°)",
+            cx,
+            476f,
+            w - 48f,
+            19.5f,
+            14f,
+            subPaint
+        )
+
+        return bmp
+    }
+}
+
+class CompassHomeWidgetProvider : AppWidgetProvider() {
+    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        super.onUpdate(context, appWidgetManager, appWidgetIds)
+        CompassHomeWidgetHelper.updateAllWidgets(context)
+    }
+
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle?
+    ) {
+        super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
+        CompassHomeWidgetHelper.renderCurrentStateToWidgets(context)
+    }
+
+    override fun onReceive(context: Context, intent: Intent) {
+        super.onReceive(context, intent)
+        when (intent.action) {
+            CompassHomeWidgetHelper.ACTION_REFRESH_WIDGET -> {
+                CompassHomeWidgetHelper.onWidgetTapped(context)
+            }
+            AppWidgetManager.ACTION_APPWIDGET_UPDATE -> {
+                CompassHomeWidgetHelper.updateAllWidgets(context)
+            }
+        }
+    }
 }
  
