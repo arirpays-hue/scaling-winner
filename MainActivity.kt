@@ -49,7 +49,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private lateinit var menuBtn: TextView
     private lateinit var pipBtn: TextView
     private lateinit var historyBtn: TextView
+    private lateinit var favHeaderBtn: TextView
     private var appLogoView: TextView? = null
+    private var favoritesDrawerContainer: LinearLayout? = null
     private val drawerItemsViews = mutableListOf<View>()
     private val drawerSeparators = mutableListOf<View>()
     private val drawerSectionHeaders = mutableListOf<Triple<Int, TextView, LinearLayout>>()
@@ -124,46 +126,58 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         "🔢 ממיר הקסדצימלי",                     // 28
         "💎 מחשבון חסכונות",                     // 29
         "📅 מחשבון תאריך",                       // 30
-        // --- 25 מחשבונים וכלים אישיים של מצב מקצועי (Pro Mode) ---
-        "📐 87 קטגוריות יחידות והמרה מרובה",      // 31
+        // --- מחשבונים וכלים אישיים של מצב מקצועי (Pro Mode) ---
+        "📐 כל 87 קטגוריות היחידות והמרה מרובה",   // 31
         "🚰 אינסטלציה, צנרת, ספיקה ולחץ",         // 32
         "🩺 מינון תרופות, עירוי IV וסוכר",        // 33
         "🏗️ בנייה, בטון, ריצוף ומיזוג BTU",       // 34
         "🎨 קודי צבע של נגדים (4/5 פסים)",        // 35
-        "🔋 מפענח קודי קבלים ואנרגיה",            // 36
+        "🔋 מפענח קודי קבלים, היגב ואנרגיה",      // 36
         "🔌 עוביי חוטים AWG/SWG ומפל מתח",        // 37
-        "⚡ מעבדת חוק אוהם, הספק וסוללה",         // 38
-        "🟢 פלס בנאים דו-צירי עם בועות",          // 39
-        "🧭 מצפן מגנטי חי עם מחוג זז",            // 40
-        "📏 מד-זווית אינטראקטיבי וסרגל מכויל",     // 41
-        "⏱️ שעון עצר כרונוגרף והקפות",            // 42
-        "🔦 פנס מסך עוצמתי ותאורת מעבדה",         // 43
-        "⚛️ הטבלה המחזורית ומודל אטום",           // 44
-        "📡 מתרגם ומשדר קוד מורס",                // 45
+        "⚡ מעבדת חוק אוהם, מחלק מתח וסוללה",     // 38
+        "🟢 פלס בנאים דו-צירי עם בועות וכיול",    // 39
+        "🧭 מצפן מגנטי חי, נעילת יעד ושדה µT",    // 40
+        "📏 מד-זווית דו-זרועי וסרגל קליבר",       // 41
+        "⏱️ שעון עצר כרונוגרף דו-טבעתי והקפות",   // 42
+        "🔦 פנס מסך עוצמתי וגווני מעבדה",         // 43
+        "⚛️ הטבלה המחזורית, אטום ומסה מולרית",    // 44
+        "📡 מתרגם ומשדר קוד מורס דו-כיווני",      // 45
         "🔐 מחולל סיסמאות ומד אנטרופיה",          // 46
-        "🔠 גימטריה, ספרות רומיות וטקסט",          // 47
-        "🥇 מתכות יקרות, מטבעות וגרפים",          // 48
-        "🏠 משכנתא ולוח סילוקין שפיצר",           // 49
-        "📈 תשואת ROI, צמיחה CAGR וחוק 72",       // 50
-        "💼 מרווח רווח, נקודת איזון ותקציב",       // 51
-        "📊 סטטיסטיקה, סטיית תקן ועקומת פעמון",    // 52
+        "🔠 גימטריה, אתב״ש, רומית וטקסט",         // 47
+        "🥇 מתכות יקרות (24K-14K), מטבעות וגרפים",// 48
+        "🏠 משכנתא, שפיצר מול קרן שווה וסילוקין", // 49
+        "📈 תשואת ROI, צמיחה CAGR ואינפלציה",     // 50
+        "💼 מרווח רווח, גרף נקודת איזון ותקציב",  // 51
+        "📊 סטטיסטיקה, Z-Score ועקומת פעמון",     // 52
         "📐 גאומטריה 2D/3D, פיתגורס ושרטוט",      // 53
         "🔢 תורת המספרים, GCD/LCM וקומבינטוריקה", // 54
-        "☁️ ייצוא PDF/CSV, גיבוי Drive ומועדפים"  // 55
+        "☁️ ייצוא PDF/CSV, גיבוי Drive והיסטוריה",// 55
+        "⭐ מרכז המועדפים וחישובים נעוצים",        // 56
+        "⚙️ ממירי מכניקה, כוח, מומנט ותאוצה",     // 57
+        "💧 ממירי זורמים, צמיגות, ספיקה וצנרת",   // 58
+        "🔥 ממירי תרמודינמיקה, חום ומיזוג",       // 59
+        "⚡ ממירי חשמל, מגנטיות, שדה והשראות",    // 60
+        "☀️ ממירי אופטיקה, אקוסטיקה וקרינה",      // 61
+        "🧪 ממירי רפואה, כימיה ומעבדה קלינית",    // 62
+        "🌌 ממירי תקשורת, טיפוגרפיה, חלל ובישול", // 63
+        "💳 מחשבון שכר, שעות נוספות, פנסיה ונטו", // 64
+        "🧮 מטריצות, דטרמיננטה ומערכת משוואות"    // 65
     )
 
-    // חלוקת התפריט לקטגוריות (4 קטגוריות רגילות + 6 קטגוריות Pro ממוקדות לפי שימוש)
+    // חלוקת התפריט לקטגוריות (מועדפים + 4 קטגוריות רגילות + 7 קטגוריות Pro ממוקדות לפי שימוש)
     private val drawerSections = listOf(
+        Triple(300, "⭐ מועדפים וגישה מהירה", listOf(56)),
         Triple(301, "📐 מתמטיקה ומדע", listOf(0, 1, 8, 15, 16, 7, 28, 22)),
         Triple(302, "💳 פיננסים וצרכנות", listOf(2, 24, 3, 17, 29, 9, 25, 10, 23, 13)),
         Triple(303, "🔄 המרות, רכב ודלק", listOf(4, 5, 6, 18, 20, 21)),
         Triple(304, "❤️ בריאות, זמן ותאריכים", listOf(11, 14, 27, 12, 30, 26)),
-        Triple(305, "🔧 Pro: יחידות, אינסטלציה, רפואה ובנייה", listOf(31, 32, 33, 34)),
-        Triple(306, "⚡ Pro: מעבדת אלקטרוניקה וחשמל", listOf(35, 36, 37, 38)),
-        Triple(307, "🧭 Pro: חיישנים, פלס, מצפן ומדידה", listOf(39, 40, 41, 42, 43)),
-        Triple(308, "🔬 Pro: מדע, אטום, מורס, הצפנה וטקסט", listOf(44, 45, 46, 47)),
-        Triple(309, "📊 Pro: השקעות, משכנתא, זהב ועסקים", listOf(48, 49, 50, 51)),
-        Triple(310, "🧮 Pro: סטטיסטיקה, גאומטריה, PDF וענן", listOf(52, 53, 54, 55))
+        Triple(305, "📐 Pro: 87 קטגוריות יחידות לפי תחום", listOf(31, 57, 58, 59, 60, 61, 62, 63)),
+        Triple(306, "🔧 Pro: הנדסת אינסטלציה, רפואה ובנייה", listOf(32, 33, 34)),
+        Triple(307, "⚡ Pro: מעבדת אלקטרוניקה וחשמל", listOf(35, 36, 37, 38)),
+        Triple(308, "🧭 Pro: חיישנים, פלס, מצפן ומדידה", listOf(39, 40, 41, 42, 43)),
+        Triple(309, "🔬 Pro: מדע, אטום, מורס, הצפנה וטקסט", listOf(44, 45, 46, 47)),
+        Triple(310, "📊 Pro: השקעות, משכנתא, שכר, זהב ועסקים", listOf(48, 49, 50, 51, 64)),
+        Triple(311, "🧮 Pro: סטטיסטיקה, גאומטריה, מטריצות וענן", listOf(52, 53, 54, 65, 55))
     )
 
     var currentInput = ""; var justCalculated = false
@@ -194,14 +208,33 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         rootFrame = FrameLayout(this)
         mainContent = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT) }
 
-        topHeader = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(20f), dp(20f), dp(20f), dp(16f)) }
+        topHeader = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(16f), dp(18f), dp(16f), dp(14f)) }
         menuBtn = TextView(this).apply { text = "☰"; setTextColor(Color.WHITE); textSize = 28f; setPadding(dp(8f), 0, dp(8f), 0); setOnClickListener { feedback(it); if (isDrawerOpen) closeDrawer() else openDrawer() } }
-        titleText = TextView(this).apply { text = "מחשבון פרימיום"; setTextColor(Color.WHITE); textSize = 22f; typeface = Typeface.DEFAULT_BOLD; layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(dp(12f), 0, dp(12f), 0) } }
+        titleText = TextView(this).apply { text = "מחשבון פרימיום"; setTextColor(Color.WHITE); textSize = 20f; typeface = Typeface.DEFAULT_BOLD; layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(dp(8f), 0, dp(8f), 0) } }
 
-        pipBtn = TextView(this).apply { text = "🧮"; textSize = 22f; gravity = Gravity.CENTER; setPadding(dp(8f), dp(8f), dp(12f), dp(8f)); setOnClickListener { feedback(it)
+        favHeaderBtn = TextView(this).apply {
+            text = "☆"
+            textSize = 21f
+            gravity = Gravity.CENTER
+            setPadding(dp(6f), dp(6f), dp(6f), dp(6f))
+            setOnClickListener {
+                feedback(it)
+                ProFavoritesEngine.toggleFavoriteTab(this@MainActivity, currentTabIndex)
+                refreshFavHeaderIcon()
+                rebuildFavoritesDrawerSection()
+                if (currentTabIndex >= 31) switchTab(currentTabIndex)
+            }
+            setOnLongClickListener {
+                feedback(it)
+                switchTab(56)
+                true
+            }
+        }
+
+        pipBtn = TextView(this).apply { text = "🧮"; textSize = 21f; gravity = Gravity.CENTER; setPadding(dp(6f), dp(6f), dp(8f), dp(6f)); setOnClickListener { feedback(it)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) { enterPictureInPictureMode(PictureInPictureParams.Builder().setAspectRatio(Rational(3, 4)).build()) } else { Toast.makeText(this@MainActivity, "חלון צף נתמך רק באנדרואיד 8 ומעלה", Toast.LENGTH_SHORT).show() }
         } }
-        historyBtn = TextView(this).apply { text = "🕒"; textSize = 20f; gravity = Gravity.CENTER; setPadding(dp(8f), dp(8f), dp(4f), dp(8f)); setOnClickListener { feedback(it); showHistoryDialog() } }
+        historyBtn = TextView(this).apply { text = "🕒"; textSize = 20f; gravity = Gravity.CENTER; setPadding(dp(6f), dp(6f), dp(4f), dp(6f)); setOnClickListener { feedback(it); showHistoryDialog() } }
 
         contentFrame = FrameLayout(this).apply { layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f) }
         mainContent?.addView(topHeader); mainContent?.addView(contentFrame)
@@ -248,10 +281,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 orientation = LinearLayout.VERTICAL
                 visibility = View.GONE
             }
+            if (secIconCode == 300) {
+                favoritesDrawerContainer = sectionItemsContainer
+            }
 
             val headerTv = TextView(this).apply {
                 tag = secTitle
-                textSize = 16f
+                textSize = 15.5f
                 typeface = Typeface.DEFAULT_BOLD
                 compoundDrawablePadding = dp(12f)
                 setPadding(dp(20f), dp(14f), dp(20f), dp(14f))
@@ -277,16 +313,18 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 }
             }
 
-            for (idx in itemIndices) {
-                sectionItemsContainer.addView(drawerItemsViews[idx])
-                val sep = View(this).apply {
-                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1f)).apply {
-                        setMargins(dp(28f), 0, dp(28f), 0)
+            if (secIconCode != 300) {
+                for (idx in itemIndices) {
+                    sectionItemsContainer.addView(drawerItemsViews[idx])
+                    val sep = View(this).apply {
+                        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1f)).apply {
+                            setMargins(dp(28f), 0, dp(28f), 0)
+                        }
+                        setBackgroundColor(Color.TRANSPARENT)
                     }
-                    setBackgroundColor(Color.TRANSPARENT)
+                    drawerSeparators.add(sep)
+                    sectionItemsContainer.addView(sep)
                 }
-                drawerSeparators.add(sep)
-                sectionItemsContainer.addView(sep)
             }
 
             drawerSectionHeaders.add(Triple(secIconCode, headerTv, sectionItemsContainer))
@@ -298,7 +336,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 }
                 setBackgroundColor(Color.TRANSPARENT)
             }
-            if (secIconCode in 305..310) proSectionDividers[secIconCode] = catSep
+            if (secIconCode in 305..311) proSectionDividers[secIconCode] = catSep
             drawerSeparators.add(catSep)
             drawerMenu?.addView(catSep)
             drawerMenu?.addView(sectionItemsContainer)
@@ -319,9 +357,64 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         drawerMenu?.addView(settingsTopDivider)
         drawerMenu?.addView(drawerItemsViews[19])
 
+        rebuildFavoritesDrawerSection()
         drawerScroll.addView(drawerMenu); rootFrame.addView(mainContent); rootFrame.addView(dimView); rootFrame.addView(drawerScroll)
         updateHandednessLayout()
         setContentView(rootFrame); setupShortcuts(); handleIntent(intent)
+    }
+
+    fun rebuildFavoritesDrawerSection() {
+        val container = favoritesDrawerContainer ?: return
+        container.removeAllViews()
+        val activeAccent = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
+
+        // קישור קבוע למרכז המועדפים והחישובים הנעוצים (56) + כל המחשבונים שסומנו בכוכב
+        val favIndices = mutableListOf(56)
+        favIndices.addAll(ProFavoritesEngine.getFavoriteTabIndices(prefs).sorted().filter { it != 56 && it in categories.indices })
+
+        for (idx in favIndices) {
+            val isSelected = (idx == currentTabIndex)
+            val tint = if (isSelected) activeAccent else Color.WHITE
+            val favItem = TextView(this).apply {
+                text = IosGlassTheme.cleanCategoryTitle(categories[idx], true)
+                textSize = 15f
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = (if (isRightHanded) Gravity.RIGHT else Gravity.LEFT) or Gravity.CENTER_VERTICAL
+                compoundDrawablePadding = dp(12f)
+                setPadding(dp(28f), dp(12f), dp(28f), dp(12f))
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    setMargins(dp(10f), dp(2f), dp(10f), dp(2f))
+                }
+                val icon = AuroraBorealisTheme.createVectorIcon(this@MainActivity, idx, tint, 20f, isAuroraMode)
+                if (isRightHanded) setCompoundDrawables(null, null, icon, null)
+                else setCompoundDrawables(icon, null, null, null)
+                setTextColor(tint)
+                if (isSelected) {
+                    background = AuroraBorealisTheme.createActiveDrawerCapsule(this@MainActivity, isAuroraMode)
+                }
+                setOnClickListener {
+                    feedback(it)
+                    settingsScrollY = 0
+                    switchTab(idx)
+                    closeDrawer()
+                }
+            }
+            container.addView(favItem)
+        }
+    }
+
+    private fun refreshFavHeaderIcon() {
+        val isFav = ProFavoritesEngine.isFavoriteTab(prefs, currentTabIndex)
+        val starCol = if (isFav) Color.parseColor("#FFD700") else if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else Color.WHITE
+        if (isCleanGlassActive) {
+            favHeaderBtn.text = ""
+            val iconCode = if (isFav) 102 else 103
+            favHeaderBtn.setCompoundDrawables(AuroraBorealisTheme.createVectorIcon(this, iconCode, starCol, 22f, isAuroraMode), null, null, null)
+        } else {
+            favHeaderBtn.setCompoundDrawables(null, null, null, null)
+            favHeaderBtn.text = if (isFav) "⭐" else "☆"
+            favHeaderBtn.setTextColor(starCol)
+        }
     }
 
     private fun getDrawerWidthPx(): Int {
@@ -335,12 +428,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         if (isRightHanded) {
             topHeader.addView(historyBtn)
             topHeader.addView(pipBtn)
+            topHeader.addView(favHeaderBtn)
             topHeader.addView(titleText)
             topHeader.addView(menuBtn)
             titleText.gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
         } else {
             topHeader.addView(menuBtn)
             topHeader.addView(titleText)
+            topHeader.addView(favHeaderBtn)
             topHeader.addView(pipBtn)
             topHeader.addView(historyBtn)
             titleText.gravity = Gravity.LEFT or Gravity.CENTER_VERTICAL
@@ -452,15 +547,17 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             pipBtn.setCompoundDrawables(null, null, null, null)
             historyBtn.setCompoundDrawables(null, null, null, null)
             pipBtn.text = "🧮"; historyBtn.text = "🕒"
-            pipBtn.textSize = 22f; historyBtn.textSize = 20f
+            pipBtn.textSize = 21f; historyBtn.textSize = 20f
             pipBtn.setTextColor(Color.WHITE); historyBtn.setTextColor(Color.WHITE)
         }
 
+        refreshFavHeaderIcon()
         AuroraBorealisTheme.applyHeaderMetallicGradient(appLogoView, isAuroraMode, isIosGlassMode)
         updateHandednessLayout(); updateDrawerSelection(); switchTab(currentTabIndex)
     }
 
     private fun openDrawer() {
+        rebuildFavoritesDrawerSection()
         updateHandednessLayout()
         if (isCleanGlassActive) IosGlassTheme.applyRealtimeGlassBlur(mainContent, true)
         dimView.visibility = View.VISIBLE; dimView.animate().alpha(1f).setDuration(250).start()
@@ -505,9 +602,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         for (sep in drawerSeparators) sep.setBackgroundColor(sepColor)
 
-        // עדכון כותרות הקטגוריות המתקפלות וסמליהן בכל 3 ערכות הנושא (כולל 6 קטגוריות ה-Pro)
+        rebuildFavoritesDrawerSection()
+
         for ((secIconCode, headerTv, container) in drawerSectionHeaders) {
-            if (secIconCode in 305..310) {
+            if (secIconCode in 305..311) {
                 headerTv.visibility = if (proActive) View.VISIBLE else View.GONE
                 proSectionDividers[secIconCode]?.visibility = if (proActive) View.VISIBLE else View.GONE
                 if (!proActive) {
@@ -542,7 +640,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             container.visibility = if (isExpanded) View.VISIBLE else View.GONE
         }
 
-        // הצגת האייקון הווקטורי הייחודי של כל כלי בכל 3 סגנונות התצוגה
         for (i in drawerItemsViews.indices) {
             val tv = drawerItemsViews[i] as TextView
             val isSelected = (i == currentTabIndex)
@@ -575,7 +672,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         if (MiniGameEngine.isActive) MiniGameEngine.stopGame(this)
         currentTabIndex = index
-        titleText.text = IosGlassTheme.cleanCategoryTitle(categories[index], true)
+        titleText.text = IosGlassTheme.cleanCategoryTitle(categories.getOrElse(index) { "מחשבון" }, true)
+        refreshFavHeaderIcon()
         updateDrawerSelection(); contentFrame.removeAllViews()
         val view = when (index) {
             0 -> createBasicCalculator(); 1 -> createScientificCalculator(); 2 -> createVatCalculator(); 3 -> createLoanCalculator()
@@ -651,7 +749,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             28 -> createHexConverter()
             29 -> createSavingsCalculator()
             30 -> createDateAnniversaryCalculator()
-            // --- 25 המסכים המעוצבים בקנבה של מצב ה-Pro ---
+            // --- כל מסכי ה-Pro המעוצבים בקנבה ---
             31 -> createPro87UnitConverter()
             32 -> createProPlumbingAndFluidsScreen()
             33 -> createProMedicalDosageScreen()
@@ -677,6 +775,16 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             53 -> createProGeometryBlueprintScreen()
             54 -> createProNumberTheoryScreen()
             55 -> createProPowerFeaturesCenter()
+            56 -> createProFavoritesCenterScreen()
+            57 -> createProMechanicsUnitsScreen()
+            58 -> createProFluidsUnitsScreen()
+            59 -> createProThermoUnitsScreen()
+            60 -> createProElectricalUnitsScreen()
+            61 -> createProOpticsRadiationUnitsScreen()
+            62 -> createProMedicalChemUnitsScreen()
+            63 -> createProDigitalAstroUnitsScreen()
+            64 -> createProSalaryAndTaxScreen()
+            65 -> createProMatrixAndEquationsScreen()
             else -> createBasicCalculator()
         }
         contentFrame.addView(view)
