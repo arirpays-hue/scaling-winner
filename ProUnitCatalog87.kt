@@ -13,9 +13,15 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import org.json.JSONObject
+import java.util.Locale
+import kotlin.math.abs
 import kotlin.math.log10
+import kotlin.math.pow
 
 object ProUnitCatalog {
+
+    // מקדם המרה קליני מדויק לגלוקוז בדם: משקל מולקולרי 180.16 g/mol חלקי 10 = 18.0182
+    const val GLUCOSE_MGDL_PER_MMOL = 18.0182
 
     val categories87: List<String> = listOf(
         // 1-15: יומיומיות והנדסיות בסיסיות
@@ -47,7 +53,20 @@ object ProUnitCatalog {
         "83. זמן ותקופות", "84. קצב העברת נתונים (Bandwidth)", "85. טיפוגרפיה (pt/px/em/rem)", "86. אסטרונומיה (AU/Parsec/שנות אור)", "87. מידות בישול ואפייה"
     )
 
-    // מיפוי מדויק ומלא לכל אחת מ-87 הקטגוריות (ללא אף חוסר!)
+    // עיגול קליני מוקפד למניעת שגיאות נקודה צפה במדדים רפואיים (כגון 0.0555 עבור 1 mg/dL)
+    fun formatClinicalNumber(value: Double): String {
+        if (value == 0.0) return "0"
+        val absV = abs(value)
+        val raw = when {
+            absV >= 100.0 -> String.format(Locale.US, "%.1f", value)
+            absV >= 1.0 -> String.format(Locale.US, "%.2f", value)
+            absV >= 0.01 -> String.format(Locale.US, "%.4f", value)
+            else -> String.format(Locale.US, "%.6f", value)
+        }
+        return if (raw.contains('.')) raw.trimEnd('0').trimEnd('.') else raw
+    }
+
+    // מיפוי מדויק ומלא לכל אחת מ-87 הקטגוריות
     fun getUnitsForCategory(catIndex: Int): Map<String, Double> {
         return when (catIndex + 1) {
             1 -> mapOf("מטר (m)" to 1.0, "קילומטר (km)" to 1000.0, "סנטימטר (cm)" to 0.01, "מילימטר (mm)" to 0.001, "מיקרומטר (µm)" to 1e-6, "ננומטר (nm)" to 1e-9, "מייל (mi)" to 1609.344, "יארד (yd)" to 0.9144, "רגל (ft)" to 0.3048, "אינץ' (in)" to 0.0254, "מייל ימי (nmi)" to 1852.0, "אנגסטרם (Å)" to 1e-10)
@@ -120,14 +139,30 @@ object ProUnitCatalog {
             70 -> mapOf("קולון לק״ג (C/kg)" to 1.0, "מיליקולון לק״ג (mC/kg)" to 0.001, "רנטגן (Roentgen - R)" to 0.000258, "מילירנטגן (mR)" to 2.58e-7)
             71 -> mapOf("ננומטר (nm)" to 1.0, "אנגסטרם (Å)" to 0.1, "מיקרומטר (µm)" to 1000.0, "מילימטר (mm)" to 1e6, "מטר (m)" to 1e9)
             72 -> mapOf("נקודות לאינץ' (DPI / PPI)" to 1.0, "נקודות לס״מ (dpcm)" to 2.54, "נקודות למ״מ (dpmm)" to 25.4)
-            73 -> mapOf("מ״ג לדציליטר (mg/dL - ישראל/ארה״ב)" to 1.0, "מילימול לליטר (mmol/L - אירופה)" to 18.0182, "גרם לליטר (g/L)" to 100.0)
-            74 -> mapOf("כולסטרול mg/dL" to 1.0, "כולסטרול mmol/L" to 38.67, "טריגליצרידים mmol/L" to 88.57)
-            75 -> mapOf("מ״ל לשעה (mL/h)" to 1.0, "טיפות לדקה (gtt/min - סט 20)" to 3.0, "טיפות לדקה (סט דם 15)" to 4.0, "מיקרו-טיפות לדקה (60 µgtt/min)" to 1.0)
+            // 73-82: דיוק קליני רפואי מוקפד
+            73 -> mapOf(
+                "mg/dL (מ״ג לדציליטר - ישראל/ארה״ב)" to 1.0,
+                "mmol/L (מילימול לליטר - אירופה)" to GLUCOSE_MGDL_PER_MMOL,
+                "g/L (גרם לליטר)" to 100.0,
+                "mg/L (מ״ג לליטר)" to 0.1
+            )
+            74 -> mapOf(
+                "כולסטרול mg/dL (ישראל/ארה״ב)" to 1.0,
+                "כולסטרול mmol/L (אירופה - ×38.67)" to 38.67,
+                "טריגליצרידים mmol/L (אירופה - ×88.57)" to 88.57
+            )
+            75 -> mapOf(
+                "mL/h (מ״ל לשעה - משאבת עירוי)" to 1.0,
+                "gtt/min (טיפות לדקה - סט רגיל 20)" to 3.0,
+                "gtt/min (טיפות לדקה - סט דם 15)" to 4.0,
+                "µgtt/min (מיקרו-טיפות לדקה - סט 60)" to 1.0,
+                "mL/min (מ״ל לדקה)" to 60.0
+            )
             76 -> mapOf("מ״ג לק״ג (mg/kg)" to 1.0, "מק״ג לק״ג (µg/kg)" to 0.001, "גרם לק״ג (g/kg)" to 1000.0, "מ״ג לפאונד (mg/lb)" to 2.20462)
             77 -> mapOf("מול לליטר (mol/L - M)" to 1.0, "מילימול לליטר (mmol/L - mM)" to 0.001, "מיקרומול לליטר (µmol/L - µM)" to 1e-6, "ננומול לליטר (nmol/L)" to 1e-9, "מול למ״ק (mol/m³)" to 0.001)
             78 -> mapOf("גרם לליטר (g/L)" to 1.0, "מ״ג לדציליטר (mg/dL)" to 0.01, "מ״ג לליטר (mg/L / ppm)" to 0.001, "מק״ג לליטר (µg/L / ppb)" to 1e-6, "ק״ג למ״ק (kg/m³)" to 1.0)
             79 -> mapOf("גרם למול (g/mol)" to 1.0, "ק״ג למול (kg/mol)" to 1000.0, "ק״ג לקילומול (kg/kmol)" to 1.0, "דלטון / יחידת מסה אטומית (Da / u)" to 1.0)
-            80 -> mapOf("יחידות pH (0-14)" to 1.0, "ריכוז יוני מימן -log[H+]" to 1.0)
+            80 -> mapOf("יחידות pH (סולם חומציות 0-14)" to 1.0, "יחידות pOH (סולם בסיסיות 0-14)" to 1.0, "ריכוז יוני מימן [H+] (mol/L)" to 1.0)
             81 -> mapOf("מיליאוסמול לק״ג (mOsm/kg)" to 1.0, "אוסמול לק״ג (Osm/kg)" to 1000.0, "מיליאוסמול לליטר (mOsm/L)" to 1.0)
             82 -> mapOf("יחידה אנזימטית (U = µmol/min)" to 1.0, "קטאל (Katal = mol/s)" to 6e7, "מיליקטאל (mkat)" to 60000.0, "מיקרוקטאל (µkat)" to 60.0, "ננוקטאל (nkat)" to 0.06)
             83 -> mapOf("שנייה (s)" to 1.0, "מילישנייה (ms)" to 0.001, "מיקרושנייה (µs)" to 1e-6, "ננושנייה (ns)" to 1e-9, "דקה (min)" to 60.0, "שעה (h)" to 3600.0, "יום (day)" to 86400.0, "שבוע (wk)" to 604800.0, "חודש ממוצע (30.44d)" to 2629746.0, "שנה (yr)" to 31556952.0)
@@ -184,7 +219,8 @@ fun MainActivity.createScopedProUnitConverter(
     val catBtn = createActionBtn("קטגוריה: ${ProUnitCatalog.categories87[selectedCatIdx]}", true) {}
     val fromBtn = createActionBtn("מ: $fromUnit", false) {}
     val toBtn = createActionBtn("ל: $toUnit", false) {}
-    val valInput = createInputBox("הזן כמות להמרה...").apply { setText("1") }
+    val defaultText = if (selectedCatIdx == 72) "100" else "1"
+    val valInput = createInputBox("הזן כמות להמרה...").apply { setText(defaultText) }
     val resTv = createResultTextView()
 
     val sideBySideCard = LinearLayout(this).apply {
@@ -209,23 +245,65 @@ fun MainActivity.createScopedProUnitConverter(
             return
         }
         val map = currentUnitsMap()
-        if (selectedCatIdx == 4) { // טמפרטורה
+        val isClinicalCategory = (selectedCatIdx in 72..81)
+
+        // קטגוריה 5: טמפרטורה
+        if (selectedCatIdx == 4) {
             val c = if (fromUnit.contains("F")) (v - 32) * 5 / 9 else if (fromUnit.contains("K")) v - 273.15 else v
             resTv.text = "${Utils.formatResult(c, 2)} °C  |  ${Utils.formatResult(c * 9 / 5 + 32, 2)} °F  |  ${Utils.formatResult(c + 273.15, 2)} K"
             return
         }
+
+        // קטגוריה 80: חומציות pH / pOH / [H+]
+        if (selectedCatIdx == 79) {
+            val ph = when {
+                fromUnit.contains("pOH") -> 14.0 - v
+                fromUnit.contains("[H+]") && v > 0 -> -log10(v)
+                else -> v
+            }.coerceIn(0.0, 14.0)
+            val poh = 14.0 - ph
+            val hConc = 10.0.pow(-ph)
+            resTv.text = "מדדי חומציות תמיסה:\n• pH = ${Utils.formatResult(ph, 2)} (${if (ph < 6.95) "חומצי" else if (ph > 7.05) "בסיסי" else "ניטרלי"})\n• pOH = ${Utils.formatResult(poh, 2)}\n• ריכוז יוני [H+] = ${String.format(Locale.US, "%.3e", hConc)} mol/L"
+            return
+        }
+
         val fFactor = map[fromUnit] ?: 1.0
         val tFactor = map[toUnit] ?: 1.0
         val directRes = v * fFactor / tFactor
-        resTv.text = "${Utils.formatResult(directRes, calcPrecision)} ${toUnit.substringBefore(" ")}"
+        val formattedDirect = if (isClinicalCategory) ProUnitCatalog.formatClinicalNumber(directRes) else Utils.formatResult(directRes, calcPrecision)
 
-        scaleCanvas.fromLabel = "${Utils.formatResult(v, 2)} ${fromUnit.substringBefore(" ")}"
-        scaleCanvas.toLabel = "${Utils.formatResult(directRes, 4)} ${toUnit.substringBefore(" ")}"
+        // קטגוריה 73: רמת סוכר בדם (Blood Glucose) עם דיוק קליני מוחלט, יחס 18.0182 ואומדן HbA1c
+        if (selectedCatIdx == 72) {
+            val mgDlVal = v * fFactor
+            val mmolVal = mgDlVal / ProUnitCatalog.GLUCOSE_MGDL_PER_MMOL
+            val gPerLVal = mgDlVal / 100.0
+            val a1cLine = if (mgDlVal in 40.0..500.0) {
+                val estA1c = (mgDlVal + 46.7) / 28.7
+                val status = when {
+                    mgDlVal < 70.0 -> "היפוגליקמיה (נמוך)"
+                    mgDlVal <= 99.0 -> "תקין בצום (70-99 mg/dL)"
+                    mgDlVal <= 125.0 -> "טרום-סוכרת בצום (100-125 mg/dL)"
+                    else -> "ערכי סוכרת בצום (126+ mg/dL)"
+                }
+                "\n• אומדן HbA1c משוער (eAG): ${ProUnitCatalog.formatClinicalNumber(estA1c)}%\n• ייחוס קליני: $status"
+            } else ""
+
+            resTv.text = "$formattedDirect ${toUnit.substringBefore(" ")}\n" +
+                    "• ב-mg/dL (ישראל/ארה״ב): ${ProUnitCatalog.formatClinicalNumber(mgDlVal)} mg/dL\n" +
+                    "• ב-mmol/L (אירופה): ${ProUnitCatalog.formatClinicalNumber(mmolVal)} mmol/L\n" +
+                    "• יחס קליני תקני: 1 mmol/L = 18.0182 mg/dL (1 mg/dL = 0.0555 mmol/L)$a1cLine"
+        } else {
+            resTv.text = "$formattedDirect ${toUnit.substringBefore(" ")}"
+        }
+
+        scaleCanvas.fromLabel = "${ProUnitCatalog.formatClinicalNumber(v)} ${fromUnit.substringBefore(" ")}"
+        scaleCanvas.toLabel = "$formattedDirect ${toUnit.substringBefore(" ")}"
         scaleCanvas.ratioLog = ((log10(directRes.coerceAtLeast(1e-6)) + 3.0) / 6.0).toFloat()
         scaleCanvas.invalidate()
 
         val header = TextView(this).apply {
-            text = "⚡ השוואה סימולטנית לכל היחידות בקטגוריה (לחץ להעתקה):"
+            text = if (isClinicalCategory) "🩺 השוואה קלינית מדויקת בין היחידות (לחץ להעתקה):"
+            else "⚡ השוואה סימולטנית לכל היחידות בקטגוריה (לחץ להעתקה):"
             setTextColor(if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor)
             textSize = 14.5f
             typeface = Typeface.DEFAULT_BOLD
@@ -236,13 +314,14 @@ fun MainActivity.createScopedProUnitConverter(
 
         for ((uName, uFactor) in map) {
             val converted = v * fFactor / uFactor
+            val cleanStr = if (isClinicalCategory) ProUnitCatalog.formatClinicalNumber(converted) else Utils.formatResult(converted, 6)
             val row = TextView(this).apply {
-                text = "• $uName:  ${Utils.formatResult(converted, 6)}"
+                text = "• $uName:  $cleanStr"
                 setTextColor(Color.WHITE)
                 textSize = 14.5f
                 gravity = Gravity.RIGHT
                 setPadding(dp(4f), dp(5f), dp(4f), dp(5f))
-                setOnClickListener { copyToClipboard(Utils.formatResult(converted, 6)) }
+                setOnClickListener { copyToClipboard(cleanStr) }
             }
             sideBySideCard.addView(row)
         }
@@ -324,7 +403,7 @@ fun MainActivity.createProOpticsRadiationUnitsScreen(): View =
     createScopedProUnitConverter("☀️ ממירי אופטיקה, אקוסטיקה וקרינה", "לוקס, לומן, קנדלה, דיופטר, לחץ קול, רדיואקטיביות (Bq/Ci), גריי, סיוורט ו-DPI", 60..71)
 
 fun MainActivity.createProMedicalChemUnitsScreen(): View =
-    createScopedProUnitConverter("🧪 ממירי רפואה, כימיה ומעבדה קלינית", "סוכר וכולסטרול בדם, קצב עירוי IV, מינון תרופות, מולריות, אוסמולליות ופעילות אנזימטית", 72..81)
+    createScopedProUnitConverter("🧪 ממירי רפואה, כימיה ומעבדה קלינית", "סוכר וכולסטרול בדם (מקדם קליני 18.0182), קצב עירוי IV, מינון תרופות, מולריות ו-pH", 72..81)
 
 fun MainActivity.createProDigitalAstroUnitsScreen(): View =
     createScopedProUnitConverter("🌌 ממירי תקשורת, טיפוגרפיה, חלל ובישול", "זמן, רוחב פס (Mbps/MBs), טיפוגרפיה (px/pt/em), שנות אור/פארסק ומידות אפייה", 82..86)
