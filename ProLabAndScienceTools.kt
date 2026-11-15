@@ -141,7 +141,7 @@ fun MainActivity.createProResistorScreen(): View {
     val modeBtn = createActionBtn("מצב נגד: 4 פסים (לחץ למעבר ל-5 פסים)", false) {}
     val btn1 = createActionBtn("פס 1: ${colors[b1].first}", false) {}
     val btn2 = createActionBtn("פס 2: ${colors[b2].first}", false) {}
-    val btn3 = createActionBtn("פס 3: ${colors[b3].first}", false).apply { visibility = View.GONE }
+    val btn3 = createActionBtn("פס 3: ${colors[b3].first}", false) {}.apply { visibility = View.GONE }
     val btnM = createActionBtn("מכפיל: ×10^$mult (${colors[mult].first})", false) {}
     val btnT = createActionBtn("דיוק: ${tolerances[tol].first}", false) {}
 
