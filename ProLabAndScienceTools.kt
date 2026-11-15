@@ -16,7 +16,6 @@ import android.view.Gravity
 import android.view.View
 import android.widget.*
 import kotlin.math.*
-import kotlin.random.Random
 
 // כותרת קנבה מעוצבת לכל מסך Pro הכוללת סרגל שבבי מועדפים וכפתור כוכב להוספה/הסרה מהמועדפים
 fun MainActivity.createProCanvaHeader(title: String, subtitle: String): LinearLayout {
@@ -452,32 +451,49 @@ fun MainActivity.createProSpiritLevelScreen(): View {
 }
 
 // =========================================================================
-// 6. מסך אישי: מצפן מגנטי חי, נעילת אזימוט יעד וגלאי שדה מגנטי (µT)
+// 6. מסך אישי: מצפן TYPE_ROTATION_VECTOR עם פיצוי הטיה 3D, מד אמינות וכיול חי!
 // =========================================================================
 fun MainActivity.createProCompassScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("🧭 מצפן מגנטי חי, נעילת יעד ושדה (µT)", "מדידת אזימוט, נעילת כיוון הליכה וגלאי מתכות/שדה אלקטרומגנטי"))
+    root.addView(createProCanvaHeader("🧭 מצפן 3D מכויל, מד אמינות ושדה (µT)", "פיצוי הטיה מלא (TYPE_ROTATION_VECTOR), חיווי אמינות חי וצפון אמיתי/מגנטי"))
 
+    var useTrueNorth = true
+    val israelDeclinationDeg = 5.2f // נטייה מגנטית בישראל (+5.2° מזרחה)
     val resTv = createResultTextView()
     lateinit var compassCanvas: CompassRoseCanvasView
 
     fun updateHeadingText(deg: Float) {
         val dirs = listOf("צפון (N)", "צפון-מזרח (NE)", "מזרח (E)", "דרום-מזרח (SE)", "דרום (S)", "דרום-מערב (SW)", "מערב (W)", "צפון-מערב (NW)")
         val idx = (((deg + 22.5f) % 360f) / 45f).toInt().coerceIn(0, 7)
+        val backAzimuth = (deg + 180f) % 360f
+        val accName = when (compassCanvas.sensorAccuracy) {
+            SensorManager.SENSOR_STATUS_ACCURACY_HIGH -> "גבוהה מאוד 🟢"
+            SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM -> "בינונית 🟡"
+            else -> "נמוכה - סובב בשמינייה (8) באוויר 🔴"
+        }
         val lockStr = compassCanvas.lockedTargetDeg?.let { target ->
             val diff = ((deg - target + 540f) % 360f) - 180f
-            "\n🎯 יעד נעול: ${Utils.formatResult(target.toDouble(), 1)}° (סטייה: ${Utils.formatResult(diff.toDouble(), 1)}°)"
+            "\n🎯 יעד נעול: ${Utils.formatResult(target.toDouble(), 1)}° (סטייה מהיעד: ${Utils.formatResult(diff.toDouble(), 1)}°)"
         } ?: ""
-        resTv.text = "אזימוט נוכחי: ${Utils.formatResult(deg.toDouble(), 1)}° | כיוון: ${dirs[idx]}$lockStr"
+
+        resTv.text = "אזימוט (${if (useTrueNorth) "צפון גאוגרפי אמיתי" else "צפון מגנטי"}): ${Utils.formatResult(deg.toDouble(), 1)}° | ${dirs[idx]}\n" +
+                "אזימוט חוזר (Back-Azimuth): ${Utils.formatResult(backAzimuth.toDouble(), 1)}°\n" +
+                "רמת דיוק וכיול חיישן: $accName$lockStr"
     }
 
     compassCanvas = CompassRoseCanvasView(this, this) { deg -> updateHeadingText(deg) }.apply {
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(320f)).apply { bottomMargin = dp(12f) }
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(345f)).apply { bottomMargin = dp(12f) }
         background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProCompassScreen, 24f)
         else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(24f).toFloat() }
     }
     updateHeadingText(0f)
+
+    val northModeBtn = createActionBtn("סוג צפון: צפון גאוגרפי אמיתי (True North +5.2°)", false) {
+        useTrueNorth = !useTrueNorth
+        (it as TextView).text = if (useTrueNorth) "סוג צפון: צפון גאוגרפי אמיתי (True North +5.2°)" else "סוג צפון: צפון מגנטי גולמי (Magnetic North)"
+        updateHeadingText(compassCanvas.azimuthDeg)
+    }
 
     val lockBtn = createActionBtn("🎯 נעל / שחרר אזימוט יעד נוכחי", false) {
         if (compassCanvas.lockedTargetDeg == null) {
@@ -490,32 +506,87 @@ fun MainActivity.createProCompassScreen(): View {
     }
 
     val sm = getSystemService(Context.SENSOR_SERVICE) as? SensorManager
-    val oriSensor = sm?.getDefaultSensor(Sensor.TYPE_ORIENTATION)
+    val rotVectorSensor = sm?.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
     val magSensor = sm?.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+    val accelSensor = sm?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+
+    val rotationMatrix = FloatArray(9)
+    val orientationAngles = FloatArray(3)
+    val gravityVals = FloatArray(3)
+    val geomagVals = FloatArray(3)
+    var hasGravity = false
+    var hasGeomag = false
+    var smoothedSin = 0f
+    var smoothedCos = 1f
+
+    fun applyNewAzimuthRad(azimuthRad: Float, pitchRad: Float, rollRad: Float) {
+        // סינון וקטורי (Angular Low-Pass Filter) לתנועת מחוג חלקה וללא קפיצות ב-360°
+        val alpha = 0.18f
+        smoothedSin = smoothedSin + alpha * (sin(azimuthRad) - smoothedSin)
+        smoothedCos = smoothedCos + alpha * (cos(azimuthRad) - smoothedCos)
+        var deg = Math.toDegrees(atan2(smoothedSin.toDouble(), smoothedCos.toDouble())).toFloat()
+        if (deg < 0f) deg += 360f
+        if (useTrueNorth) deg = (deg + israelDeclinationDeg) % 360f
+
+        compassCanvas.azimuthDeg = deg
+        compassCanvas.pitchTiltDeg = Math.toDegrees(pitchRad.toDouble()).toFloat()
+        compassCanvas.rollTiltDeg = Math.toDegrees(rollRad.toDouble()).toFloat()
+        compassCanvas.invalidate()
+        updateHeadingText(deg)
+    }
 
     val listener = object : SensorEventListener {
         override fun onSensorChanged(e: SensorEvent?) {
             if (e == null) return
-            if (e.sensor.type == Sensor.TYPE_ORIENTATION) {
-                compassCanvas.azimuthDeg = e.values[0]
-                compassCanvas.invalidate()
-                updateHeadingText(e.values[0])
-            } else if (e.sensor.type == Sensor.TYPE_MAGNETIC_FIELD) {
-                val bx = e.values[0]; val by = e.values[1]; val bz = e.values[2]
-                compassCanvas.magneticFieldUt = sqrt(bx * bx + by * by + bz * bz)
-                compassCanvas.invalidate()
+            when (e.sensor.type) {
+                Sensor.TYPE_ROTATION_VECTOR -> {
+                    SensorManager.getRotationMatrixFromVector(rotationMatrix, e.values)
+                    SensorManager.getOrientation(rotationMatrix, orientationAngles)
+                    applyNewAzimuthRad(orientationAngles[0], orientationAngles[1], orientationAngles[2])
+                }
+                Sensor.TYPE_MAGNETIC_FIELD -> {
+                    System.arraycopy(e.values, 0, geomagVals, 0, 3)
+                    hasGeomag = true
+                    val bx = e.values[0]; val by = e.values[1]; val bz = e.values[2]
+                    compassCanvas.magneticFieldUt = sqrt(bx * bx + by * by + bz * bz)
+                    if (rotVectorSensor == null && hasGravity && SensorManager.getRotationMatrix(rotationMatrix, null, gravityVals, geomagVals)) {
+                        SensorManager.getOrientation(rotationMatrix, orientationAngles)
+                        applyNewAzimuthRad(orientationAngles[0], orientationAngles[1], orientationAngles[2])
+                    } else {
+                        compassCanvas.invalidate()
+                    }
+                }
+                Sensor.TYPE_ACCELEROMETER -> {
+                    System.arraycopy(e.values, 0, gravityVals, 0, 3)
+                    hasGravity = true
+                    if (rotVectorSensor == null && hasGeomag && SensorManager.getRotationMatrix(rotationMatrix, null, gravityVals, geomagVals)) {
+                        SensorManager.getOrientation(rotationMatrix, orientationAngles)
+                        applyNewAzimuthRad(orientationAngles[0], orientationAngles[1], orientationAngles[2])
+                    }
+                }
             }
         }
-        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+            if (sensor?.type == Sensor.TYPE_MAGNETIC_FIELD || sensor?.type == Sensor.TYPE_ROTATION_VECTOR) {
+                compassCanvas.sensorAccuracy = accuracy
+                compassCanvas.invalidate()
+                updateHeadingText(compassCanvas.azimuthDeg)
+            }
+        }
     }
-    if (oriSensor != null) sm.registerListener(listener, oriSensor, SensorManager.SENSOR_DELAY_GAME)
+
+    if (rotVectorSensor != null) sm.registerListener(listener, rotVectorSensor, SensorManager.SENSOR_DELAY_GAME)
     if (magSensor != null) sm.registerListener(listener, magSensor, SensorManager.SENSOR_DELAY_UI)
+    if (rotVectorSensor == null && accelSensor != null) sm.registerListener(listener, accelSensor, SensorManager.SENSOR_DELAY_GAME)
+
     root.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
         override fun onViewAttachedToWindow(v: View) {}
         override fun onViewDetachedFromWindow(v: View) { sm?.unregisterListener(listener) }
     })
 
-    root.addView(compassCanvas); root.addView(lockBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
+    root.addView(compassCanvas); root.addView(northModeBtn); root.addView(lockBtn)
+    root.addView(createPinResultButton(resTv)); root.addView(resTv)
     scroll.addView(root); return scroll
 }
 
