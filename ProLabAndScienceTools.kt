@@ -1,5 +1,6 @@
 package com.example.calculator
 
+import android.app.Dialog
 import android.content.Context
 import android.graphics.*
 import android.graphics.drawable.GradientDrawable
@@ -7,6 +8,9 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.text.Editable
@@ -14,10 +18,13 @@ import android.text.InputType
 import android.text.TextWatcher
 import android.view.Gravity
 import android.view.View
+import android.view.Window
+import android.view.WindowManager
 import android.widget.*
 import kotlin.math.*
 
 // כותרת קנבה מעוצבת לכל מסך Pro הכוללת סרגל שבבי מועדפים וכפתור כוכב להוספה/הסרה מהמועדפים
+// (ללא אפשרות להוסיף את "מרכז המועדפים" עצמו למועדפים)
 fun MainActivity.createProCanvaHeader(title: String, subtitle: String): LinearLayout {
     val accent = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
     val outerWrapper = LinearLayout(this).apply {
@@ -51,8 +58,10 @@ fun MainActivity.createProCanvaHeader(title: String, subtitle: String): LinearLa
         gravity = Gravity.CENTER_VERTICAL
     }
 
+    val isFavCenterTab = (currentTabIndex == ProFavoritesEngine.FAVORITES_CENTER_TAB_INDEX)
     val isFav = ProFavoritesEngine.isFavoriteTab(prefs, currentTabIndex)
     val starBtn = TextView(this).apply {
+        visibility = if (isFavCenterTab) View.GONE else View.VISIBLE
         text = if (isFav) "⭐ במועדפים" else "☆ מועדף"
         setTextColor(if (isFav) Color.parseColor("#FFD700") else Color.WHITE)
         textSize = 13f
@@ -67,6 +76,12 @@ fun MainActivity.createProCanvaHeader(title: String, subtitle: String): LinearLa
             val nowFav = ProFavoritesEngine.toggleFavoriteTab(this@createProCanvaHeader, currentTabIndex)
             text = if (nowFav) "⭐ במועדפים" else "☆ מועדף"
             setTextColor(if (nowFav) Color.parseColor("#FFD700") else Color.WHITE)
+            switchTab(currentTabIndex)
+        }
+        setOnLongClickListener {
+            feedback(it)
+            switchTab(ProFavoritesEngine.FAVORITES_CENTER_TAB_INDEX)
+            true
         }
     }
 
@@ -467,9 +482,11 @@ fun MainActivity.createProCompassScreen(): View {
         val dirs = listOf("צפון (N)", "צפון-מזרח (NE)", "מזרח (E)", "דרום-מזרח (SE)", "דרום (S)", "דרום-מערב (SW)", "מערב (W)", "צפון-מערב (NW)")
         val idx = (((deg + 22.5f) % 360f) / 45f).toInt().coerceIn(0, 7)
         val backAzimuth = (deg + 180f) % 360f
-        val accName = when (compassCanvas.sensorAccuracy) {
-            SensorManager.SENSOR_STATUS_ACCURACY_HIGH -> "גבוהה מאוד 🟢"
-            SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM -> "בינונית 🟡"
+        val accName = when {
+            !compassCanvas.hasSensorHardware || compassCanvas.sensorAccuracy == -2 -> "ללא חיישן חומרה (סיבוב ידני במגע) ⚪"
+            !compassCanvas.hasReceivedFirstReading || compassCanvas.sensorAccuracy == -1 -> "מאתחל קריאת חיישן... ⏳"
+            compassCanvas.sensorAccuracy >= SensorManager.SENSOR_STATUS_ACCURACY_HIGH -> "גבוהה מאוד 🟢"
+            compassCanvas.sensorAccuracy == SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM -> "בינונית 🟡"
             else -> "נמוכה - סובב בשמינייה (8) באוויר 🔴"
         }
         val lockStr = compassCanvas.lockedTargetDeg?.let { target ->
@@ -482,7 +499,15 @@ fun MainActivity.createProCompassScreen(): View {
                 "רמת דיוק וכיול חיישן: $accName$lockStr"
     }
 
+    val sm = getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+    val rotVectorSensor = sm?.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+    val magSensor = sm?.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+    val accelSensor = sm?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+    val hardwareAvailable = (rotVectorSensor != null || (magSensor != null && accelSensor != null))
+
     compassCanvas = CompassRoseCanvasView(this, this) { deg -> updateHeadingText(deg) }.apply {
+        hasSensorHardware = hardwareAvailable
+        sensorAccuracy = if (hardwareAvailable) -1 else -2
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(345f)).apply { bottomMargin = dp(12f) }
         background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProCompassScreen, 24f)
         else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(24f).toFloat() }
@@ -505,11 +530,6 @@ fun MainActivity.createProCompassScreen(): View {
         updateHeadingText(compassCanvas.azimuthDeg)
     }
 
-    val sm = getSystemService(Context.SENSOR_SERVICE) as? SensorManager
-    val rotVectorSensor = sm?.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
-    val magSensor = sm?.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
-    val accelSensor = sm?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-
     val rotationMatrix = FloatArray(9)
     val orientationAngles = FloatArray(3)
     val gravityVals = FloatArray(3)
@@ -519,8 +539,11 @@ fun MainActivity.createProCompassScreen(): View {
     var smoothedSin = 0f
     var smoothedCos = 1f
 
-    fun applyNewAzimuthRad(azimuthRad: Float, pitchRad: Float, rollRad: Float) {
-        // סינון וקטורי (Angular Low-Pass Filter) לתנועת מחוג חלקה וללא קפיצות ב-360°
+    fun applyNewAzimuthRad(azimuthRad: Float, pitchRad: Float, rollRad: Float, eventAccuracy: Int) {
+        compassCanvas.hasReceivedFirstReading = true
+        if (compassCanvas.sensorAccuracy < 0) {
+            compassCanvas.sensorAccuracy = if (eventAccuracy > 0) eventAccuracy else SensorManager.SENSOR_STATUS_ACCURACY_HIGH
+        }
         val alpha = 0.18f
         smoothedSin = smoothedSin + alpha * (sin(azimuthRad) - smoothedSin)
         smoothedCos = smoothedCos + alpha * (cos(azimuthRad) - smoothedCos)
@@ -542,16 +565,20 @@ fun MainActivity.createProCompassScreen(): View {
                 Sensor.TYPE_ROTATION_VECTOR -> {
                     SensorManager.getRotationMatrixFromVector(rotationMatrix, e.values)
                     SensorManager.getOrientation(rotationMatrix, orientationAngles)
-                    applyNewAzimuthRad(orientationAngles[0], orientationAngles[1], orientationAngles[2])
+                    applyNewAzimuthRad(orientationAngles[0], orientationAngles[1], orientationAngles[2], e.accuracy)
                 }
                 Sensor.TYPE_MAGNETIC_FIELD -> {
                     System.arraycopy(e.values, 0, geomagVals, 0, 3)
                     hasGeomag = true
+                    compassCanvas.hasReceivedFirstReading = true
+                    if (compassCanvas.sensorAccuracy < 0 && e.accuracy > 0) {
+                        compassCanvas.sensorAccuracy = e.accuracy
+                    }
                     val bx = e.values[0]; val by = e.values[1]; val bz = e.values[2]
                     compassCanvas.magneticFieldUt = sqrt(bx * bx + by * by + bz * bz)
                     if (rotVectorSensor == null && hasGravity && SensorManager.getRotationMatrix(rotationMatrix, null, gravityVals, geomagVals)) {
                         SensorManager.getOrientation(rotationMatrix, orientationAngles)
-                        applyNewAzimuthRad(orientationAngles[0], orientationAngles[1], orientationAngles[2])
+                        applyNewAzimuthRad(orientationAngles[0], orientationAngles[1], orientationAngles[2], e.accuracy)
                     } else {
                         compassCanvas.invalidate()
                     }
@@ -561,7 +588,7 @@ fun MainActivity.createProCompassScreen(): View {
                     hasGravity = true
                     if (rotVectorSensor == null && hasGeomag && SensorManager.getRotationMatrix(rotationMatrix, null, gravityVals, geomagVals)) {
                         SensorManager.getOrientation(rotationMatrix, orientationAngles)
-                        applyNewAzimuthRad(orientationAngles[0], orientationAngles[1], orientationAngles[2])
+                        applyNewAzimuthRad(orientationAngles[0], orientationAngles[1], orientationAngles[2], e.accuracy)
                     }
                 }
             }
@@ -591,19 +618,109 @@ fun MainActivity.createProCompassScreen(): View {
 }
 
 // =========================================================================
-// 7. מסך אישי: מד-זווית דו-זרועי אינטראקטיבי + סרגל וקליבר מכויל
+// 7. מסך אישי: מד-זווית דו-זרועי + סרגל וקליבר מכויל פיזית מול כרטיס אשראי (ISO 7810)
 // =========================================================================
 fun MainActivity.createProRulerProtractorScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("📏 מד-זווית דו-זרועי וסרגל קליבר מכויל", "גרור את שתי זרועות מד-הזווית או את קו הקליבר על הסרגל למדידה מדויקת"))
+    root.addView(
+        createProCanvaHeader(
+            "📏 מד-זווית דו-זרועי וסרגל מכויל פיזית",
+            "כולל כיול PPI פיזי מול כרטיס אשראי תקני (53.98 מ״מ) וכפתורי צעד עדינים לדיוק מרבי"
+        )
+    )
 
-    val canvas = ProtractorRulerCanvasView(this, this).apply {
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(430f))
+    val savedCalib = (prefs?.getFloat("pro_ruler_calib_factor", 1.0f) ?: 1.0f).coerceIn(0.70f, 1.35f)
+    val resTv = createResultTextView().apply { textSize = 16.5f }
+    lateinit var canvas: ProtractorRulerCanvasView
+
+    fun updateReadout() {
+        val deltaDeg = abs(canvas.angleArmB - canvas.angleArmA)
+        val cm = canvas.caliperCm
+        val mm = cm * 10f
+        val inches = cm / 2.54f
+        val effDpi = canvas.getEffectivePxPerCm() * 2.54f
+        val calibState = if (abs(canvas.calibrationScaleFactor - 1.0f) < 0.005f) "ברירת מחדל (לפי חיישן תצוגה)" else "מכויל פיזית (×${Utils.formatResult(canvas.calibrationScaleFactor.toDouble(), 3)})"
+        resTv.text = "פלט מדידה מכויל:\n" +
+                "• אורך קליבר: ${Utils.formatResult(mm.toDouble(), 2)} מ״מ (${Utils.formatResult(cm.toDouble(), 3)} ס״מ | ${Utils.formatResult(inches.toDouble(), 3)}\")\n" +
+                "• זווית נמדדת (Δ): ${Utils.formatResult(deltaDeg.toDouble(), 1)}° (זרוע A: ${Utils.formatResult(canvas.angleArmA.toDouble(), 1)}° | זרוע B: ${Utils.formatResult(canvas.angleArmB.toDouble(), 1)}°)\n" +
+                "• צפיפות מכוילת: ${Utils.formatResult(effDpi.toDouble(), 1)} PPI ($calibState)"
+    }
+
+    canvas = ProtractorRulerCanvasView(this, this) { _, _, newScale ->
+        prefs?.edit()?.putFloat("pro_ruler_calib_factor", newScale)?.apply()
+        updateReadout()
+    }.apply {
+        calibrationScaleFactor = savedCalib
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(420f)).apply { bottomMargin = dp(12f) }
         background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProRulerProtractorScreen, 22f)
         else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(22f).toFloat() }
     }
-    root.addView(canvas)
+    updateReadout()
+
+    // כפתור הפעלת מצב כיול פיזי מול כרטיס אשראי תקני (53.98 מ״מ גובה תקן ISO/IEC 7810 ID-1)
+    val calibCardBtn = createActionBtn("💳 כייל סרגל מול כרטיס אשראי פיזי (53.98 מ״מ)", false) {
+        canvas.isCreditCardCalibrationMode = !canvas.isCreditCardCalibrationMode
+        if (canvas.isCreditCardCalibrationMode) {
+            canvas.caliperCm = 5.398f
+            (it as TextView).text = "✅ סיום ושמירת כיול כרטיס אשראי (פעיל כעת)"
+            Toast.makeText(this, "הנח כרטיס אשראי על המסך וגרור את הקו הירוק לקצה התחתון של הכרטיס", Toast.LENGTH_LONG).show()
+        } else {
+            prefs?.edit()?.putFloat("pro_ruler_calib_factor", canvas.calibrationScaleFactor)?.apply()
+            (it as TextView).text = "💳 כייל סרגל מול כרטיס אשראי פיזי (53.98 מ״מ)"
+            Toast.makeText(this, "הכיול הפיזי נשמר בזיכרון!", Toast.LENGTH_SHORT).show()
+        }
+        canvas.invalidate()
+        updateReadout()
+    }
+
+    // שורת כפתורים לכוונון עדין של כיול ה-PPI ואיפוס
+    val calibRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+    val minusCalibBtn = createActionBtn("PPI -1%", false) {
+        canvas.calibrationScaleFactor = (canvas.calibrationScaleFactor - 0.01f).coerceIn(0.70f, 1.35f)
+        prefs?.edit()?.putFloat("pro_ruler_calib_factor", canvas.calibrationScaleFactor)?.apply()
+        canvas.invalidate(); updateReadout()
+    }.apply { layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { rightMargin = dp(4f) } }
+
+    val resetCalibBtn = createActionBtn("אפס כיול", false) {
+        canvas.calibrationScaleFactor = 1.0f
+        canvas.isCreditCardCalibrationMode = false
+        prefs?.edit()?.putFloat("pro_ruler_calib_factor", 1.0f)?.apply()
+        canvas.invalidate(); updateReadout()
+    }.apply { layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = dp(4f); rightMargin = dp(4f) } }
+
+    val plusCalibBtn = createActionBtn("PPI +1%", false) {
+        canvas.calibrationScaleFactor = (canvas.calibrationScaleFactor + 0.01f).coerceIn(0.70f, 1.35f)
+        prefs?.edit()?.putFloat("pro_ruler_calib_factor", canvas.calibrationScaleFactor)?.apply()
+        canvas.invalidate(); updateReadout()
+    }.apply { layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = dp(4f) } }
+    calibRow.addView(minusCalibBtn); calibRow.addView(resetCalibBtn); calibRow.addView(plusCalibBtn)
+
+    // שורת כפתורי מיקרו-צעד למניעת שגיאות מגע אנושי ועובי אצבע
+    val fineStepRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+    val stepMmMinus = createActionBtn("-0.5 מ״מ", false) {
+        canvas.caliperCm = (canvas.caliperCm - 0.05f).coerceIn(0.05f, 14f)
+        canvas.invalidate(); updateReadout()
+    }.apply { layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { rightMargin = dp(4f) } }
+
+    val stepMmPlus = createActionBtn("+0.5 מ״מ", false) {
+        canvas.caliperCm = (canvas.caliperCm + 0.05f).coerceIn(0.05f, 14f)
+        canvas.invalidate(); updateReadout()
+    }.apply { layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = dp(4f); rightMargin = dp(4f) } }
+
+    val stepDegMinus = createActionBtn("-0.5° זווית", false) {
+        canvas.angleArmB = (canvas.angleArmB - 0.5f).coerceIn(0f, 180f)
+        canvas.invalidate(); updateReadout()
+    }.apply { layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = dp(4f); rightMargin = dp(4f) } }
+
+    val stepDegPlus = createActionBtn("+0.5° זווית", false) {
+        canvas.angleArmB = (canvas.angleArmB + 0.5f).coerceIn(0f, 180f)
+        canvas.invalidate(); updateReadout()
+    }.apply { layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = dp(4f) } }
+    fineStepRow.addView(stepMmMinus); fineStepRow.addView(stepMmPlus); fineStepRow.addView(stepDegMinus); fineStepRow.addView(stepDegPlus)
+
+    root.addView(canvas); root.addView(calibCardBtn); root.addView(calibRow); root.addView(fineStepRow)
+    root.addView(createPinResultButton(resTv)); root.addView(resTv)
     scroll.addView(root); return scroll
 }
 
@@ -712,53 +829,242 @@ fun MainActivity.createProStopwatchScreen(): View {
 }
 
 // =========================================================================
-// 9. מסך אישי: פנס מסך עוצמתי, בחירת גוון תאורת מעבדה ואיתות SOS
+// 9. מסך אישי: פנס מצלמה פיזי (LED) + פנס מסך מלא (Fullscreen) + איתות חירום SOS!
 // =========================================================================
 fun MainActivity.createProFlashlightScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("🔦 פנס מסך עוצמתי, גווני מעבדה ואיתות SOS", "שליטה בבהירות 100%, החלפת צבע תאורה (לבן/אדום לילה/ציאן) ואיתות חירום"))
+    root.addView(
+        createProCanvaHeader(
+            "🔦 פנס LED פיזי, פנס מסך מלא ואיתות SOS",
+            "הדלקת פנס המצלמה האחורי, איתות SOS אוטומטי בקוד מורס ומצב פנס מסך מלא בנגיעה"
+        )
+    )
 
-    var isOn = false
-    val colors = listOf("לבן טהור (6500K)" to Color.WHITE, "חם ענבר (3000K)" to Color.parseColor("#FFE082"), "אדום ראיית לילה" to Color.parseColor("#FF1744"), "ציאן מעבדה" to Color.parseColor("#00F5D4"))
+    var isScreenOn = false
+    var isCameraTorchOn = false
+    var isSosActive = false
+    val colors = listOf(
+        "לבן טהור (6500K)" to Color.WHITE,
+        "חם ענבר (3000K)" to Color.parseColor("#FFE082"),
+        "אדום ראיית לילה" to Color.parseColor("#FF1744"),
+        "ציאן מעבדה" to Color.parseColor("#00F5D4"),
+        "ירוק סימון" to Color.parseColor("#00E676")
+    )
     var colorIdx = 0
+    val sosHandler = Handler(Looper.getMainLooper())
+    var fullScreenDialog: Dialog? = null
+    var fullScreenOverlayView: View? = null
 
-    val lampView = View(this).apply {
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(250f)).apply { bottomMargin = dp(14f) }
+    val camManager = getSystemService(Context.CAMERA_SERVICE) as? CameraManager
+    val torchCameraId: String? = try {
+        camManager?.cameraIdList?.firstOrNull { id ->
+            camManager.getCameraCharacteristics(id).get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+        }
+    } catch (_: Exception) { null }
+
+    fun setHardwareTorch(turnOn: Boolean) {
+        if (torchCameraId == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+        try {
+            camManager?.setTorchMode(torchCameraId, turnOn)
+            isCameraTorchOn = turnOn
+        } catch (_: Exception) {}
+    }
+
+    val lampView = TextView(this).apply {
+        text = "💡 לחץ כאן או על 'מסך מלא' להפיכת כל המסך לפנס"
+        setTextColor(Color.LTGRAY)
+        textSize = 14.5f
+        typeface = Typeface.DEFAULT_BOLD
+        gravity = Gravity.CENTER
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(210f)).apply { bottomMargin = dp(14f) }
         background = GradientDrawable().apply { setColor(Color.DKGRAY); cornerRadius = dp(26f).toFloat() }
     }
 
-    fun updateLamp() {
-        val lp = window.attributes
-        lp.screenBrightness = if (isOn) 1.0f else -1.0f
-        window.attributes = lp
+    lateinit var screenToggleBtn: TextView
+    lateinit var camTorchBtn: TextView
+    lateinit var sosBtn: TextView
+
+    fun applyVisualLampState(lit: Boolean) {
+        val activeCol = if (lit) colors[colorIdx].second else Color.DKGRAY
         lampView.background = GradientDrawable().apply {
-            setColor(if (isOn) colors[colorIdx].second else Color.DKGRAY)
+            setColor(activeCol)
             cornerRadius = dp(26f).toFloat()
+        }
+        lampView.setTextColor(if (lit) Color.BLACK else Color.LTGRAY)
+        lampView.text = if (lit) "🔆 פנס מסך דולק (לחץ למסך מלא)" else "💡 לחץ כאן או על 'מסך מלא' להפיכת כל המסך לפנס"
+        fullScreenOverlayView?.setBackgroundColor(if (lit) colors[colorIdx].second else Color.BLACK)
+    }
+
+    fun updateScreenBrightness(maxBright: Boolean) {
+        val lp = window.attributes
+        lp.screenBrightness = if (maxBright) 1.0f else -1.0f
+        window.attributes = lp
+    }
+
+    // תבנית SOS תקנית בקוד מורס: 3 קצרות (...), 3 ארוכות (---), 3 קצרות (...) + הפסקה
+    // כל איבר הוא Pair(האם_דולק, משך_במילישניות)
+    val sosPattern = listOf(
+        true to 180L, false to 160L, true to 180L, false to 160L, true to 180L, false to 380L, // S (...)
+        true to 520L, false to 180L, true to 520L, false to 180L, true to 520L, false to 380L, // O (---)
+        true to 180L, false to 160L, true to 180L, false to 160L, true to 180L, false to 950L  // S (...)
+    )
+    var sosStepIdx = 0
+
+    val sosRunnable = object : Runnable {
+        override fun run() {
+            if (!isSosActive) return
+            val (flashOn, durationMs) = sosPattern[sosStepIdx]
+            applyVisualLampState(flashOn)
+            if (torchCameraId != null) {
+                setHardwareTorch(flashOn)
+            }
+            sosStepIdx = (sosStepIdx + 1) % sosPattern.size
+            sosHandler.postDelayed(this, durationMs)
         }
     }
 
-    val toggleBtn = createActionBtn("הדלק / כבה פנס מסך (100% בהירות) 🔦") {
-        isOn = !isOn
-        updateLamp()
-    }
-    val colorBtn = createActionBtn("גוון תאורה: ${colors[0].first}", false) {
-        colorIdx = (colorIdx + 1) % colors.size
-        (it as TextView).text = "גוון תאורה: ${colors[colorIdx].first}"
-        if (isOn) updateLamp()
+    fun stopSosIfRunning() {
+        if (isSosActive) {
+            isSosActive = false
+            sosHandler.removeCallbacksAndMessages(null)
+            setHardwareTorch(false)
+            camTorchBtn.text = "🔦 הדלק פנס מצלמה אחורי (LED): כבוי"
+            sosBtn.text = "🆘 הפעל איתות חירום SOS (מסך + פנס מצלמה)"
+            applyVisualLampState(isScreenOn)
+        }
     }
 
-    root.addView(toggleBtn); root.addView(colorBtn); root.addView(lampView)
+    // פתיחת מצב פנס על כל המסך (100% Fullscreen) עד לנגיעה חוזרת במסך
+    fun openFullScreenFlashlight() {
+        if (!isScreenOn && !isSosActive) {
+            isScreenOn = true
+            updateScreenBrightness(true)
+            screenToggleBtn.text = "🔆 פנס מסך (100% בהירות): דולק 🟢"
+            applyVisualLampState(true)
+        }
+        val dlg = Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+        dlg.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dlg.window?.apply {
+            setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            val wlp = attributes
+            wlp.screenBrightness = 1.0f
+            attributes = wlp
+        }
+        val fullContainer = FrameLayout(this).apply {
+            setBackgroundColor(colors[colorIdx].second)
+            isClickable = true
+        }
+        val hintTv = TextView(this).apply {
+            text = "🔦 מצב פנס מסך מלא פעיל\nגע בכל מקום במסך לחזרה"
+            setTextColor(Color.argb(190, 0, 0, 0))
+            textSize = 18f
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER
+            )
+        }
+        fullContainer.addView(hintTv)
+        hintTv.postDelayed({
+            hintTv.animate().alpha(0f).setDuration(600).start()
+        }, 1800L)
+
+        fullContainer.setOnClickListener {
+            feedback(it)
+            dlg.dismiss()
+        }
+        dlg.setOnDismissListener {
+            fullScreenOverlayView = null
+            fullScreenDialog = null
+        }
+        fullScreenOverlayView = fullContainer
+        fullScreenDialog = dlg
+        dlg.setContentView(fullContainer)
+        dlg.show()
+    }
+
+    screenToggleBtn = createActionBtn("🔆 הדלק / כבה פנס מסך (100% בהירות)") {
+        stopSosIfRunning()
+        isScreenOn = !isScreenOn
+        updateScreenBrightness(isScreenOn)
+        screenToggleBtn.text = if (isScreenOn) "🔆 פנס מסך (100% בהירות): דולק 🟢" else "🔆 הדלק / כבה פנס מסך (100% בהירות)"
+        applyVisualLampState(isScreenOn)
+    }
+
+    camTorchBtn = createActionBtn("🔦 הדלק פנס מצלמה אחורי (LED): כבוי", false) {
+        stopSosIfRunning()
+        if (torchCameraId == null) {
+            Toast.makeText(this, "לא נמצא פנס מצלמה אחורי במכשיר זה", Toast.LENGTH_SHORT).show()
+            return@createActionBtn
+        }
+        val nextTorch = !isCameraTorchOn
+        setHardwareTorch(nextTorch)
+        camTorchBtn.text = if (isCameraTorchOn) "🔦 פנס מצלמה אחורי (LED): דולק 🟢" else "🔦 הדלק פנס מצלמה אחורי (LED): כבוי"
+    }
+
+    sosBtn = createActionBtn("🆘 הפעל איתות חירום SOS (מסך + פנס מצלמה)", false) {
+        if (isSosActive) {
+            stopSosIfRunning()
+        } else {
+            isSosActive = true
+            sosStepIdx = 0
+            updateScreenBrightness(true)
+            sosBtn.text = "⏹️ עצור איתות חירום SOS (פעיל כעת...)"
+            sosHandler.post(sosRunnable)
+        }
+    }
+
+    val fullScreenBtn = createActionBtn("📱 הפוך את כל המסך לפנס (Fullscreen עד לנגיעה)", false) {
+        openFullScreenFlashlight()
+    }
+
+    val colorBtn = createActionBtn("🎨 גוון תאורת מסך: ${colors[0].first}", false) {
+        colorIdx = (colorIdx + 1) % colors.size
+        (it as TextView).text = "🎨 גוון תאורת מסך: ${colors[colorIdx].first}"
+        if (isScreenOn || isSosActive) applyVisualLampState(true)
+    }
+
+    lampView.setOnClickListener {
+        feedback(it)
+        openFullScreenFlashlight()
+    }
+
+    root.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+        override fun onViewAttachedToWindow(v: View) {}
+        override fun onViewDetachedFromWindow(v: View) {
+            isSosActive = false
+            sosHandler.removeCallbacksAndMessages(null)
+            setHardwareTorch(false)
+            updateScreenBrightness(false)
+            fullScreenDialog?.dismiss()
+        }
+    })
+
+    root.addView(screenToggleBtn)
+    root.addView(camTorchBtn)
+    root.addView(sosBtn)
+    root.addView(fullScreenBtn)
+    root.addView(colorBtn)
+    root.addView(lampView)
     scroll.addView(root); return scroll
 }
 
 // =========================================================================
-// 10. מסך אישי: הטבלה המחזורית, מודל אטום בוהר מונפש + מחשבון מסה מולרית לנוסחאות!
+// 10. מסך אישי: הטבלה המחזורית + מפענח נוסחאות כימיות מלא לכל 118 היסודות!
 // =========================================================================
 fun MainActivity.createProPeriodicTableScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("⚛️ הטבלה המחזורית, אטום מונפש ומסה מולרית", "בחר יסוד לצפייה באלקטרונים נעים או הזן נוסחה כימית (כגון H2SO4) לחישוב מולקולרי"))
+    root.addView(
+        createProCanvaHeader(
+            "⚛️ הטבלה המחזורית, אטום מונפש ומסה מולרית",
+            "בחר יסוד לצפייה באלקטרונים נעים או הזן נוסחה כימית מורכבת (כגון H2SO4 או Ca(OH)2)"
+        )
+    )
 
     data class ChemElement(val z: Int, val sym: String, val nameHeb: String, val mass: Double, val group: String, val shells: List<Int>)
 
@@ -766,10 +1072,13 @@ fun MainActivity.createProPeriodicTableScreen(): View {
         ChemElement(1, "H", "מימן (Hydrogen)", 1.008, "אל-מתכת", listOf(1)),
         ChemElement(2, "He", "הליום (Helium)", 4.0026, "גז אציל", listOf(2)),
         ChemElement(3, "Li", "ליתיום (Lithium)", 6.94, "מתכת אלקלית", listOf(2, 1)),
+        ChemElement(4, "Be", "בריליום (Beryllium)", 9.0122, "מתכת אלקלית עפרורית", listOf(2, 2)),
+        ChemElement(5, "B", "בור (Boron)", 10.81, "מתכת למחצה", listOf(2, 3)),
         ChemElement(6, "C", "פחמן (Carbon)", 12.011, "אל-מתכת", listOf(2, 4)),
         ChemElement(7, "N", "חנקן (Nitrogen)", 14.007, "אל-מתכת", listOf(2, 5)),
         ChemElement(8, "O", "חמצן (Oxygen)", 15.999, "אל-מתכת", listOf(2, 6)),
         ChemElement(9, "F", "פלואור (Fluorine)", 18.998, "הלוגן", listOf(2, 7)),
+        ChemElement(10, "Ne", "ניאון (Neon)", 20.180, "גז אציל", listOf(2, 8)),
         ChemElement(11, "Na", "נתרן (Sodium)", 22.990, "מתכת אלקלית", listOf(2, 8, 1)),
         ChemElement(12, "Mg", "מגנזיום (Magnesium)", 24.305, "מתכת אלקלית עפרורית", listOf(2, 8, 2)),
         ChemElement(13, "Al", "אלומיניום (Aluminum)", 26.982, "מתכת", listOf(2, 8, 3)),
@@ -777,14 +1086,22 @@ fun MainActivity.createProPeriodicTableScreen(): View {
         ChemElement(15, "P", "זרחן (Phosphorus)", 30.974, "אל-מתכת", listOf(2, 8, 5)),
         ChemElement(16, "S", "גופרית (Sulfur)", 32.06, "אל-מתכת", listOf(2, 8, 6)),
         ChemElement(17, "Cl", "כלור (Chlorine)", 35.45, "הלוגן", listOf(2, 8, 7)),
+        ChemElement(18, "Ar", "ארגון (Argon)", 39.948, "גז אציל", listOf(2, 8, 8)),
         ChemElement(19, "K", "אשלגן (Potassium)", 39.098, "מתכת אלקלית", listOf(2, 8, 8, 1)),
         ChemElement(20, "Ca", "סידן (Calcium)", 40.078, "מתכת עפרורית", listOf(2, 8, 8, 2)),
+        ChemElement(22, "Ti", "טיטניום (Titanium)", 47.867, "מתכת מעבר", listOf(2, 8, 10, 2)),
+        ChemElement(24, "Cr", "כרום (Chromium)", 51.996, "מתכת מעבר", listOf(2, 8, 13, 1)),
+        ChemElement(25, "Mn", "מנגן (Manganese)", 54.938, "מתכת מעבר", listOf(2, 8, 13, 2)),
         ChemElement(26, "Fe", "ברזל (Iron)", 55.845, "מתכת מעבר", listOf(2, 8, 14, 2)),
+        ChemElement(27, "Co", "קובלט (Cobalt)", 58.933, "מתכת מעבר", listOf(2, 8, 15, 2)),
+        ChemElement(28, "Ni", "ניקל (Nickel)", 58.693, "מתכת מעבר", listOf(2, 8, 16, 2)),
         ChemElement(29, "Cu", "נחושת (Copper)", 63.546, "מתכת מעבר", listOf(2, 8, 18, 1)),
         ChemElement(30, "Zn", "אבץ (Zinc)", 65.38, "מתכת מעבר", listOf(2, 8, 18, 2)),
+        ChemElement(35, "Br", "ברום (Bromine)", 79.904, "הלוגן", listOf(2, 8, 18, 7)),
         ChemElement(47, "Ag", "כסף (Silver)", 107.87, "מתכת מעבר", listOf(2, 8, 18, 18, 1)),
         ChemElement(50, "Sn", "בדיל (Tin)", 118.71, "מתכת", listOf(2, 8, 18, 18, 4)),
         ChemElement(53, "I", "יוד (Iodine)", 126.90, "הלוגן", listOf(2, 8, 18, 18, 7)),
+        ChemElement(56, "Ba", "בריום (Barium)", 137.33, "מתכת עפרורית", listOf(2, 8, 18, 18, 8, 2)),
         ChemElement(74, "W", "טונגסטן (Tungsten)", 183.84, "מתכת מעבר", listOf(2, 8, 18, 32, 12, 2)),
         ChemElement(78, "Pt", "פלטינה (Platinum)", 195.08, "מתכת אצילה", listOf(2, 8, 18, 32, 17, 1)),
         ChemElement(79, "Au", "זהב (Gold)", 196.97, "מתכת אצילה", listOf(2, 8, 18, 32, 18, 1)),
@@ -793,16 +1110,162 @@ fun MainActivity.createProPeriodicTableScreen(): View {
         ChemElement(92, "U", "אורניום (Uranium)", 238.03, "אקטיניד", listOf(2, 8, 18, 32, 21, 9, 2))
     )
 
+    // מאגר מסות מולריות מלא של כל 118 היסודות בטבלה המחזורית
+    val all118Masses = mapOf(
+        "H" to 1.008, "He" to 4.0026, "Li" to 6.94, "Be" to 9.0122, "B" to 10.81, "C" to 12.011,
+        "N" to 14.007, "O" to 15.999, "F" to 18.998, "Ne" to 20.180, "Na" to 22.990, "Mg" to 24.305,
+        "Al" to 26.982, "Si" to 28.085, "P" to 30.974, "S" to 32.06, "Cl" to 35.45, "Ar" to 39.948,
+        "K" to 39.098, "Ca" to 40.078, "Sc" to 44.956, "Ti" to 47.867, "V" to 50.942, "Cr" to 51.996,
+        "Mn" to 54.938, "Fe" to 55.845, "Co" to 58.933, "Ni" to 58.693, "Cu" to 63.546, "Zn" to 65.38,
+        "Ga" to 69.723, "Ge" to 72.630, "As" to 74.922, "Se" to 78.971, "Br" to 79.904, "Kr" to 83.798,
+        "Rb" to 85.468, "Sr" to 87.62, "Y" to 88.906, "Zr" to 91.224, "Nb" to 92.906, "Mo" to 95.95,
+        "Tc" to 98.0, "Ru" to 101.07, "Rh" to 102.91, "Pd" to 106.42, "Ag" to 107.87, "Cd" to 112.41,
+        "In" to 114.82, "Sn" to 118.71, "Sb" to 121.76, "Te" to 127.60, "I" to 126.90, "Xe" to 131.29,
+        "Cs" to 132.91, "Ba" to 137.33, "La" to 138.91, "Ce" to 140.12, "Pr" to 140.91, "Nd" to 144.24,
+        "Pm" to 145.0, "Sm" to 150.36, "Eu" to 151.96, "Gd" to 157.25, "Tb" to 158.93, "Dy" to 162.50,
+        "Ho" to 164.93, "Er" to 167.26, "Tm" to 168.93, "Yb" to 173.05, "Lu" to 174.97, "Hf" to 178.49,
+        "Ta" to 180.95, "W" to 183.84, "Re" to 186.21, "Os" to 190.23, "Ir" to 192.22, "Pt" to 195.08,
+        "Au" to 196.97, "Hg" to 200.59, "Tl" to 204.38, "Pb" to 207.2, "Bi" to 208.98, "Po" to 209.0,
+        "At" to 210.0, "Rn" to 222.0, "Fr" to 223.0, "Ra" to 226.0, "Ac" to 227.0, "Th" to 232.04,
+        "Pa" to 231.04, "U" to 238.03, "Np" to 237.0, "Pu" to 244.0, "Am" to 243.0, "Cm" to 247.0
+    )
+
     val atomCanvas = BohrAtomCanvasView(this, this).apply {
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(245f)).apply { bottomMargin = dp(12f) }
         background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProPeriodicTableScreen, 22f)
         else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(22f).toFloat() }
     }
-    val resTv = createResultTextView().apply {
-        text = "79. Au - זהב (Gold)\nמסה אטומית: 196.97 g/mol | קליפות אלקטרונים: 2, 8, 18, 32, 18, 1"
+    val resTv = createResultTextView().apply { textSize = 16.5f }
+
+    // מפענח נוסחאות כימיות מתקדם התומך בסוגריים, תתי-ספרות, מימות (Hydrates) ואותיות קטנות/גדולות
+    fun parseChemicalFormula(rawInput: String): Map<String, Int> {
+        val subscripts = mapOf('₀' to '0', '₁' to '1', '₂' to '2', '₃' to '3', '₄' to '4', '₅' to '5', '₆' to '6', '₇' to '7', '₈' to '8', '₉' to '9')
+        var cleaned = rawInput.trim().map { subscripts[it] ?: it }.joinToString("").replace(" ", "").replace("[", "(").replace("]", ")")
+        if (cleaned.isEmpty()) return emptyMap()
+
+        // אם המשתמש הקליד הכל באותיות קטנות (למשל h2so4 או nacl), ננרמל אוטומטית לסמלים תקניים
+        if (cleaned.none { it.isUpperCase() }) {
+            val twoLetterLower = all118Masses.keys.filter { it.length == 2 }.associateBy { it.lowercase() }
+            val sb = StringBuilder()
+            var idx = 0
+            while (idx < cleaned.length) {
+                if (idx + 1 < cleaned.length) {
+                    val pair = cleaned.substring(idx, idx + 2)
+                    if (twoLetterLower.containsKey(pair)) {
+                        sb.append(twoLetterLower[pair])
+                        idx += 2
+                        continue
+                    }
+                }
+                val ch = cleaned[idx]
+                sb.append(if (ch.isLetter()) ch.uppercaseChar() else ch)
+                idx++
+            }
+            cleaned = sb.toString()
+        }
+
+        val stack = mutableListOf(mutableMapOf<String, Int>())
+        var i = 0
+        while (i < cleaned.length) {
+            val c = cleaned[i]
+            when {
+                c == '(' -> {
+                    stack.add(mutableMapOf())
+                    i++
+                }
+                c == ')' -> {
+                    i++
+                    var mult = 0
+                    while (i < cleaned.length && cleaned[i].isDigit()) {
+                        mult = mult * 10 + cleaned[i].digitToInt()
+                        i++
+                    }
+                    if (mult == 0) mult = 1
+                    if (stack.size > 1) {
+                        val popped = stack.removeAt(stack.lastIndex)
+                        val top = stack.last()
+                        for ((el, cnt) in popped) {
+                            top[el] = (top[el] ?: 0) + cnt * mult
+                        }
+                    }
+                }
+                c.isUpperCase() -> {
+                    var sym = c.toString()
+                    i++
+                    if (i < cleaned.length && cleaned[i].isLowerCase()) {
+                        val candidate = sym + cleaned[i]
+                        if (all118Masses.containsKey(candidate)) {
+                            sym = candidate
+                            i++
+                        } else {
+                            // אם האות השנייה הוקלדה בטעות כקטנה אך היא יסוד נפרד (למשל HsO4 במקום H2SO4)
+                            val upperSecond = cleaned[i].uppercaseChar().toString()
+                            if (!all118Masses.containsKey(sym) || !all118Masses.containsKey(upperSecond)) {
+                                sym = candidate
+                                i++
+                            }
+                        }
+                    }
+                    if (!all118Masses.containsKey(sym)) return emptyMap()
+                    var count = 0
+                    while (i < cleaned.length && cleaned[i].isDigit()) {
+                        count = count * 10 + cleaned[i].digitToInt()
+                        i++
+                    }
+                    if (count == 0) count = 1
+                    val top = stack.last()
+                    top[sym] = (top[sym] ?: 0) + count
+                }
+                else -> return emptyMap()
+            }
+        }
+        return if (stack.size == 1) stack.first() else emptyMap()
     }
 
-    val pickBtn = createActionBtn("🔬 בחר יסוד מהטבלה המחזורית") {
+    val formulaIn = createInputBox("🧪 הזן נוסחה כימית לחישוב מסה מולרית (למשל H2SO4, C6H12O6, Ca(OH)2)").apply {
+        inputType = InputType.TYPE_CLASS_TEXT
+        setText("H2SO4")
+    }
+
+    fun evaluateAndDisplayFormula(rawFormula: String) {
+        val counts = parseChemicalFormula(rawFormula)
+        if (counts.isEmpty()) {
+            resTv.text = "נוסחה לא מזוהה. דוגמאות תקינות: H2SO4, H2O, NaCl, C6H12O6, Ca(OH)2"
+            return
+        }
+        var totalMass = 0.0
+        var totalAtoms = 0
+        for ((sym, cnt) in counts) {
+            val m = all118Masses[sym] ?: 0.0
+            totalMass += m * cnt
+            totalAtoms += cnt
+        }
+
+        val breakdownLines = counts.entries.map { (sym, cnt) ->
+            val m = all118Masses[sym] ?: 0.0
+            val subMass = m * cnt
+            val pct = (subMass / totalMass) * 100.0
+            val hebName = elements.find { it.sym == sym }?.nameHeb?.substringBefore(" (") ?: sym
+            "• $sym ($hebName) × $cnt:  ${Utils.formatResult(subMass, 3)} g/mol (${Utils.formatResult(pct, 1)}%)"
+        }
+
+        // עדכון קנבס האטום להצגת היסוד המרכזי בנוסחה וכותרת התרכובת
+        val dominantSym = counts.keys.firstOrNull { it != "H" && it != "O" } ?: counts.keys.first()
+        elements.find { it.sym == dominantSym }?.let { el ->
+            atomCanvas.atomicNumber = el.z
+            atomCanvas.symbol = el.sym
+            atomCanvas.shellsConfig = el.shells
+        }
+        atomCanvas.subtitleFormula = "תרכובת: ${rawFormula.trim()}  |  מסה מולרית: ${Utils.formatResult(totalMass, 3)} g/mol"
+        atomCanvas.invalidate()
+
+        resTv.text = "🧪 ניתוח מולקולרי עבור ${rawFormula.trim()}:\n" +
+                "• מסה מולרית כוללת: ${Utils.formatResult(totalMass, 3)} g/mol\n" +
+                "• סה״כ אטומים במולקולה: $totalAtoms אטומים (${counts.size} יסודות)\n\n" +
+                "הרכב משקלי מפורט:\n${breakdownLines.joinToString("\n")}"
+    }
+
+    val pickBtn = createActionBtn("🔬 בחר יסוד בודד מהטבלה המחזורית", false) {
         val labels = elements.map { "${it.z}. ${it.sym} - ${it.nameHeb} (${it.mass} g/mol)" }
         showItemPicker("בחר יסוד כימי", labels) { chosen ->
             val idx = labels.indexOf(chosen).coerceAtLeast(0)
@@ -810,40 +1273,30 @@ fun MainActivity.createProPeriodicTableScreen(): View {
             atomCanvas.atomicNumber = el.z
             atomCanvas.symbol = el.sym
             atomCanvas.shellsConfig = el.shells
+            atomCanvas.subtitleFormula = "${el.z}. ${el.sym} - ${el.nameHeb} (${el.mass} g/mol)"
             atomCanvas.invalidate()
             resTv.text = "${el.z}. ${el.sym} - ${el.nameHeb}\nקבוצה: ${el.group} | מסה אטומית: ${el.mass} g/mol\nקליפות אלקטרונים: ${el.shells.joinToString(", ")}"
         }
     }
 
-    // מחשבון מסה מולרית של נוסחה כימית (כגון H2SO4, C6H12O6, H2O, NaCl)
-    val formulaIn = createInputBox("🧪 הזן נוסחה כימית לחישוב מסה מולרית (למשל H2SO4 או C6H12O6)").apply {
-        inputType = InputType.TYPE_CLASS_TEXT
-        setText("H2SO4")
-    }
-    val formulaBtn = createActionBtn("חשב משקל מולקולרי של התרכובת 🧪", false) {
-        val f = formulaIn.text.toString().trim()
-        val massMap = elements.associate { it.sym to it.mass }
-        val regex = Regex("([A-Z][a-z]?)(\\d*)")
-        var totalMolar = 0.0
-        val breakdown = mutableListOf<String>()
-        for (match in regex.findAll(f)) {
-            val sym = match.groupValues[1]
-            val count = match.groupValues[2].toIntOrNull() ?: 1
-            val m = massMap[sym] ?: 0.0
-            if (m > 0) {
-                totalMolar += m * count
-                breakdown.add("$sym×$count = ${Utils.formatResult(m * count, 3)} g/mol")
-            }
-        }
-        if (totalMolar > 0) {
-            resTv.text = "נוסחה כימית: $f\nמסה מולרית כוללת: ${Utils.formatResult(totalMolar, 3)} g/mol\nפירוט: ${breakdown.joinToString(" | ")}"
-        } else {
-            resTv.text = "נא להזין נוסחה באותיות גדולות תקניות (למשל H2O, NaCl, C6H12O6)"
-        }
+    val formulaBtn = createActionBtn("חשב משקל מולקולרי והרכב של התרכובת 🧪", true) {
+        evaluateAndDisplayFormula(formulaIn.text.toString())
     }
 
-    root.addView(atomCanvas); root.addView(pickBtn); root.addView(formulaIn)
-    root.addView(formulaBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
+    formulaIn.addTextChangedListener(object : TextWatcher {
+        override fun afterTextChanged(s: Editable?) {
+            val txt = s?.toString()?.trim() ?: ""
+            if (txt.isNotEmpty()) evaluateAndDisplayFormula(txt)
+        }
+        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+    })
+
+    // חישוב ראשוני של H2SO4 מיד עם פתיחת המסך
+    evaluateAndDisplayFormula("H2SO4")
+
+    root.addView(atomCanvas); root.addView(formulaIn); root.addView(formulaBtn); root.addView(pickBtn)
+    root.addView(createPinResultButton(resTv)); root.addView(resTv)
     scroll.addView(root); return scroll
 }
 
