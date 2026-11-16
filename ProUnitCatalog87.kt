@@ -307,18 +307,18 @@ fun MainActivity.createScopedProUnitConverter(
         scaleCanvas.invalidate()
 
         val headerColor = when {
-            isMinimalistMode -> MinimalistTheme.TEXT_DARK
+            isMinimalistMode -> MinimalistTheme.TEXT_CHARCOAL
             isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
             else -> primaryColor
         }
-        val rowTextColor = if (isMinimalistMode) MinimalistTheme.TEXT_DARK else Color.WHITE
+        val rowTextColor = if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
 
         val header = TextView(this).apply {
             text = if (isClinicalCategory) "🩺 השוואה קלינית מדויקת בין היחידות (לחץ להעתקה):"
             else "⚡ השוואה סימולטנית לכל היחידות בקטגוריה (לחץ להעתקה):"
             setTextColor(headerColor)
             textSize = 14.5f
-            typeface = Typeface.DEFAULT_BOLD
+            typeface = if (isMinimalistMode) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
             gravity = Gravity.RIGHT
             setPadding(0, 0, 0, dp(8f))
         }
@@ -331,6 +331,7 @@ fun MainActivity.createScopedProUnitConverter(
                 text = "• $uName:  \u200E$cleanStr\u200E"
                 setTextColor(rowTextColor)
                 textSize = 14.5f
+                typeface = Typeface.create("sans-serif", Typeface.NORMAL)
                 gravity = Gravity.RIGHT
                 setPadding(dp(4f), dp(5f), dp(4f), dp(5f))
                 setOnClickListener { copyToClipboard(cleanStr) }
@@ -439,7 +440,7 @@ private fun MainActivity.showCustomUnitCreatorDialog(categoryName: String, onAdd
     val layout = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(20f), dp(20f), dp(20f), dp(12f))
-        setBackgroundColor(if (isMinimalistMode) MinimalistTheme.getBackgroundColor() else Utils.lightenColor(bgColor, 0.08f))
+        setBackgroundColor(if (isMinimalistMode) MinimalistTheme.getBackgroundColor(this@showCustomUnitCreatorDialog) else Utils.lightenColor(bgColor, 0.08f))
     }
     val nameIn = createInputBox("שם היחידה החדשה").apply { inputType = InputType.TYPE_CLASS_TEXT }
     val factorIn = createInputBox("יחס המרה ליחידת הבסיס (למשל 2.5)")
