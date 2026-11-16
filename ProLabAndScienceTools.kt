@@ -35,7 +35,11 @@ import kotlin.math.*
 // כותרת קנבה מעוצבת לכל מסך Pro הכוללת סרגל שבבי מועדפים וכפתור כוכב להוספה/הסרה מהמועדפים
 // (ללא אפשרות להוסיף את "מרכז המועדפים" עצמו למועדפים)
 fun MainActivity.createProCanvaHeader(title: String, subtitle: String): LinearLayout {
-    val accent = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
+    val accent = when {
+        isMinimalistMode -> MinimalistTheme.TEXT_MUTED
+        isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
+        else -> primaryColor
+    }
     val outerWrapper = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         layoutParams = LinearLayout.LayoutParams(
@@ -50,11 +54,14 @@ fun MainActivity.createProCanvaHeader(title: String, subtitle: String): LinearLa
     val card = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(18f), dp(14f), dp(18f), dp(14f))
-        background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProCanvaHeader, 22f)
-        else GradientDrawable().apply {
-            setColor(Utils.lightenColor(bgColor, 0.08f))
-            cornerRadius = dp(22f).toFloat()
-            setStroke(dp(1.5f), accent)
+        background = when {
+            isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProCanvaHeader, 22f, cardStyle = 1)
+            isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProCanvaHeader, 22f)
+            else -> GradientDrawable().apply {
+                setColor(Utils.lightenColor(bgColor, 0.08f))
+                cornerRadius = dp(22f).toFloat()
+                setStroke(dp(1.5f), accent)
+            }
         }
         layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
@@ -70,21 +77,42 @@ fun MainActivity.createProCanvaHeader(title: String, subtitle: String): LinearLa
     val isFavCenterTab = (currentTabIndex == ProFavoritesEngine.FAVORITES_CENTER_TAB_INDEX)
     val isFav = ProFavoritesEngine.isFavoriteTab(prefs, currentTabIndex)
     val starBtn = TextView(this).apply {
+        tag = "PRO_STAR_CHIP"
         visibility = if (isFavCenterTab) View.GONE else View.VISIBLE
-        text = if (isFav) "⭐ במועדפים" else "☆ מועדף"
-        setTextColor(if (isFav) Color.parseColor("#FFD700") else Color.WHITE)
+        text = if (isMinimalistMode) {
+            if (isFav) "★ במועדפים" else "★ מועדף"
+        } else {
+            if (isFav) "⭐ במועדפים" else "☆ מועדף"
+        }
+        setTextColor(
+            when {
+                isMinimalistMode -> MinimalistTheme.TEXT_DARK
+                isFav -> Color.parseColor("#FFD700")
+                else -> Color.WHITE
+            }
+        )
         textSize = 13f
         typeface = Typeface.DEFAULT_BOLD
-        setPadding(dp(10f), dp(5f), dp(10f), dp(5f))
+        setPadding(dp(12f), dp(6f), dp(12f), dp(6f))
         background = GradientDrawable().apply {
-            setColor(Color.argb(45, 255, 255, 255))
+            setColor(if (isMinimalistMode) MinimalistTheme.HEADER_STAR_PILL else Color.argb(45, 255, 255, 255))
             cornerRadius = dp(50f).toFloat()
         }
         setOnClickListener {
             feedback(it)
             val nowFav = ProFavoritesEngine.toggleFavoriteTab(this@createProCanvaHeader, currentTabIndex)
-            text = if (nowFav) "⭐ במועדפים" else "☆ מועדף"
-            setTextColor(if (nowFav) Color.parseColor("#FFD700") else Color.WHITE)
+            text = if (isMinimalistMode) {
+                if (nowFav) "★ במועדפים" else "★ מועדף"
+            } else {
+                if (nowFav) "⭐ במועדפים" else "☆ מועדף"
+            }
+            setTextColor(
+                when {
+                    isMinimalistMode -> MinimalistTheme.TEXT_DARK
+                    nowFav -> Color.parseColor("#FFD700")
+                    else -> Color.WHITE
+                }
+            )
             switchTab(currentTabIndex)
         }
         setOnLongClickListener {
@@ -96,7 +124,7 @@ fun MainActivity.createProCanvaHeader(title: String, subtitle: String): LinearLa
 
     val titleTv = TextView(this).apply {
         text = IosGlassTheme.cleanCategoryTitle(title, isCleanGlassActive)
-        setTextColor(Color.WHITE)
+        setTextColor(if (isMinimalistMode) MinimalistTheme.TEXT_DARK else Color.WHITE)
         textSize = 18.5f
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.RIGHT
@@ -111,7 +139,7 @@ fun MainActivity.createProCanvaHeader(title: String, subtitle: String): LinearLa
 
     card.addView(TextView(this).apply {
         text = subtitle
-        setTextColor(accent)
+        setTextColor(if (isMinimalistMode) MinimalistTheme.TEXT_MUTED else accent)
         textSize = 13.5f
         gravity = Gravity.RIGHT
         setPadding(0, dp(4f), 0, 0)
@@ -156,8 +184,11 @@ fun MainActivity.createProResistorScreen(): View {
 
     val canvasView = ResistorVisualCanvasView(this).apply {
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(185f)).apply { bottomMargin = dp(12f) }
-        background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProResistorScreen, 20f)
-        else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(20f).toFloat() }
+        background = when {
+            isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProResistorScreen, 20f, 2)
+            isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProResistorScreen, 20f)
+            else -> GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(20f).toFloat() }
+        }
     }
     val resTv = createResultTextView()
 
@@ -204,7 +235,6 @@ fun MainActivity.createProResistorScreen(): View {
     btnM.setOnClickListener { showItemPicker("בחר מכפיל", colors.map { it.first }) { c -> mult = colors.indexOfFirst { it.first == c }; updateResistor() } }
     btnT.setOnClickListener { showItemPicker("בחר דיוק", tolerances.map { it.first }) { c -> tol = tolerances.indexOfFirst { it.first == c }; btnT.text = "דיוק: $c"; updateResistor() } }
 
-    // מנוע חיפוש הפוך: מהתנגדות באוהם לצבעי הפסים
     val reverseIn = createInputBox("🔄 חיפוש הפוך: הזן התנגדות ב-Ω (למשל 4700) למציאת הצבעים")
     val reverseBtn = createActionBtn("מצא פסי צבע לפי התנגדות 🔄") {
         val targetOhms = reverseIn.text.toString().toDoubleOrNull()
@@ -249,7 +279,8 @@ fun MainActivity.createProCapacitorScreen(): View {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
             val cx = width / 2f; val cy = height * 0.44f
-            p.color = Color.LTGRAY; p.strokeWidth = 3.5f * d; p.style = Paint.Style.STROKE
+            p.color = if (isMinimalistMode) MinimalistTheme.TEXT_MUTED else Color.LTGRAY
+            p.strokeWidth = 3.5f * d; p.style = Paint.Style.STROKE
             canvas.drawLine(cx - 14f * d, cy + 16f * d, cx - 14f * d, height - 8f * d, p)
             canvas.drawLine(cx + 14f * d, cy + 16f * d, cx + 14f * d, height - 8f * d, p)
             p.color = Color.parseColor("#FFB74D"); p.style = Paint.Style.FILL
@@ -257,7 +288,10 @@ fun MainActivity.createProCapacitorScreen(): View {
             p.color = Color.BLACK; p.textSize = 15f * d; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
             canvas.drawText(capCodeText, cx, cy + 5f * d, p)
         }
-    }.apply { layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(165f)).apply { bottomMargin = dp(12f) } }
+    }.apply {
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(165f)).apply { bottomMargin = dp(12f) }
+        if (isMinimalistMode) background = MinimalistTheme.createMinimalistCardDrawable(this@createProCapacitorScreen, 20f, 2)
+    }
 
     val codeIn = createInputBox("קוד קבל (למשל 104, 472K, 223J)").apply { inputType = InputType.TYPE_CLASS_TEXT; setText("104K") }
     val voltIn = createInputBox("מתח עבודה בוולט (V)").apply { setText("12") }
@@ -325,7 +359,10 @@ fun MainActivity.createProAwgWireScreen(): View {
             p.color = Color.WHITE; p.textSize = 13f * d; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
             canvas.drawText("Ø ${Utils.formatResult(currentDiamMm.toDouble(), 2)} mm (${if (isCopper) "Cu" else "Al"})", cx, cy + 5f * d, p)
         }
-    }.apply { layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(165f)).apply { bottomMargin = dp(12f) } }
+    }.apply {
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(165f)).apply { bottomMargin = dp(12f) }
+        if (isMinimalistMode) background = MinimalistTheme.createMinimalistCardDrawable(this@createProAwgWireScreen, 20f, 2)
+    }
 
     val matBtn = createActionBtn("חומר מוליך: נחושת (Copper Cu)", false) {}
     val awgIn = createInputBox("מספר AWG (0 עד 40, למשל 14)").apply { setText("14") }
@@ -420,8 +457,11 @@ fun MainActivity.createProSpiritLevelScreen(): View {
     var isHold = false
     val levelCanvas = SpiritLevelCanvasView(this, this).apply {
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(330f)).apply { bottomMargin = dp(12f) }
-        background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProSpiritLevelScreen, 24f)
-        else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(24f).toFloat() }
+        background = when {
+            isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProSpiritLevelScreen, 24f, 2)
+            isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProSpiritLevelScreen, 24f)
+            else -> GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(24f).toFloat() }
+        }
     }
     val resTv = createResultTextView()
 
@@ -483,7 +523,7 @@ fun MainActivity.createProCompassScreen(): View {
     root.addView(createProCanvaHeader("🧭 מצפן 3D מכויל, מד אמינות ושדה (µT)", "פיצוי הטיה מלא (TYPE_ROTATION_VECTOR), חיווי אמינות חי וצפון אמיתי/מגנטי"))
 
     var useTrueNorth = true
-    val israelDeclinationDeg = 5.2f // נטייה מגנטית בישראל (+5.2° מזרחה)
+    val israelDeclinationDeg = 5.2f
     val resTv = createResultTextView()
     lateinit var compassCanvas: CompassRoseCanvasView
     var lastWidgetSyncMs = 0L
@@ -530,8 +570,11 @@ fun MainActivity.createProCompassScreen(): View {
         hasSensorHardware = hardwareAvailable
         sensorAccuracy = if (hardwareAvailable) -1 else -2
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(345f)).apply { bottomMargin = dp(12f) }
-        background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProCompassScreen, 24f)
-        else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(24f).toFloat() }
+        background = when {
+            isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProCompassScreen, 24f, cardStyle = 2)
+            isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProCompassScreen, 24f)
+            else -> GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(24f).toFloat() }
+        }
     }
     updateHeadingText(0f)
 
@@ -674,8 +717,11 @@ fun MainActivity.createProRulerProtractorScreen(): View {
     }.apply {
         calibrationScaleFactor = savedCalib
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(420f)).apply { bottomMargin = dp(12f) }
-        background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProRulerProtractorScreen, 22f)
-        else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(22f).toFloat() }
+        background = when {
+            isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProRulerProtractorScreen, 22f, 2)
+            isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProRulerProtractorScreen, 22f)
+            else -> GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(22f).toFloat() }
+        }
     }
     updateReadout()
 
@@ -759,8 +805,11 @@ fun MainActivity.createProStopwatchScreen(): View {
 
     val chronoCanvas = ChronographStopwatchCanvasView(this, this).apply {
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(265f)).apply { bottomMargin = dp(12f) }
-        background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProStopwatchScreen, 24f)
-        else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(24f).toFloat() }
+        background = when {
+            isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProStopwatchScreen, 24f, 2)
+            isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProStopwatchScreen, 24f)
+            else -> GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(24f).toFloat() }
+        }
     }
 
     val statsTv = createResultTextView().apply { textSize = 16.5f }
@@ -889,14 +938,15 @@ fun MainActivity.createProFlashlightScreen(): View {
         } catch (_: Exception) {}
     }
 
+    val offLampCol = if (isMinimalistMode) MinimalistTheme.COMPASS_DIAL_RING_BG else Color.DKGRAY
     val lampView = TextView(this).apply {
         text = "💡 לחץ כאן או על 'מסך מלא' להפיכת כל המסך לפנס"
-        setTextColor(Color.LTGRAY)
+        setTextColor(if (isMinimalistMode) MinimalistTheme.TEXT_DARK else Color.LTGRAY)
         textSize = 14.5f
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(210f)).apply { bottomMargin = dp(14f) }
-        background = GradientDrawable().apply { setColor(Color.DKGRAY); cornerRadius = dp(26f).toFloat() }
+        background = GradientDrawable().apply { setColor(offLampCol); cornerRadius = dp(26f).toFloat() }
     }
 
     lateinit var screenToggleBtn: TextView
@@ -904,12 +954,12 @@ fun MainActivity.createProFlashlightScreen(): View {
     lateinit var sosBtn: TextView
 
     fun applyVisualLampState(lit: Boolean) {
-        val activeCol = if (lit) colors[colorIdx].second else Color.DKGRAY
+        val activeCol = if (lit) colors[colorIdx].second else offLampCol
         lampView.background = GradientDrawable().apply {
             setColor(activeCol)
             cornerRadius = dp(26f).toFloat()
         }
-        lampView.setTextColor(if (lit) Color.BLACK else Color.LTGRAY)
+        lampView.setTextColor(if (lit) Color.BLACK else if (isMinimalistMode) MinimalistTheme.TEXT_DARK else Color.LTGRAY)
         lampView.text = if (lit) "🔆 פנס מסך דולק (לחץ למסך מלא)" else "💡 לחץ כאן או על 'מסך מלא' להפיכת כל המסך לפנס"
         fullScreenOverlayView?.setBackgroundColor(if (lit) colors[colorIdx].second else Color.BLACK)
     }
@@ -920,11 +970,10 @@ fun MainActivity.createProFlashlightScreen(): View {
         window.attributes = lp
     }
 
-    // תבנית SOS תקנית בקוד מורס: 3 קצרות (...), 3 ארוכות (---), 3 קצרות (...) + הפסקה
     val sosPattern = listOf(
-        true to 180L, false to 160L, true to 180L, false to 160L, true to 180L, false to 380L, // S (...)
-        true to 520L, false to 180L, true to 520L, false to 180L, true to 520L, false to 380L, // O (---)
-        true to 180L, false to 160L, true to 180L, false to 160L, true to 180L, false to 950L  // S (...)
+        true to 180L, false to 160L, true to 180L, false to 160L, true to 180L, false to 380L,
+        true to 520L, false to 180L, true to 520L, false to 180L, true to 520L, false to 380L,
+        true to 180L, false to 160L, true to 180L, false to 160L, true to 180L, false to 950L
     )
     var sosStepIdx = 0
 
@@ -1126,7 +1175,6 @@ fun MainActivity.createProPeriodicTableScreen(): View {
         ChemElement(92, "U", "אורניום (Uranium)", 238.03, "אקטיניד", listOf(2, 8, 18, 32, 21, 9, 2))
     )
 
-    // מאגר מסות מולריות מלא של כל 118 היסודות בטבלה המחזורית + שמות בעברית
     val all118Masses = mapOf(
         "H" to 1.008, "He" to 4.0026, "Li" to 6.94, "Be" to 9.0122, "B" to 10.81, "C" to 12.011,
         "N" to 14.007, "O" to 15.999, "F" to 18.998, "Ne" to 20.180, "Na" to 22.990, "Mg" to 24.305,
@@ -1148,8 +1196,11 @@ fun MainActivity.createProPeriodicTableScreen(): View {
 
     val atomCanvas = BohrAtomCanvasView(this, this).apply {
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(245f)).apply { bottomMargin = dp(12f) }
-        background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProPeriodicTableScreen, 22f)
-        else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(22f).toFloat() }
+        background = when {
+            isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProPeriodicTableScreen, 22f, 2)
+            isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProPeriodicTableScreen, 22f)
+            else -> GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(22f).toFloat() }
+        }
     }
     val resTv = createResultTextView().apply { textSize = 16.5f }
 
@@ -1254,7 +1305,6 @@ fun MainActivity.createProPeriodicTableScreen(): View {
             totalAtoms += cnt
         }
 
-        // שימוש ב-Left-To-Right Mark (\u200E) ובסימן שוויון (=) למניעת הצמדת מספר האטומים למסה ב-RTL
         val breakdownLines = counts.entries.map { (sym, cnt) ->
             val m = all118Masses[sym] ?: 0.0
             val subMass = m * cnt
@@ -1339,7 +1389,6 @@ fun MainActivity.createProMorseScreen(): View {
     )
     val reverseMorseEng = morseMap.entries.take(36).associate { it.value to it.key }
 
-    // 3 מתגים עצמאיים לשליטה בכל ערוץ שידור בנפרד
     var useScreenBeacon = true
     var useFlashlightTorch = false
     var useAudioBeep = true
@@ -1365,14 +1414,17 @@ fun MainActivity.createProMorseScreen(): View {
         } catch (_: Exception) {}
     }
 
+    val idleBeaconCol = if (isMinimalistMode) MinimalistTheme.COMPASS_MINT_CARD else Color.DKGRAY
+    val idleTextCol = if (isMinimalistMode) MinimalistTheme.TEXT_DARK else Color.LTGRAY
+
     val beaconView = TextView(this).apply {
         text = "📡 משדר מורס מוכן (נקודה = קצר • קו = ארוך)"
-        setTextColor(Color.LTGRAY)
+        setTextColor(idleTextCol)
         textSize = 14f
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(78f)).apply { bottomMargin = dp(12f) }
-        background = GradientDrawable().apply { setColor(Color.DKGRAY); cornerRadius = dp(18f).toFloat() }
+        background = GradientDrawable().apply { setColor(idleBeaconCol); cornerRadius = dp(18f).toFloat() }
     }
 
     val input = createInputBox("הקלד טקסט (עברית/אנגלית) או קוד מורס (נקודות וקווים)").apply {
@@ -1399,13 +1451,12 @@ fun MainActivity.createProMorseScreen(): View {
         override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
     })
 
-    // כפתורי הפעלה/כיבוי עצמאיים לכל אחד מ-3 ערוצי השידור
     val toggleScreenBtn = createActionBtn("💡 שידור באור מסך: מופעל 🟢", false) {
         useScreenBeacon = !useScreenBeacon
         (it as TextView).text = if (useScreenBeacon) "💡 שידור באור מסך: מופעל 🟢" else "💡 שידור באור מסך: כבוי 🔴"
         if (!useScreenBeacon) {
-            beaconView.background = GradientDrawable().apply { setColor(Color.DKGRAY); cornerRadius = dp(18f).toFloat() }
-            beaconView.setTextColor(Color.LTGRAY)
+            beaconView.background = GradientDrawable().apply { setColor(idleBeaconCol); cornerRadius = dp(18f).toFloat() }
+            beaconView.setTextColor(idleTextCol)
         }
     }
 
@@ -1434,8 +1485,8 @@ fun MainActivity.createProMorseScreen(): View {
         morseHandler.removeCallbacksAndMessages(null)
         setHardwareTorch(false)
         try { toneGen?.stopTone() } catch (_: Exception) {}
-        beaconView.background = GradientDrawable().apply { setColor(Color.DKGRAY); cornerRadius = dp(18f).toFloat() }
-        beaconView.setTextColor(Color.LTGRAY)
+        beaconView.background = GradientDrawable().apply { setColor(idleBeaconCol); cornerRadius = dp(18f).toFloat() }
+        beaconView.setTextColor(idleTextCol)
         beaconView.text = "📡 משדר מורס מוכן (נקודה = קצר • קו = ארוך)"
         transmitBtn.text = "▶️ שדר קוד מורס בערוצים הפעילים"
     }
@@ -1457,9 +1508,12 @@ fun MainActivity.createProMorseScreen(): View {
 
         isTransmitting = true
         transmitBtn.text = "⏹️ עצור שידור מורס (משדר כעת...)"
-        val accent = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
+        val accent = when {
+            isMinimalistMode -> MinimalistTheme.ACTION_CORAL_PRIMARY
+            isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
+            else -> primaryColor
+        }
 
-        // בניית רשימת צעדי שידור: Triple(האם_אות_פעיל, משך_במילישניות, תווית_לתצוגה)
         val steps = mutableListOf<Triple<Boolean, Long, String>>()
         for (ch in codeToPlay.take(80)) {
             when (ch) {
@@ -1499,8 +1553,8 @@ fun MainActivity.createProMorseScreen(): View {
                         try { toneGen?.startTone(ToneGenerator.TONE_DTMF_A, durMs.toInt()) } catch (_: Exception) {}
                     }
                 } else {
-                    beaconView.background = GradientDrawable().apply { setColor(Color.DKGRAY); cornerRadius = dp(18f).toFloat() }
-                    beaconView.setTextColor(Color.LTGRAY)
+                    beaconView.background = GradientDrawable().apply { setColor(idleBeaconCol); cornerRadius = dp(18f).toFloat() }
+                    beaconView.setTextColor(idleTextCol)
                     if (label.isNotEmpty()) beaconView.text = "📡 $label"
                     setHardwareTorch(false)
                     try { toneGen?.stopTone() } catch (_: Exception) {}
@@ -1548,15 +1602,19 @@ fun MainActivity.createProPasswordGenScreen(): View {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
             val w = width.toFloat(); val h = height.toFloat()
-            p.color = Color.argb(80, 255, 255, 255)
+            p.color = if (isMinimalistMode) Color.argb(40, 0, 0, 0) else Color.argb(80, 255, 255, 255)
             canvas.drawRoundRect(RectF(16f * d, 16f * d, w - 16f * d, 38f * d), 12f * d, 12f * d, p)
             val ratio = (entropyBits / 160f).coerceIn(0.1f, 1f)
             p.color = if (entropyBits >= 80f) Color.parseColor("#00E676") else Color.parseColor("#FFB74D")
             canvas.drawRoundRect(RectF(16f * d, 16f * d, 16f * d + (w - 32f * d) * ratio, 38f * d), 12f * d, 12f * d, p)
-            p.color = Color.WHITE; p.textSize = 13.5f * d; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
+            p.color = if (isMinimalistMode) MinimalistTheme.TEXT_DARK else Color.WHITE
+            p.textSize = 13.5f * d; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
             canvas.drawText("אנטרופיה: ${entropyBits.toInt()} bits (${if (entropyBits >= 90f) "הצפנה צבאית חזקה" else "חוזק בינוני"})", w / 2f, h - 10f * d, p)
         }
-    }.apply { layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(95f)).apply { bottomMargin = dp(10f) } }
+    }.apply {
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(95f)).apply { bottomMargin = dp(10f) }
+        if (isMinimalistMode) background = MinimalistTheme.createMinimalistCardDrawable(this@createProPasswordGenScreen, 18f, 2)
+    }
 
     val lenIn = createInputBox("אורך סיסמה (6 עד 64 תווים)").apply { setText("16") }
     val symBtn = createActionBtn("סימנים מיוחדים (!@#$): מופעל ✔️", false) {}
@@ -1641,7 +1699,7 @@ fun MainActivity.createProGematriaAndTextScreen(): View {
 
 // =========================================================================
 // 14. וידג'ט מצפן פעיל למסך הבית מעוצב בקנבה (Active Canva Compass Home Widget)
-//     כולל תמיכה ב-goAsync(), Bitmap קל וחד (280x280) ומעקב חיישן חי
+//     תומך גם בערכת הנושא "עיצוב מינימליסטי" (כרטיס מנטה #DFEFE4) וגם בערכות הכהות!
 // =========================================================================
 object CompassHomeWidgetHelper {
     const val ACTION_REFRESH_WIDGET = "com.example.calculator.ACTION_REFRESH_COMPASS_WIDGET"
@@ -1681,7 +1739,6 @@ object CompassHomeWidgetHelper {
         val appCtx = context.applicationContext ?: context
         val now = System.currentTimeMillis()
         if (now - lastTapTimestampMs < 1100L) {
-            // לחיצה כפולה מהירה על הווידג'ט פותחת את מסך המצפן המלא באפליקציה
             lastTapTimestampMs = 0L
             pendingResult?.finish()
             val openAppIntent = Intent(appCtx, MainActivity::class.java).apply {
@@ -1692,7 +1749,6 @@ object CompassHomeWidgetHelper {
             return
         }
         lastTapTimestampMs = now
-        // לחיצה רגילה מפעילה סשן דגימת מצפן חי ורציף על מסך הבית
         startLiveSensorTrackingSession(appCtx, durationMs = 8500L, pendingResult = pendingResult)
     }
 
@@ -1750,7 +1806,7 @@ object CompassHomeWidgetHelper {
             }
             var deg = Math.toDegrees(atan2(smoothedSin.toDouble(), smoothedCos.toDouble())).toFloat()
             if (deg < 0f) deg += 360f
-            deg = (deg + 5.2f) % 360f // צפון גאוגרפי אמיתי בישראל (+5.2°)
+            deg = (deg + 5.2f) % 360f
 
             val now = System.currentTimeMillis()
             val angleDiff = abs(((deg - lastPushedDeg + 540f) % 360f) - 180f)
@@ -1825,10 +1881,10 @@ object CompassHomeWidgetHelper {
             val magUt = prefs.getFloat(PREF_MAG_UT, 46.5f)
             val acc = prefs.getInt(PREF_ACCURACY, SensorManager.SENSOR_STATUS_ACCURACY_HIGH)
             val isAurora = prefs.getBoolean("isAuroraMode", false)
+            val isMinimalist = prefs.getBoolean("isMinimalistMode", false)
             val primaryCol = prefs.getInt("primaryColor", Color.parseColor("#64B5F6"))
 
-            // Bitmap בגודל 280x280 (~313KB בלבד) – מונע לחלוטין חריגה מ-Binder 1MB Limit באנדרואיד!
-            val bmp = drawCanvaCompassWidgetBitmap(heading, magUt, acc, isAurora, primaryCol, isLiveActive)
+            val bmp = drawCanvaCompassWidgetBitmap(heading, magUt, acc, isAurora, isMinimalist, primaryCol, isLiveActive)
 
             val customLayoutId = context.resources.getIdentifier("compass_widget_layout", "layout", context.packageName)
             val customImgId = context.resources.getIdentifier("widget_compass_img", "id", context.packageName)
@@ -1867,6 +1923,7 @@ object CompassHomeWidgetHelper {
         magUt: Float,
         accuracy: Int,
         isAurora: Boolean,
+        isMinimalist: Boolean,
         primaryColor: Int,
         isLiveActive: Boolean
     ): Bitmap {
@@ -1874,48 +1931,60 @@ object CompassHomeWidgetHelper {
         val h = 280
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
-        val accent = CanvasUiHelper.ensureReadableAccent(primaryColor, isAurora)
+        val accent = CanvasUiHelper.ensureReadableAccent(primaryColor, isAurora, isMinimalist)
 
-        // 1. כרטיס קנבה מעוגל עם גרדיאנט עמוק והברקת מסגרת
         val cardRect = RectF(6f, 6f, w - 6f, h - 6f)
         val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
-            shader = LinearGradient(
-                0f, 0f, w.toFloat(), h.toFloat(),
-                if (isAurora) intArrayOf(
-                    AuroraBorealisTheme.EMERALD_NIGHT,
-                    AuroraBorealisTheme.ARCTIC_BLUE,
-                    AuroraBorealisTheme.COSMIC_PURPLE
-                ) else intArrayOf(
-                    Color.parseColor("#121A28"),
-                    Color.parseColor("#0A0F18"),
-                    Color.parseColor("#162234")
-                ),
-                null,
-                Shader.TileMode.CLAMP
-            )
+            if (isMinimalist) {
+                color = MinimalistTheme.COMPASS_MINT_CARD
+            } else {
+                shader = LinearGradient(
+                    0f, 0f, w.toFloat(), h.toFloat(),
+                    if (isAurora) intArrayOf(
+                        AuroraBorealisTheme.EMERALD_NIGHT,
+                        AuroraBorealisTheme.ARCTIC_BLUE,
+                        AuroraBorealisTheme.COSMIC_PURPLE
+                    ) else intArrayOf(
+                        Color.parseColor("#121A28"),
+                        Color.parseColor("#0A0F18"),
+                        Color.parseColor("#162234")
+                    ),
+                    null,
+                    Shader.TileMode.CLAMP
+                )
+            }
         }
         canvas.drawRoundRect(cardRect, 36f, 36f, bgPaint)
 
         val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
             strokeWidth = if (isLiveActive) 2.8f else 2.0f
-            color = if (isLiveActive) Color.parseColor("#00E676")
-            else Color.argb(185, Color.red(accent), Color.green(accent), Color.blue(accent))
+            color = when {
+                isLiveActive -> Color.parseColor("#2E7D32")
+                isMinimalist -> Color.argb(45, 43, 40, 37)
+                else -> Color.argb(185, Color.red(accent), Color.green(accent), Color.blue(accent))
+            }
         }
         canvas.drawRoundRect(cardRect, 36f, 36f, borderPaint)
 
-        // 2. קפסולת מצב עליונה בעיצוב Canva
         val pillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
-            color = if (isLiveActive) Color.argb(60, 0, 230, 118)
-            else Color.argb(45, Color.red(accent), Color.green(accent), Color.blue(accent))
+            color = when {
+                isMinimalist -> MinimalistTheme.ALERT_PINK_PILL
+                isLiveActive -> Color.argb(60, 0, 230, 118)
+                else -> Color.argb(45, Color.red(accent), Color.green(accent), Color.blue(accent))
+            }
         }
         val topPill = RectF(18f, 15f, w - 18f, 41f)
         canvas.drawRoundRect(topPill, 13f, 13f, pillPaint)
 
         val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = if (isLiveActive) Color.parseColor("#00E676") else accent
+            color = when {
+                isMinimalist -> MinimalistTheme.ALERT_RED_TEXT
+                isLiveActive -> Color.parseColor("#00E676")
+                else -> accent
+            }
             textSize = 11.5f
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
@@ -1928,45 +1997,37 @@ object CompassHomeWidgetHelper {
         }
         CanvasUiHelper.drawFittedText(canvas, headerStatus, w / 2f, 32f, topPill.width() - 12f, 11.5f, 8.5f, titlePaint)
 
-        // 3. חוגת שושנת הרוחות במרכז
         val cx = w / 2f
         val cy = 132f
         val r = 73f
 
         val dialBg = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
-            color = Color.argb(190, 8, 14, 22)
+            color = if (isMinimalist) MinimalistTheme.COMPASS_DIAL_RING_BG else Color.argb(190, 8, 14, 22)
         }
         canvas.drawCircle(cx, cy, r, dialBg)
 
-        val ringStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
-            strokeWidth = 2.4f
-            color = accent
+        if (!isMinimalist) {
+            val ringStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = 2.4f
+                color = accent
+            }
+            canvas.drawCircle(cx, cy, r, ringStroke)
         }
-        canvas.drawCircle(cx, cy, r, ringStroke)
-
-        // חץ קריאה עליון (Lubber Triangle)
-        val lubber = Path().apply {
-            moveTo(cx, cy - r - 2f)
-            lineTo(cx - 6.5f, cy - r - 12f)
-            lineTo(cx + 6.5f, cy - r - 12f)
-            close()
-        }
-        canvas.drawPath(lubber, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent; style = Paint.Style.FILL })
 
         canvas.save()
         canvas.rotate(-headingDeg, cx, cy)
 
         val tickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
+            color = if (isMinimalist) MinimalistTheme.TEXT_DARK else Color.WHITE
             style = Paint.Style.STROKE
         }
         for (deg in 0 until 360 step 15) {
             val rad = Math.toRadians((deg - 90).toDouble())
             val major = (deg % 90 == 0)
             tickPaint.strokeWidth = if (major) 2.0f else 1.1f
-            tickPaint.alpha = if (major) 255 else 135
+            tickPaint.alpha = if (major) 240 else 135
             val innerR = if (major) r * 0.78f else r * 0.88f
             canvas.drawLine(
                 (cx + cos(rad) * innerR).toFloat(),
@@ -1982,38 +2043,44 @@ object CompassHomeWidgetHelper {
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
         }
-        dirPaint.color = Color.parseColor("#FF3B30")
+        dirPaint.color = if (isMinimalist) MinimalistTheme.TEXT_DARK else Color.parseColor("#FF3B30")
         canvas.drawText("N", cx, cy - r * 0.53f, dirPaint)
-        dirPaint.color = Color.WHITE
+        dirPaint.color = if (isMinimalist) MinimalistTheme.TEXT_DARK else Color.WHITE
         canvas.drawText("S", cx, cy + r * 0.68f, dirPaint)
         canvas.drawText("E", cx + r * 0.62f, cy + 4.5f, dirPaint)
         canvas.drawText("W", cx - r * 0.62f, cy + 4.5f, dirPaint)
 
-        // מחט צפון (אדומה) ומחט דרום (כסופה)
         val northNeedle = Path().apply {
             moveTo(cx, cy - r * 0.46f)
-            lineTo(cx - r * 0.10f, cy)
-            lineTo(cx + r * 0.10f, cy)
+            lineTo(cx - r * 0.11f, cy)
+            lineTo(cx + r * 0.11f, cy)
             close()
         }
         val southNeedle = Path().apply {
             moveTo(cx, cy + r * 0.46f)
-            lineTo(cx - r * 0.10f, cy)
-            lineTo(cx + r * 0.10f, cy)
+            lineTo(cx - r * 0.11f, cy)
+            lineTo(cx + r * 0.11f, cy)
             close()
         }
-        canvas.drawPath(southNeedle, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#B0BEC5"); style = Paint.Style.FILL })
-        canvas.drawPath(northNeedle, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#FF3B30"); style = Paint.Style.FILL })
+        if (isMinimalist) {
+            canvas.drawPath(northNeedle, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#9AA5A0"); style = Paint.Style.FILL })
+            canvas.drawPath(southNeedle, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#F0544F"); style = Paint.Style.FILL })
+        } else {
+            canvas.drawPath(southNeedle, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#B0BEC5"); style = Paint.Style.FILL })
+            canvas.drawPath(northNeedle, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#FF3B30"); style = Paint.Style.FILL })
+        }
         canvas.restore()
 
-        canvas.drawCircle(cx, cy, 4.5f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; style = Paint.Style.FILL })
+        canvas.drawCircle(cx, cy, 4.5f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = if (isMinimalist) MinimalistTheme.COMPASS_DIAL_RING_BG else Color.WHITE
+            style = Paint.Style.FILL
+        })
 
-        // 4. תצוגת מעלות, כיוון ושדה מגנטי בתחתית הווידג'ט
         val dirsHeb = listOf("צפון (N)", "צפון-מזרח (NE)", "מזרח (E)", "דרום-מזרח (SE)", "דרום (S)", "דרום-מערב (SW)", "מערב (W)", "צפון-מערב (NW)")
         val dirIdx = (((headingDeg + 22.5f) % 360f) / 45f).toInt().coerceIn(0, 7)
 
         val degPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
+            color = if (isMinimalist) MinimalistTheme.TEXT_DARK else Color.WHITE
             textSize = 19f
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
@@ -2030,7 +2097,7 @@ object CompassHomeWidgetHelper {
         )
 
         val subPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = accent
+            color = if (isMinimalist) MinimalistTheme.TEXT_MUTED else accent
             textSize = 11f
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
