@@ -113,21 +113,35 @@ object AuroraBorealisTheme {
     }
 
     fun styleAuroraSymbol(tv: TextView, symbol: String, isPressed: Boolean = false) {
-        val isOperator = symbol in listOf("÷", "×", "−", "+", "=")
+        val activity = tv.context as? MainActivity
+        val isOperator = symbol in listOf("÷", "×", "−", "-", "+", "=")
         val isCommand = symbol in listOf("AC", "⌫", "%", "MC", "MR", "M+", "M-")
 
-        val customInk = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_TEXT_ICONS]) {
-            MinimalistTheme.TEXT_CHARCOAL
-        } else null
+        val approxBtnBg = when {
+            isOperator -> AURORA_PRIMARY
+            isCommand -> if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_MEM_CMD_KEYS]) {
+                MinimalistTheme.getSlotEffectiveColor(MinimalistTheme.SLOT_MEM_CMD_KEYS, Color.rgb(160, 195, 210))
+            } else Color.rgb(45, 70, 85)
+            else -> if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_NUM_KEYS]) {
+                MinimalistTheme.getSlotEffectiveColor(MinimalistTheme.SLOT_NUM_KEYS, Color.rgb(24, 42, 54))
+            } else Color.rgb(24, 42, 54)
+        }
 
-        val textColor = when {
+        val hasCustomSymbolColor = MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_NUM_TEXT] ||
+                MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_OP_TEXT] ||
+                MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_MEM_CMD_TEXT] ||
+                MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_TEXT_ICONS]
+
+        val rawColor = when {
             isPressed -> Color.WHITE
-            customInk != null && !isOperator -> customInk
+            hasCustomSymbolColor && activity != null ->
+                MinimalistTheme.resolveKeypadSymbolTextColor(activity, symbol, approxBtnBg)
             isOperator -> EMERALD_NIGHT
             isCommand -> AURORA_PRIMARY
             else -> Color.WHITE
         }
-        tv.setTextColor(textColor)
+        val safeTextColor = MinimalistTheme.ensureReadableTextOnBg(rawColor, approxBtnBg, 2.3)
+        tv.setTextColor(safeTextColor)
 
         val displaySym = if (symbol == "-") "−" else symbol
         if (displaySym in listOf("sin", "cos", "tan", "log", "ln", "x²", "x³", "x^y", "e")) {
@@ -161,7 +175,7 @@ object AuroraBorealisTheme {
         }
         val radius = activity.dp(auroraCornerPt).toFloat()
         val isEqualsOrMul = symbol in listOf("=", "×")
-        val isOperator = symbol in listOf("÷", "×", "−", "+", "=")
+        val isOperator = symbol in listOf("÷", "×", "−", "-", "+", "=")
         val isCommand = symbol in listOf("AC", "⌫", "%") || isMem
         val boost = if (isPressed) 50 else 0
 
@@ -205,13 +219,16 @@ object AuroraBorealisTheme {
             setColor(Color.argb(if (isPressed) 50 else 125, 0, 0, 0))
         }
 
+        val defaultBorderCol = Color.argb(if (isPressed) 220 else 110, Color.red(AURORA_PRIMARY), Color.green(AURORA_PRIMARY), Color.blue(AURORA_PRIMARY))
+        val borderStrokeCol = MinimalistTheme.resolveBorderStrokeColor(activity, defaultBorderCol)
+
         val glassBody = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
             intArrayOf(topColor, bottomColor)
         ).apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = radius
-            setStroke(activity.dp(1f), Color.argb(if (isPressed) 220 else 110, Color.red(AURORA_PRIMARY), Color.green(AURORA_PRIMARY), Color.blue(AURORA_PRIMARY)))
+            setStroke(activity.dp(1.2f), borderStrokeCol)
         }
 
         val specularTopEdge = GradientDrawable(
@@ -266,7 +283,8 @@ object AuroraBorealisTheme {
         ).apply {
             cornerRadius = radius
             if (!isDrawer) {
-                setStroke(activity.dp(1.2f), Color.argb(125, Color.red(AURORA_PRIMARY), Color.green(AURORA_PRIMARY), Color.blue(AURORA_PRIMARY)))
+                val defBorder = Color.argb(125, Color.red(AURORA_PRIMARY), Color.green(AURORA_PRIMARY), Color.blue(AURORA_PRIMARY))
+                setStroke(activity.dp(1.2f), MinimalistTheme.resolveBorderStrokeColor(activity, defBorder))
             }
         }
 
