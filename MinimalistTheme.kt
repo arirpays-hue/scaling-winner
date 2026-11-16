@@ -20,6 +20,22 @@ import android.widget.*
 import java.util.Locale
 import kotlin.math.*
 
+data class ThemePalettePreset(
+    val id: String,
+    val name: String,
+    val primaryAccent: Int,
+    val secondaryAccent: Int,
+    val mainBg: Int,
+    val cardBg: Int,
+    val logoBg: Int,
+    val logoText: Int,
+    val memKeysBg: Int,
+    val numKeysBg: Int,
+    val activePillBg: Int,
+    val textIconsColor: Int,
+    val auroraBg3: Int = Color.parseColor("#1B0F2E")
+)
+
 object MinimalistTheme {
 
     const val MINIMALIST_THEME_NAME = "עיצוב מינימליסטי"
@@ -62,6 +78,427 @@ object MinimalistTheme {
     val slotBrightness = FloatArray(TOTAL_COLOR_SLOTS) { 1.0f }
     val slotOpacity = FloatArray(TOTAL_COLOR_SLOTS) { 1.0f }
     var selectedElementSlot: Int = SLOT_ACTION_1
+    var activePaletteId: String = "min_default"
+
+    // =========================================================================
+    // 1. 12 פלטות פסטל ייעודיות לערכת הנושא "עיצוב מינימליסטי"
+    // =========================================================================
+    val minimalistPalettes: List<ThemePalettePreset> = listOf(
+        ThemePalettePreset(
+            id = "min_default", name = "🌿 מרווה ואפרסק (מקורי)",
+            primaryAccent = Color.parseColor("#FFA48E"), secondaryAccent = Color.parseColor("#FFE094"),
+            mainBg = Color.parseColor("#FCF9F5"), cardBg = Color.parseColor("#FFFFFF"),
+            logoBg = Color.parseColor("#FFE094"), logoText = Color.parseColor("#2C2C2C"),
+            memKeysBg = Color.parseColor("#B1D4F9"), numKeysBg = Color.parseColor("#FFFFFF"),
+            activePillBg = Color.parseColor("#A3D5B5"), textIconsColor = Color.parseColor("#2C2C2C")
+        ),
+        ThemePalettePreset(
+            id = "min_sakura", name = "🌸 פריחת הדובדבן (Sakura)",
+            primaryAccent = Color.parseColor("#F48FB1"), secondaryAccent = Color.parseColor("#FFCCBC"),
+            mainBg = Color.parseColor("#FFF8FA"), cardBg = Color.parseColor("#FFFFFF"),
+            logoBg = Color.parseColor("#F8BBD0"), logoText = Color.parseColor("#3B232E"),
+            memKeysBg = Color.parseColor("#E1BEE7"), numKeysBg = Color.parseColor("#FFFFFF"),
+            activePillBg = Color.parseColor("#F8BBD0"), textIconsColor = Color.parseColor("#3B232E")
+        ),
+        ThemePalettePreset(
+            id = "min_nordic", name = "🌊 חוף נורדי (Nordic Breeze)",
+            primaryAccent = Color.parseColor("#7FB3D5"), secondaryAccent = Color.parseColor("#F9E79F"),
+            mainBg = Color.parseColor("#F4F8FB"), cardBg = Color.parseColor("#FFFFFF"),
+            logoBg = Color.parseColor("#AED6F1"), logoText = Color.parseColor("#1B2A38"),
+            memKeysBg = Color.parseColor("#A3E4D7"), numKeysBg = Color.parseColor("#FFFFFF"),
+            activePillBg = Color.parseColor("#A2D9CE"), textIconsColor = Color.parseColor("#1B2A38")
+        ),
+        ThemePalettePreset(
+            id = "min_citrus", name = "🍋 לימונענע קיצית (Citrus Mint)",
+            primaryAccent = Color.parseColor("#FFD54F"), secondaryAccent = Color.parseColor("#FFAB91"),
+            mainBg = Color.parseColor("#FEFCF3"), cardBg = Color.parseColor("#FFFFFF"),
+            logoBg = Color.parseColor("#FFF59D"), logoText = Color.parseColor("#283322"),
+            memKeysBg = Color.parseColor("#80CBC4"), numKeysBg = Color.parseColor("#FFFFFF"),
+            activePillBg = Color.parseColor("#C5E1A5"), textIconsColor = Color.parseColor("#283322")
+        ),
+        ThemePalettePreset(
+            id = "min_lavender", name = "💜 שדות לבנדר (Provence)",
+            primaryAccent = Color.parseColor("#B39DDB"), secondaryAccent = Color.parseColor("#F48FB1"),
+            mainBg = Color.parseColor("#F8F5FC"), cardBg = Color.parseColor("#FFFFFF"),
+            logoBg = Color.parseColor("#D1C4E9"), logoText = Color.parseColor("#2A2138"),
+            memKeysBg = Color.parseColor("#9FA8DA"), numKeysBg = Color.parseColor("#FFFFFF"),
+            activePillBg = Color.parseColor("#CE93D8"), textIconsColor = Color.parseColor("#2A2138")
+        ),
+        ThemePalettePreset(
+            id = "min_matcha", name = "🍵 מאצ׳ה יפנית (Matcha Latte)",
+            primaryAccent = Color.parseColor("#81C784"), secondaryAccent = Color.parseColor("#DCE775"),
+            mainBg = Color.parseColor("#F5F8F2"), cardBg = Color.parseColor("#FFFFFF"),
+            logoBg = Color.parseColor("#C8E6C9"), logoText = Color.parseColor("#1E2E22"),
+            memKeysBg = Color.parseColor("#B2DFDB"), numKeysBg = Color.parseColor("#FFFFFF"),
+            activePillBg = Color.parseColor("#A5D6A7"), textIconsColor = Color.parseColor("#1E2E22")
+        ),
+        ThemePalettePreset(
+            id = "min_terracotta", name = "🍑 טרקוטה וחול (Desert Sand)",
+            primaryAccent = Color.parseColor("#E59866"), secondaryAccent = Color.parseColor("#F8C471"),
+            mainBg = Color.parseColor("#FAF3EB"), cardBg = Color.parseColor("#FFFDF9"),
+            logoBg = Color.parseColor("#FAD7A0"), logoText = Color.parseColor("#36261E"),
+            memKeysBg = Color.parseColor("#F5CBA7"), numKeysBg = Color.parseColor("#FFFDF9"),
+            activePillBg = Color.parseColor("#A9DFBF"), textIconsColor = Color.parseColor("#36261E")
+        ),
+        ThemePalettePreset(
+            id = "min_arctic", name = "☁️ ענני קוטב (Arctic Cotton)",
+            primaryAccent = Color.parseColor("#90CAF9"), secondaryAccent = Color.parseColor("#80DEEA"),
+            mainBg = Color.parseColor("#F7FAFC"), cardBg = Color.parseColor("#FFFFFF"),
+            logoBg = Color.parseColor("#BBDEFB"), logoText = Color.parseColor("#1E293B"),
+            memKeysBg = Color.parseColor("#B3E5FC"), numKeysBg = Color.parseColor("#FFFFFF"),
+            activePillBg = Color.parseColor("#9FA8DA"), textIconsColor = Color.parseColor("#1E293B")
+        ),
+        ThemePalettePreset(
+            id = "min_berry", name = "🍓 פירות יער ושמנת (Berry Cream)",
+            primaryAccent = Color.parseColor("#EF9A9A"), secondaryAccent = Color.parseColor("#FFCC80"),
+            mainBg = Color.parseColor("#FDF7F7"), cardBg = Color.parseColor("#FFFFFF"),
+            logoBg = Color.parseColor("#FFCDD2"), logoText = Color.parseColor("#381F26"),
+            memKeysBg = Color.parseColor("#F8BBD0"), numKeysBg = Color.parseColor("#FFFFFF"),
+            activePillBg = Color.parseColor("#F48FB1"), textIconsColor = Color.parseColor("#381F26")
+        ),
+        ThemePalettePreset(
+            id = "min_sunflower", name = "🌻 חמנייה ופשתן (Sunflower)",
+            primaryAccent = Color.parseColor("#FFE082"), secondaryAccent = Color.parseColor("#FFAB91"),
+            mainBg = Color.parseColor("#FBF9F2"), cardBg = Color.parseColor("#FFFFFF"),
+            logoBg = Color.parseColor("#FFECB3"), logoText = Color.parseColor("#2F281E"),
+            memKeysBg = Color.parseColor("#C5E1A5"), numKeysBg = Color.parseColor("#FFFFFF"),
+            activePillBg = Color.parseColor("#FFD54F"), textIconsColor = Color.parseColor("#2F281E")
+        ),
+        ThemePalettePreset(
+            id = "min_pistachio", name = "🥜 פיסטוק וקרמל (Pistachio)",
+            primaryAccent = Color.parseColor("#AED581"), secondaryAccent = Color.parseColor("#FFCC80"),
+            mainBg = Color.parseColor("#F7F9F4"), cardBg = Color.parseColor("#FFFFFF"),
+            logoBg = Color.parseColor("#DCEDC8"), logoText = Color.parseColor("#2B2520"),
+            memKeysBg = Color.parseColor("#A7FFEB"), numKeysBg = Color.parseColor("#FFFFFF"),
+            activePillBg = Color.parseColor("#C5E1A5"), textIconsColor = Color.parseColor("#2B2520")
+        ),
+        ThemePalettePreset(
+            id = "min_pearl", name = "🐚 צדף ופנינה (Pearl Shell)",
+            primaryAccent = Color.parseColor("#F4A298"), secondaryAccent = Color.parseColor("#F5E1B8"),
+            mainBg = Color.parseColor("#F6F6F8"), cardBg = Color.parseColor("#FFFFFF"),
+            logoBg = Color.parseColor("#E8ECEF"), logoText = Color.parseColor("#2C2C2C"),
+            memKeysBg = Color.parseColor("#B2DFDB"), numKeysBg = Color.parseColor("#FFFFFF"),
+            activePillBg = Color.parseColor("#CFD8DC"), textIconsColor = Color.parseColor("#2C2C2C")
+        )
+    )
+
+    // =========================================================================
+    // 2. 12 פלטות זוהר צפוני ייעודיות לערכת הנושא "Aurora Borealis"
+    // =========================================================================
+    val auroraPalettes: List<ThemePalettePreset> = listOf(
+        ThemePalettePreset(
+            id = "aur_default", name = "🌌 זוהר ארקטי (Cyan & Emerald)",
+            primaryAccent = Color.parseColor("#00F5D4"), secondaryAccent = Color.parseColor("#10B981"),
+            mainBg = Color.parseColor("#0A1C1A"), cardBg = Color.parseColor("#07111E"),
+            logoBg = Color.parseColor("#0F2830"), logoText = Color.parseColor("#00F5D4"),
+            memKeysBg = Color.parseColor("#10B981"), numKeysBg = Color.parseColor("#152632"),
+            activePillBg = Color.parseColor("#00F5D4"), textIconsColor = Color.WHITE,
+            auroraBg3 = Color.parseColor("#1B0F2E")
+        ),
+        ThemePalettePreset(
+            id = "aur_magenta", name = "🔮 ערפילית סגולה (Cosmic Magenta)",
+            primaryAccent = Color.parseColor("#FF4DFF"), secondaryAccent = Color.parseColor("#9D4EDD"),
+            mainBg = Color.parseColor("#180A29"), cardBg = Color.parseColor("#11071F"),
+            logoBg = Color.parseColor("#291042"), logoText = Color.parseColor("#FF80FF"),
+            memKeysBg = Color.parseColor("#C77DFF"), numKeysBg = Color.parseColor("#221238"),
+            activePillBg = Color.parseColor("#FF4DFF"), textIconsColor = Color.WHITE,
+            auroraBg3 = Color.parseColor("#3C096C")
+        ),
+        ThemePalettePreset(
+            id = "aur_glacier", name = "❄️ קרחון כחול (Glacier Ice)",
+            primaryAccent = Color.parseColor("#00E5FF"), secondaryAccent = Color.parseColor("#3A86FF"),
+            mainBg = Color.parseColor("#061526"), cardBg = Color.parseColor("#040E1A"),
+            logoBg = Color.parseColor("#0B2545"), logoText = Color.parseColor("#00E5FF"),
+            memKeysBg = Color.parseColor("#48CAE4"), numKeysBg = Color.parseColor("#10253E"),
+            activePillBg = Color.parseColor("#00E5FF"), textIconsColor = Color.WHITE,
+            auroraBg3 = Color.parseColor("#1D3557")
+        ),
+        ThemePalettePreset(
+            id = "aur_solar", name = "☄️ שמש חצות (Solar Flare)",
+            primaryAccent = Color.parseColor("#FF9E00"), secondaryAccent = Color.parseColor("#FF0055"),
+            mainBg = Color.parseColor("#220A16"), cardBg = Color.parseColor("#17060F"),
+            logoBg = Color.parseColor("#381022"), logoText = Color.parseColor("#FFB703"),
+            memKeysBg = Color.parseColor("#FB5607"), numKeysBg = Color.parseColor("#2E1220"),
+            activePillBg = Color.parseColor("#FF9E00"), textIconsColor = Color.WHITE,
+            auroraBg3 = Color.parseColor("#3D0814")
+        ),
+        ThemePalettePreset(
+            id = "aur_krypton", name = "🧪 קריפטון ירוק (Bio-Luminescence)",
+            primaryAccent = Color.parseColor("#39FF14"), secondaryAccent = Color.parseColor("#00E676"),
+            mainBg = Color.parseColor("#071C0E"), cardBg = Color.parseColor("#041208"),
+            logoBg = Color.parseColor("#0E3019"), logoText = Color.parseColor("#39FF14"),
+            memKeysBg = Color.parseColor("#69F0AE"), numKeysBg = Color.parseColor("#102B18"),
+            activePillBg = Color.parseColor("#39FF14"), textIconsColor = Color.WHITE,
+            auroraBg3 = Color.parseColor("#082E26")
+        ),
+        ThemePalettePreset(
+            id = "aur_sakura", name = "🌸 סקורה לילי (Neon Sakura)",
+            primaryAccent = Color.parseColor("#FF758F"), secondaryAccent = Color.parseColor("#FF4D6D"),
+            mainBg = Color.parseColor("#1F0B15"), cardBg = Color.parseColor("#14070E"),
+            logoBg = Color.parseColor("#361324"), logoText = Color.parseColor("#FF8FA3"),
+            memKeysBg = Color.parseColor("#FFB3C1"), numKeysBg = Color.parseColor("#2B111E"),
+            activePillBg = Color.parseColor("#FF758F"), textIconsColor = Color.WHITE,
+            auroraBg3 = Color.parseColor("#2D0F38")
+        ),
+        ThemePalettePreset(
+            id = "aur_electric", name = "⚡ פלזמה חשמלית (Electric Indigo)",
+            primaryAccent = Color.parseColor("#00BBF9"), secondaryAccent = Color.parseColor("#9B5DE5"),
+            mainBg = Color.parseColor("#0E0B26"), cardBg = Color.parseColor("#08061A"),
+            logoBg = Color.parseColor("#1B1445"), logoText = Color.parseColor("#00F5D4"),
+            memKeysBg = Color.parseColor("#9B5DE5"), numKeysBg = Color.parseColor("#171338"),
+            activePillBg = Color.parseColor("#00BBF9"), textIconsColor = Color.WHITE,
+            auroraBg3 = Color.parseColor("#280B45")
+        ),
+        ThemePalettePreset(
+            id = "aur_gold", name = "👑 זהב צפוני (Royal Gold Aurora)",
+            primaryAccent = Color.parseColor("#FFD700"), secondaryAccent = Color.parseColor("#FFA200"),
+            mainBg = Color.parseColor("#1C1507"), cardBg = Color.parseColor("#120E04"),
+            logoBg = Color.parseColor("#2E230C"), logoText = Color.parseColor("#FFD700"),
+            memKeysBg = Color.parseColor("#FFCA3A"), numKeysBg = Color.parseColor("#261D0B"),
+            activePillBg = Color.parseColor("#FFD700"), textIconsColor = Color.WHITE,
+            auroraBg3 = Color.parseColor("#24112E")
+        ),
+        ThemePalettePreset(
+            id = "aur_crimson", name = "🩸 זוהר ארגמן (Crimson Aurora)",
+            primaryAccent = Color.parseColor("#FF2A54"), secondaryAccent = Color.parseColor("#FF6B6B"),
+            mainBg = Color.parseColor("#21070C"), cardBg = Color.parseColor("#140407"),
+            logoBg = Color.parseColor("#380C15"), logoText = Color.parseColor("#FF4D6D"),
+            memKeysBg = Color.parseColor("#FF758F"), numKeysBg = Color.parseColor("#2E0B13"),
+            activePillBg = Color.parseColor("#FF2A54"), textIconsColor = Color.WHITE,
+            auroraBg3 = Color.parseColor("#2B0922")
+        ),
+        ThemePalettePreset(
+            id = "aur_turquoise", name = "🐬 לגונה זוהרת (Teal Lagoon)",
+            primaryAccent = Color.parseColor("#64DFDF"), secondaryAccent = Color.parseColor("#80FFDB"),
+            mainBg = Color.parseColor("#061E24"), cardBg = Color.parseColor("#041418"),
+            logoBg = Color.parseColor("#0C323B"), logoText = Color.parseColor("#80FFDB"),
+            memKeysBg = Color.parseColor("#56CFE1"), numKeysBg = Color.parseColor("#0E2930"),
+            activePillBg = Color.parseColor("#64DFDF"), textIconsColor = Color.WHITE,
+            auroraBg3 = Color.parseColor("#141836")
+        ),
+        ThemePalettePreset(
+            id = "aur_ultraviolet", name = "🛸 אולטרה-סגול (Ultraviolet)",
+            primaryAccent = Color.parseColor("#E0AAFF"), secondaryAccent = Color.parseColor("#7209B7"),
+            mainBg = Color.parseColor("#10002B"), cardBg = Color.parseColor("#09001A"),
+            logoBg = Color.parseColor("#240046"), logoText = Color.parseColor("#E0AAFF"),
+            memKeysBg = Color.parseColor("#C77DFF"), numKeysBg = Color.parseColor("#1B063B"),
+            activePillBg = Color.parseColor("#E0AAFF"), textIconsColor = Color.WHITE,
+            auroraBg3 = Color.parseColor("#3C096C")
+        ),
+        ThemePalettePreset(
+            id = "aur_mint_berry", name = "🍧 מנטה ופטל (Cyber Mint Berry)",
+            primaryAccent = Color.parseColor("#00F5D4"), secondaryAccent = Color.parseColor("#F15BB5"),
+            mainBg = Color.parseColor("#0B1924"), cardBg = Color.parseColor("#170C24"),
+            logoBg = Color.parseColor("#211233"), logoText = Color.parseColor("#00F5D4"),
+            memKeysBg = Color.parseColor("#F15BB5"), numKeysBg = Color.parseColor("#152331"),
+            activePillBg = Color.parseColor("#00F5D4"), textIconsColor = Color.WHITE,
+            auroraBg3 = Color.parseColor("#2E0F29")
+        )
+    )
+
+    // =========================================================================
+    // 3. 12 פלטות זכוכית ייעודיות לערכת הנושא "Liquid Glass Pro"
+    // =========================================================================
+    val liquidGlassPalettes: List<ThemePalettePreset> = listOf(
+        ThemePalettePreset(
+            id = "gls_default", name = "💎 זכוכית קלאסית (iOS Amber & Blue)",
+            primaryAccent = Color.parseColor("#FF9F0A"), secondaryAccent = Color.parseColor("#64B5F6"),
+            mainBg = Color.parseColor("#0D111A"), cardBg = Color.parseColor("#1E2638"),
+            logoBg = Color.parseColor("#1E2638"), logoText = Color.WHITE,
+            memKeysBg = Color.parseColor("#90A4AE"), numKeysBg = Color.parseColor("#2A344A"),
+            activePillBg = Color.parseColor("#64B5F6"), textIconsColor = Color.WHITE
+        ),
+        ThemePalettePreset(
+            id = "gls_crystal", name = "🧊 זכוכית קפואה (Frosted Cyan)",
+            primaryAccent = Color.parseColor("#00E5FF"), secondaryAccent = Color.parseColor("#40C4FF"),
+            mainBg = Color.parseColor("#09131C"), cardBg = Color.parseColor("#162838"),
+            logoBg = Color.parseColor("#162838"), logoText = Color.parseColor("#E0F7FA"),
+            memKeysBg = Color.parseColor("#80DEEA"), numKeysBg = Color.parseColor("#1F3547"),
+            activePillBg = Color.parseColor("#00E5FF"), textIconsColor = Color.WHITE
+        ),
+        ThemePalettePreset(
+            id = "gls_ruby", name = "🍷 זכוכית רובי (Ruby Quartz)",
+            primaryAccent = Color.parseColor("#FF4D6D"), secondaryAccent = Color.parseColor("#FF758F"),
+            mainBg = Color.parseColor("#180A10"), cardBg = Color.parseColor("#2E1520"),
+            logoBg = Color.parseColor("#2E1520"), logoText = Color.parseColor("#FFCCD5"),
+            memKeysBg = Color.parseColor("#F48FB1"), numKeysBg = Color.parseColor("#3A1B28"),
+            activePillBg = Color.parseColor("#FF4D6D"), textIconsColor = Color.WHITE
+        ),
+        ThemePalettePreset(
+            id = "gls_emerald", name = "🌿 זכוכית אמרלד (Emerald Jade)",
+            primaryAccent = Color.parseColor("#00E676"), secondaryAccent = Color.parseColor("#69F0AE"),
+            mainBg = Color.parseColor("#081610"), cardBg = Color.parseColor("#142E22"),
+            logoBg = Color.parseColor("#142E22"), logoText = Color.parseColor("#B9F6CA"),
+            memKeysBg = Color.parseColor("#80CBC4"), numKeysBg = Color.parseColor("#1C3B2D"),
+            activePillBg = Color.parseColor("#00E676"), textIconsColor = Color.WHITE
+        ),
+        ThemePalettePreset(
+            id = "gls_amethyst", name = "🔮 זכוכית אמטיסט (Amethyst Pro)",
+            primaryAccent = Color.parseColor("#B388FF"), secondaryAccent = Color.parseColor("#EA80FC"),
+            mainBg = Color.parseColor("#110C1D"), cardBg = Color.parseColor("#241A3B"),
+            logoBg = Color.parseColor("#241A3B"), logoText = Color.parseColor("#EDE7F6"),
+            memKeysBg = Color.parseColor("#CE93D8"), numKeysBg = Color.parseColor("#30234D"),
+            activePillBg = Color.parseColor("#B388FF"), textIconsColor = Color.WHITE
+        ),
+        ThemePalettePreset(
+            id = "gls_champagne", name = "🥂 זכוכית שמפניה (Champagne Gold)",
+            primaryAccent = Color.parseColor("#FFD54F"), secondaryAccent = Color.parseColor("#FFB300"),
+            mainBg = Color.parseColor("#17140B"), cardBg = Color.parseColor("#2E2817"),
+            logoBg = Color.parseColor("#2E2817"), logoText = Color.parseColor("#FFF8E1"),
+            memKeysBg = Color.parseColor("#FFE082"), numKeysBg = Color.parseColor("#3B331E"),
+            activePillBg = Color.parseColor("#FFD54F"), textIconsColor = Color.WHITE
+        ),
+        ThemePalettePreset(
+            id = "gls_titanium", name = "🌑 טיטניום כהה (Natural Titanium)",
+            primaryAccent = Color.parseColor("#90A4AE"), secondaryAccent = Color.parseColor("#B0BEC5"),
+            mainBg = Color.parseColor("#0A0C0E"), cardBg = Color.parseColor("#1C2026"),
+            logoBg = Color.parseColor("#1C2026"), logoText = Color.parseColor("#ECEFF1"),
+            memKeysBg = Color.parseColor("#78909C"), numKeysBg = Color.parseColor("#262B33"),
+            activePillBg = Color.parseColor("#B0BEC5"), textIconsColor = Color.WHITE
+        ),
+        ThemePalettePreset(
+            id = "gls_sapphire", name = "🌊 זכוכית ספיר (Deep Sapphire)",
+            primaryAccent = Color.parseColor("#448AFF"), secondaryAccent = Color.parseColor("#82B1FF"),
+            mainBg = Color.parseColor("#070E1E"), cardBg = Color.parseColor("#142240"),
+            logoBg = Color.parseColor("#142240"), logoText = Color.parseColor("#E3F2FD"),
+            memKeysBg = Color.parseColor("#90CAF9"), numKeysBg = Color.parseColor("#1D3059"),
+            activePillBg = Color.parseColor("#448AFF"), textIconsColor = Color.WHITE
+        ),
+        ThemePalettePreset(
+            id = "gls_rosegold", name = "🍑 זכוכית רוז-גולד (Rose Gold)",
+            primaryAccent = Color.parseColor("#FF80AB"), secondaryAccent = Color.parseColor("#FFAB91"),
+            mainBg = Color.parseColor("#1A0E14"), cardBg = Color.parseColor("#331C28"),
+            logoBg = Color.parseColor("#331C28"), logoText = Color.parseColor("#FCE4EC"),
+            memKeysBg = Color.parseColor("#F8BBD0"), numKeysBg = Color.parseColor("#422534"),
+            activePillBg = Color.parseColor("#FF80AB"), textIconsColor = Color.WHITE
+        ),
+        ThemePalettePreset(
+            id = "gls_cyber", name = "⚡ זכוכית סייבר (Cyber Neon)",
+            primaryAccent = Color.parseColor("#18FFFF"), secondaryAccent = Color.parseColor("#FF4081"),
+            mainBg = Color.parseColor("#090C18"), cardBg = Color.parseColor("#161D36"),
+            logoBg = Color.parseColor("#161D36"), logoText = Color.parseColor("#18FFFF"),
+            memKeysBg = Color.parseColor("#FF80AB"), numKeysBg = Color.parseColor("#1F2847"),
+            activePillBg = Color.parseColor("#18FFFF"), textIconsColor = Color.WHITE
+        ),
+        ThemePalettePreset(
+            id = "gls_sunset", name = "🌅 זכוכית שקיעה (Sunset Horizon)",
+            primaryAccent = Color.parseColor("#FF6E40"), secondaryAccent = Color.parseColor("#FFAB40"),
+            mainBg = Color.parseColor("#1A0D0A"), cardBg = Color.parseColor("#361B15"),
+            logoBg = Color.parseColor("#361B15"), logoText = Color.parseColor("#FBE9E7"),
+            memKeysBg = Color.parseColor("#FFCCBC"), numKeysBg = Color.parseColor("#45231B"),
+            activePillBg = Color.parseColor("#FF6E40"), textIconsColor = Color.WHITE
+        ),
+        ThemePalettePreset(
+            id = "gls_mint", name = "🍃 זכוכית מנטה (Arctic Mint Glass)",
+            primaryAccent = Color.parseColor("#64FFDA"), secondaryAccent = Color.parseColor("#1DE9B6"),
+            mainBg = Color.parseColor("#071715"), cardBg = Color.parseColor("#12302C"),
+            logoBg = Color.parseColor("#12302C"), logoText = Color.parseColor("#E0F2F1"),
+            memKeysBg = Color.parseColor("#80CBC4"), numKeysBg = Color.parseColor("#1A403B"),
+            activePillBg = Color.parseColor("#64FFDA"), textIconsColor = Color.WHITE
+        )
+    )
+
+    // =========================================================================
+    // 4. 12 פלטות קלאסיות ייעודיות לערכת הנושא "עיצוב רגיל (קלאסי)"
+    // =========================================================================
+    val classicPalettes: List<ThemePalettePreset> = listOf(
+        ThemePalettePreset(
+            id = "cls_default", name = "🔵 כחול קלאסי (Classic Pro)",
+            primaryAccent = Color.parseColor("#64B5F6"), secondaryAccent = Color.parseColor("#FF9F0A"),
+            mainBg = Color.parseColor("#08090C"), cardBg = Color.parseColor("#14171F"),
+            logoBg = Color.parseColor("#14171F"), logoText = Color.WHITE,
+            memKeysBg = Color.parseColor("#1E2430"), numKeysBg = Color.parseColor("#171A24"),
+            activePillBg = Color.parseColor("#64B5F6"), textIconsColor = Color.WHITE
+        ),
+        ThemePalettePreset(
+            id = "cls_oled", name = "🌑 שחור מוחלט (Pure OLED)",
+            primaryAccent = Color.parseColor("#00E5FF"), secondaryAccent = Color.parseColor("#00B0FF"),
+            mainBg = Color.parseColor("#000000"), cardBg = Color.parseColor("#0D0D0D"),
+            logoBg = Color.parseColor("#0D0D0D"), logoText = Color.parseColor("#00E5FF"),
+            memKeysBg = Color.parseColor("#161616"), numKeysBg = Color.parseColor("#0F0F0F"),
+            activePillBg = Color.parseColor("#00E5FF"), textIconsColor = Color.WHITE
+        ),
+        ThemePalettePreset(
+            id = "cls_matrix", name = "💻 מטריקס ירוק (Matrix Code)",
+            primaryAccent = Color.parseColor("#00E676"), secondaryAccent = Color.parseColor("#76FF03"),
+            mainBg = Color.parseColor("#040B06"), cardBg = Color.parseColor("#0B190F"),
+            logoBg = Color.parseColor("#0B190F"), logoText = Color.parseColor("#00E676"),
+            memKeysBg = Color.parseColor("#122B18"), numKeysBg = Color.parseColor("#0D1F12"),
+            activePillBg = Color.parseColor("#00E676"), textIconsColor = Color.WHITE
+        ),
+        ThemePalettePreset(
+            id = "cls_cyberpunk", name = "⚡ סייברפאנק 2077 (Night City)",
+            primaryAccent = Color.parseColor("#FCEE09"), secondaryAccent = Color.parseColor("#00F0FF"),
+            mainBg = Color.parseColor("#0D0914"), cardBg = Color.parseColor("#1B122B"),
+            logoBg = Color.parseColor("#FCEE09"), logoText = Color.BLACK,
+            memKeysBg = Color.parseColor("#FF003C"), numKeysBg = Color.parseColor("#1F1530"),
+            activePillBg = Color.parseColor("#00F0FF"), textIconsColor = Color.WHITE
+        ),
+        ThemePalettePreset(
+            id = "cls_dracula", name = "🧛 דרקולה כהה (Dracula IDE)",
+            primaryAccent = Color.parseColor("#BD93F9"), secondaryAccent = Color.parseColor("#FF79C6"),
+            mainBg = Color.parseColor("#1E1F29"), cardBg = Color.parseColor("#282A36"),
+            logoBg = Color.parseColor("#282A36"), logoText = Color.parseColor("#F8F8F2"),
+            memKeysBg = Color.parseColor("#44475A"), numKeysBg = Color.parseColor("#2D303E"),
+            activePillBg = Color.parseColor("#BD93F9"), textIconsColor = Color.WHITE
+        ),
+        ThemePalettePreset(
+            id = "cls_gold", name = "👑 זהב יוקרתי (Luxury Gold)",
+            primaryAccent = Color.parseColor("#FFD700"), secondaryAccent = Color.parseColor("#FFA000"),
+            mainBg = Color.parseColor("#0C0A06"), cardBg = Color.parseColor("#1C170E"),
+            logoBg = Color.parseColor("#1C170E"), logoText = Color.parseColor("#FFD700"),
+            memKeysBg = Color.parseColor("#2B2315"), numKeysBg = Color.parseColor("#1F1910"),
+            activePillBg = Color.parseColor("#FFD700"), textIconsColor = Color.WHITE
+        ),
+        ThemePalettePreset(
+            id = "cls_crimson", name = "🔥 אדום אש (Crimson Flame)",
+            primaryAccent = Color.parseColor("#FF5252"), secondaryAccent = Color.parseColor("#FF1744"),
+            mainBg = Color.parseColor("#0F0607"), cardBg = Color.parseColor("#210D10"),
+            logoBg = Color.parseColor("#210D10"), logoText = Color.parseColor("#FF8A80"),
+            memKeysBg = Color.parseColor("#331419"), numKeysBg = Color.parseColor("#260F13"),
+            activePillBg = Color.parseColor("#FF5252"), textIconsColor = Color.WHITE
+        ),
+        ThemePalettePreset(
+            id = "cls_ocean", name = "🌊 אוקיינוס עמוק (Deep Ocean)",
+            primaryAccent = Color.parseColor("#26C6DA"), secondaryAccent = Color.parseColor("#00ACC1"),
+            mainBg = Color.parseColor("#051014"), cardBg = Color.parseColor("#0D222B"),
+            logoBg = Color.parseColor("#0D222B"), logoText = Color.parseColor("#80DEEA"),
+            memKeysBg = Color.parseColor("#143340"), numKeysBg = Color.parseColor("#0F2833"),
+            activePillBg = Color.parseColor("#26C6DA"), textIconsColor = Color.WHITE
+        ),
+        ThemePalettePreset(
+            id = "cls_sunset", name = "🌇 כתום שקיעה (Sunset Orange)",
+            primaryAccent = Color.parseColor("#FF9100"), secondaryAccent = Color.parseColor("#FF3D00"),
+            mainBg = Color.parseColor("#120905"), cardBg = Color.parseColor("#26140C"),
+            logoBg = Color.parseColor("#26140C"), logoText = Color.parseColor("#FFD180"),
+            memKeysBg = Color.parseColor("#381E12"), numKeysBg = Color.parseColor("#2B170E"),
+            activePillBg = Color.parseColor("#FF9100"), textIconsColor = Color.WHITE
+        ),
+        ThemePalettePreset(
+            id = "cls_synthwave", name = "🕹️ רטרו סינת׳ווייב (Synthwave 80s)",
+            primaryAccent = Color.parseColor("#F72585"), secondaryAccent = Color.parseColor("#4CC9F0"),
+            mainBg = Color.parseColor("#100720"), cardBg = Color.parseColor("#210F3D"),
+            logoBg = Color.parseColor("#210F3D"), logoText = Color.parseColor("#4CC9F0"),
+            memKeysBg = Color.parseColor("#3A0CA3"), numKeysBg = Color.parseColor("#28124A"),
+            activePillBg = Color.parseColor("#F72585"), textIconsColor = Color.WHITE
+        ),
+        ThemePalettePreset(
+            id = "cls_emerald", name = "🌲 יער אזמרגד (Emerald Forest)",
+            primaryAccent = Color.parseColor("#69F0AE"), secondaryAccent = Color.parseColor("#00E676"),
+            mainBg = Color.parseColor("#06120C"), cardBg = Color.parseColor("#0E261B"),
+            logoBg = Color.parseColor("#0E261B"), logoText = Color.parseColor("#B9F6CA"),
+            memKeysBg = Color.parseColor("#173B2A"), numKeysBg = Color.parseColor("#112E20"),
+            activePillBg = Color.parseColor("#69F0AE"), textIconsColor = Color.WHITE
+        ),
+        ThemePalettePreset(
+            id = "cls_monochrome", name = "♟️ מונוכרום גרפיט (Graphite Mono)",
+            primaryAccent = Color.parseColor("#E0E0E0"), secondaryAccent = Color.parseColor("#9E9E9E"),
+            mainBg = Color.parseColor("#0B0C0E"), cardBg = Color.parseColor("#1A1C20"),
+            logoBg = Color.parseColor("#1A1C20"), logoText = Color.WHITE,
+            memKeysBg = Color.parseColor("#2C2F36"), numKeysBg = Color.parseColor("#202227"),
+            activePillBg = Color.parseColor("#E0E0E0"), textIconsColor = Color.WHITE
+        )
+    )
 
     init {
         resetSlotsArrayToDefaults()
@@ -90,6 +527,137 @@ object MinimalistTheme {
         DEFAULT_TEXT_CHARCOAL          // 9: טקסט ואייקונים ראשי
     )
 
+    fun getPalettesForCurrentTheme(activity: MainActivity): List<ThemePalettePreset> {
+        return when {
+            activity.isMinimalistMode -> minimalistPalettes
+            activity.isAuroraMode -> auroraPalettes
+            activity.isIosGlassMode -> liquidGlassPalettes
+            else -> classicPalettes
+        }
+    }
+
+    // מחיל פלטת צבעים שנבחרה מסרגל הפלטות בהתאם לערכת הנושא הפעילה!
+    fun applyThemePalettePreset(activity: MainActivity, preset: ThemePalettePreset) {
+        activePaletteId = preset.id
+        val colors = intArrayOf(
+            preset.primaryAccent,   // 0: SLOT_ACTION_1
+            preset.secondaryAccent, // 1: SLOT_ACTION_2
+            preset.logoBg,          // 2: SLOT_LOGO_BG
+            preset.logoText,        // 3: SLOT_LOGO_TEXT
+            preset.mainBg,          // 4: SLOT_MAIN_BG
+            preset.cardBg,          // 5: SLOT_CARDS_INPUTS
+            preset.memKeysBg,       // 6: SLOT_MEM_CMD_KEYS
+            preset.numKeysBg,       // 7: SLOT_NUM_KEYS
+            preset.activePillBg,    // 8: SLOT_ACTIVE_PILL
+            preset.textIconsColor   // 9: SLOT_TEXT_ICONS
+        )
+        for (i in 0 until TOTAL_COLOR_SLOTS) {
+            slotCustomized[i] = true
+            slotBaseColors[i] = colors[i]
+            slotBrightness[i] = 1.0f
+            slotOpacity[i] = 1.0f
+        }
+
+        activity.primaryColor = preset.primaryAccent
+        activity.bgColor = preset.mainBg
+
+        if (activity.isAuroraMode) {
+            AuroraBorealisTheme.AURORA_PRIMARY = preset.primaryAccent
+            AuroraBorealisTheme.AURORA_SECONDARY = preset.secondaryAccent
+            AuroraBorealisTheme.EMERALD_NIGHT = preset.mainBg
+            AuroraBorealisTheme.ARCTIC_BLUE = preset.cardBg
+            AuroraBorealisTheme.COSMIC_PURPLE = preset.auroraBg3
+            AuroraBorealisTheme.saveAuroraPrefs(activity.prefs)
+        } else if (activity.isIosGlassMode) {
+            IosGlassTheme.useClassicOrangeOps = (preset.id == "gls_default")
+            IosGlassTheme.saveIosPrefs(activity.prefs)
+        }
+
+        saveMinimalistPrefs(activity.prefs)
+        activity.savePreferences()
+        activity.applyTheme()
+    }
+
+    // =========================================================================
+    // בונה את סרגל הפלטות הדינמי בראש מסך ההגדרות (מותאם אישית לכל ערכת נושא!)
+    // =========================================================================
+    fun createThemeMatchedPalettesBar(activity: MainActivity): View {
+        val isMin = activity.isMinimalistMode
+        val palettes = getPalettesForCurrentTheme(activity)
+
+        val wrapper = LinearLayout(activity).apply {
+            tag = "THEME_MATCHED_PALETTES_BAR"
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = activity.dp(10f) }
+        }
+
+        val headerTitle = when {
+            activity.isMinimalistMode -> "🎨 12 פלטות פסטל מותאמות לעיצוב מינימליסטי"
+            activity.isAuroraMode -> "🌌 12 פלטות זוהר צפוני מותאמות ל-Aurora Borealis"
+            activity.isIosGlassMode -> "💎 12 פלטות זכוכית מותאמות ל-Liquid Glass Pro"
+            else -> "🎨 12 פלטות צבעים מותאמות לעיצוב קלאסי"
+        }
+
+        val titleTv = TextView(activity).apply {
+            text = headerTitle
+            setTextColor(if (isMin) TEXT_CHARCOAL else Color.WHITE)
+            textSize = 15.5f
+            typeface = if (isMin) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
+            gravity = Gravity.RIGHT
+            setPadding(activity.dp(4f), activity.dp(4f), activity.dp(4f), activity.dp(8f))
+        }
+        wrapper.addView(titleTv)
+
+        val hScroll = HorizontalScrollView(activity).apply {
+            isHorizontalScrollBarEnabled = false
+        }
+        val row = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(activity.dp(2f), activity.dp(2f), activity.dp(2f), activity.dp(2f))
+        }
+
+        for (preset in palettes) {
+            val isSelected = (activePaletteId == preset.id)
+            val chipBgColor = if (isMin) preset.activePillBg else preset.cardBg
+            val lum = (0.299 * Color.red(chipBgColor) + 0.587 * Color.green(chipBgColor) + 0.114 * Color.blue(chipBgColor)) / 255.0
+            val readableTextCol = if (lum > 0.56) Color.parseColor("#242424") else Color.WHITE
+
+            val chip = TextView(activity).apply {
+                tag = "PRO_STAR_CHIP"
+                text = if (isSelected) "✓ ${preset.name}" else preset.name
+                setTextColor(readableTextCol)
+                textSize = 13.5f
+                typeface = if (isSelected) Typeface.DEFAULT_BOLD else Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                gravity = Gravity.CENTER
+                setPadding(activity.dp(16f), activity.dp(10f), activity.dp(16f), activity.dp(10f))
+                background = GradientDrawable().apply {
+                    cornerRadius = activity.dp(999f).toFloat()
+                    setColor(chipBgColor)
+                    val strokeW = activity.dp(if (isSelected) 2.2f else 1.4f)
+                    val strokeCol = if (isSelected && isMin) Color.parseColor("#2C2C2C") else preset.primaryAccent
+                    setStroke(strokeW, strokeCol)
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { setMargins(activity.dp(4f), activity.dp(2f), activity.dp(4f), activity.dp(2f)) }
+                setOnClickListener {
+                    activity.feedback(it)
+                    applyThemePalettePreset(activity, preset)
+                }
+            }
+            row.addView(chip)
+        }
+
+        hScroll.addView(row)
+        wrapper.addView(hScroll)
+        return wrapper
+    }
+
     fun getSlotEffectiveColor(slot: Int, fallback: Int = getDefaultSlotColors()[slot]): Int {
         if (slot !in 0 until TOTAL_COLOR_SLOTS || !slotCustomized[slot]) return fallback
         val allowAlpha = (slot != SLOT_MAIN_BG)
@@ -100,7 +668,6 @@ object MinimalistTheme {
         )
     }
 
-    // מאפיינים דינמיים המתעדכנים אוטומטית בכל האפליקציה כאשר המשתמש משנה צבע של אלמנט
     val BG_CREAM: Int get() = getSlotEffectiveColor(SLOT_MAIN_BG, DEFAULT_BG_CREAM)
     val DRAWER_BG: Int get() = getSlotEffectiveColor(SLOT_MAIN_BG, DEFAULT_BG_CREAM)
     val DRAWER_HEADER_YELLOW: Int get() = getSlotEffectiveColor(SLOT_LOGO_BG, DEFAULT_DRAWER_HEADER_YELLOW)
@@ -128,7 +695,6 @@ object MinimalistTheme {
     val ACCENT_BUTTER_YELLOW: Int get() = getSlotEffectiveColor(SLOT_ACTION_2, DEFAULT_ACCENT_BUTTER_YELLOW)
     val ACCENT_WARM_MUSTARD: Int get() = DEFAULT_ACCENT_WARM_MUSTARD
 
-    // תאימות מלאה לכל הקבצים האחרים בפרויקט
     val TEXT_DARK: Int get() = TEXT_CHARCOAL
     val TEXT_MUTED: Int get() = TEXT_MUTED_GREY
     val HEADER_PISTACHIO_CARD: Int get() = ACCENT_MUTED_GREEN
@@ -163,6 +729,7 @@ object MinimalistTheme {
         shadowSoftness = prefs.getInt("min_shadow_softness", 0)
         warmPaperTintMode = prefs.getInt("min_paper_tint_mode", 0)
         selectedElementSlot = prefs.getInt("min_selected_slot", SLOT_ACTION_1).coerceIn(0, TOTAL_COLOR_SLOTS - 1)
+        activePaletteId = prefs.getString("min_active_palette_id", "min_default") ?: "min_default"
         val defaults = getDefaultSlotColors()
         for (i in 0 until TOTAL_COLOR_SLOTS) {
             slotCustomized[i] = prefs.getBoolean("min_slot_cust_$i", false)
@@ -179,6 +746,7 @@ object MinimalistTheme {
             .putInt("min_shadow_softness", shadowSoftness)
             .putInt("min_paper_tint_mode", warmPaperTintMode)
             .putInt("min_selected_slot", selectedElementSlot)
+            .putString("min_active_palette_id", activePaletteId)
         for (i in 0 until TOTAL_COLOR_SLOTS) {
             ed.putBoolean("min_slot_cust_$i", slotCustomized[i])
             ed.putInt("min_slot_col_$i", slotBaseColors[i])
@@ -224,9 +792,6 @@ object MinimalistTheme {
         return if (activity.isMinimalistMode) Color.parseColor("#F48484") else activity.primaryColor
     }
 
-    // =========================================================================
-    // 1. דיאלוג "בחר מצב תצוגה" מאוחד עם כל 4 האפשרויות
-    // =========================================================================
     fun showUnifiedDisplayModeDialog(activity: MainActivity) {
         val dlg = Dialog(activity)
         dlg.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -298,9 +863,10 @@ object MinimalistTheme {
                     if (activity.isMinimalistMode) {
                         activity.buttonCornerStyle = pillCornerPt
                     }
-                    activity.savePreferences()
+                    // בעת החלפת ערכת נושא, טוענים את פלטת ברירת המחדל התואמת לאותה ערכת נושא
+                    val defaultPreset = getPalettesForCurrentTheme(activity).first()
                     dlg.dismiss()
-                    activity.applyTheme()
+                    applyThemePalettePreset(activity, defaultPreset)
                 }
             }
 
@@ -339,9 +905,6 @@ object MinimalistTheme {
         dlg.window?.setLayout(widthPx, WindowManager.LayoutParams.WRAP_CONTENT)
     }
 
-    // =========================================================================
-    // 2. דיאלוג "בחר סוג צליל" מתוקן וקריא ב-100% בכל ערכות הנושא
-    // =========================================================================
     fun showUnifiedSoundPickerDialog(activity: MainActivity) {
         val dlg = Dialog(activity)
         dlg.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -495,9 +1058,6 @@ object MinimalistTheme {
         }
     }
 
-    // =========================================================================
-    // כפתורי מקלדת שטוחים התומכים בכל 10 ערוצי הצבע המותאמים אישית
-    // =========================================================================
     fun createMinimalistKeypadButtonDrawable(
         activity: MainActivity,
         symbol: String,
@@ -623,7 +1183,7 @@ object MinimalistTheme {
                 v.elevation = 0f
                 v.translationZ = 0f
             }
-            if (v.tag == "MINIMALIST_CUSTOMIZER_IGNORE") return
+            if (v.tag == "MINIMALIST_CUSTOMIZER_IGNORE" || v.tag == "THEME_MATCHED_PALETTES_BAR") return
 
             when (v) {
                 is EditText -> {
@@ -644,8 +1204,6 @@ object MinimalistTheme {
                     v.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
 
                     if (v.tag == "PRO_STAR_CHIP") {
-                        v.setTextColor(TEXT_CHARCOAL)
-                        v.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
                         return
                     }
 
@@ -814,7 +1372,6 @@ object MinimalistTheme {
 
     // =========================================================================
     // SCREEN 5: מנוע התאמת צבעים רב-אלמנטי (10 אלמנטים) עם גלגל צבעים 2D יחיד ופעיל!
-    // מתאים את עצמו אוטומטית לכל ערכת נושא (מינימליסטית, קלאסית, זכוכית וזוהר הצפון)
     // =========================================================================
     fun createColorThemeCustomizerSection(activity: MainActivity): View {
         val isMin = activity.isMinimalistMode
@@ -879,16 +1436,28 @@ object MinimalistTheme {
 
             if (slotCustomized[SLOT_ACTION_1]) {
                 activity.primaryColor = effAction1
+                if (activity.isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY = effAction1
+            }
+            if (slotCustomized[SLOT_ACTION_2] && activity.isAuroraMode) {
+                AuroraBorealisTheme.AURORA_SECONDARY = getSlotEffectiveColor(SLOT_ACTION_2, AuroraBorealisTheme.AURORA_SECONDARY)
             }
             if (slotCustomized[SLOT_MAIN_BG]) {
                 activity.bgColor = effMainBg
+                if (activity.isAuroraMode) AuroraBorealisTheme.EMERALD_NIGHT = effMainBg
             }
 
-            // עדכון חי של רקע המסך, שורת המצב, תפריט הצד ובאנר הלוגו בזמן גרירת גלגל הצבעים!
-            val liveBg = if (isMin) getBackgroundColor(activity) else activity.bgColor
-            activity.mainContent?.setBackgroundColor(liveBg)
-            activity.window.statusBarColor = liveBg
-            activity.window.navigationBarColor = liveBg
+            if (isMin) {
+                val liveBg = getBackgroundColor(activity)
+                activity.mainContent?.setBackgroundColor(liveBg)
+                activity.window.statusBarColor = liveBg
+                activity.window.navigationBarColor = liveBg
+            } else if (activity.isAuroraMode) {
+                activity.mainContent?.background = AuroraBorealisTheme.createAuroraAtmosphericBackground()
+            } else if (activity.isIosGlassMode) {
+                activity.mainContent?.background = IosGlassTheme.createLiquidAmbientBackground(activity)
+            } else {
+                activity.mainContent?.setBackgroundColor(activity.bgColor)
+            }
             activity.updateLiveDrawerAndHeaderColors()
 
             saveMinimalistPrefs(activity.prefs)
@@ -958,7 +1527,6 @@ object MinimalistTheme {
             chipsRow.addView(chip)
         }
 
-        // הכרטיס הצהוב החם הראשי (#FFE094 במצב מינימליסטי) שמכיל את גלגל הצבעים 2D והסליידרים
         val yellowCard = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(activity.dp(20f), activity.dp(18f), activity.dp(20f), activity.dp(20f))
@@ -1073,7 +1641,6 @@ object MinimalistTheme {
         yellowCard.addView(opacityLabel)
         yellowCard.addView(opacitySlider)
 
-        // שורת כפתורי איפוס: איפוס האלמנט הנוכחי או איפוס כל 10 האלמנטים לפלטת הפסטל המקורית
         val resetRow = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             layoutParams = LinearLayout.LayoutParams(
@@ -1109,7 +1676,7 @@ object MinimalistTheme {
         }
 
         val resetAllPastelBtn = TextView(activity).apply {
-            text = "↺ אפס את כל הצבעים למקור"
+            text = "↺ אפס לפלטת ברירת המחדל"
             setTextColor(DEFAULT_TEXT_CHARCOAL)
             textSize = 13f
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
@@ -1124,14 +1691,13 @@ object MinimalistTheme {
             }
             setOnClickListener {
                 activity.feedback(it)
-                resetSlotsArrayToDefaults()
+                val defPreset = getPalettesForCurrentTheme(activity).first()
+                applyThemePalettePreset(activity, defPreset)
                 if (activity.isMinimalistMode) {
-                    activity.primaryColor = DEFAULT_ACCENT_TERRACOTTA
-                    activity.bgColor = DEFAULT_BG_CREAM
+                    resetSlotsArrayToDefaults()
+                    saveMinimalistPrefs(activity.prefs)
+                    activity.applyTheme()
                 }
-                saveMinimalistPrefs(activity.prefs)
-                activity.savePreferences()
-                activity.applyTheme()
             }
         }
 
@@ -1146,7 +1712,6 @@ object MinimalistTheme {
 
     // =========================================================================
     // חבילת 85+ סמלים וקטוריים ייחודיים לערכת הנושא המינימליסטית!
-    // לכל מחשבון, ממיר, כלי Pro וקטגוריה יש סמל קווי ייחודי משלו (אפס כפילויות!)
     // =========================================================================
     fun createMinimalistVectorIcon(
         context: Context,
@@ -1179,7 +1744,7 @@ object MinimalistTheme {
                 val r = Math.min(b.width(), b.height()) * 0.40f
 
                 when (iconCode) {
-                    0 -> { // 0. מחשבון רגיל: גוף מחשבון עם מסך ו-6 נקודות מקשים
+                    0 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.68f, cy - r * 0.84f, cx + r * 0.68f, cy + r * 0.84f), r * 0.18f, r * 0.18f, paint)
                         canvas.drawRect(cx - r * 0.42f, cy - r * 0.56f, cx + r * 0.42f, cy - r * 0.22f, paint)
                         for (gx in listOf(-0.32f, 0f, 0.32f)) {
@@ -1188,7 +1753,7 @@ object MinimalistTheme {
                             }
                         }
                     }
-                    1 -> { // 1. מחשבון מדעי: עקומת סינוס f(x) על צירים
+                    1 -> {
                         canvas.drawLine(cx - r * 0.82f, cy, cx + r * 0.82f, cy, paint)
                         canvas.drawLine(cx, cy - r * 0.78f, cx, cy + r * 0.78f, paint)
                         val wave = Path().apply {
@@ -1197,7 +1762,7 @@ object MinimalistTheme {
                         }
                         canvas.drawPath(wave, paint)
                     }
-                    2 -> { // 2. מחשבון מע״מ: חשבונית משוננת עם סמל %
+                    2 -> {
                         val rec = Path().apply {
                             moveTo(cx - r * 0.62f, cy - r * 0.82f)
                             lineTo(cx + r * 0.62f, cy - r * 0.82f)
@@ -1213,7 +1778,7 @@ object MinimalistTheme {
                         canvas.drawCircle(cx - r * 0.20f, cy - r * 0.28f, r * 0.09f, dotPaint)
                         canvas.drawCircle(cx + r * 0.20f, cy + r * 0.14f, r * 0.09f, dotPaint)
                     }
-                    3 -> { // 3. מחשבון הלוואה: מבנה בנק קלאסי עם גג משולש ו-3 עמודים
+                    3 -> {
                         val roof = Path().apply {
                             moveTo(cx - r * 0.85f, cy - r * 0.24f)
                             lineTo(cx, cy - r * 0.82f)
@@ -1226,7 +1791,7 @@ object MinimalistTheme {
                         }
                         canvas.drawLine(cx - r * 0.85f, cy + r * 0.72f, cx + r * 0.85f, cy + r * 0.72f, paint)
                     }
-                    4 -> { // 4. המרת מרחקים: סרגל אופקי עם שנתות וחץ דו-כיווני מעליו
+                    4 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.88f, cy + r * 0.05f, cx + r * 0.88f, cy + r * 0.68f), r * 0.14f, r * 0.14f, paint)
                         for (tx in listOf(-0.45f, 0f, 0.45f)) {
                             canvas.drawLine(cx + r * tx, cy + r * 0.05f, cx + r * tx, cy + r * 0.38f, paint)
@@ -1237,33 +1802,33 @@ object MinimalistTheme {
                         canvas.drawLine(cx + r * 0.72f, cy - r * 0.42f, cx + r * 0.45f, cy - r * 0.65f, paint)
                         canvas.drawLine(cx + r * 0.72f, cy - r * 0.42f, cx + r * 0.45f, cy - r * 0.19f, paint)
                     }
-                    5 -> { // 5. המרת משקלים: מאזני כפות קלאסיים
+                    5 -> {
                         canvas.drawLine(cx, cy - r * 0.78f, cx, cy + r * 0.78f, paint)
                         canvas.drawLine(cx - r * 0.45f, cy + r * 0.78f, cx + r * 0.45f, cy + r * 0.78f, paint)
                         canvas.drawLine(cx - r * 0.75f, cy - r * 0.35f, cx + r * 0.75f, cy - r * 0.35f, paint)
                         canvas.drawArc(RectF(cx - r * 0.90f, cy - r * 0.05f, cx - r * 0.35f, cy + r * 0.42f), 0f, 180f, true, paint)
                         canvas.drawArc(RectF(cx + r * 0.35f, cy - r * 0.05f, cx + r * 0.90f, cy + r * 0.42f), 0f, 180f, true, paint)
                     }
-                    6 -> { // 6. המרת טמפ׳: מדחום אנכי עם כדורית תחתונה וסימון מעלות
+                    6 -> {
                         canvas.drawArc(RectF(cx - r * 0.44f, cy + r * 0.05f, cx + r * 0.44f, cy + r * 0.86f), -45f, 270f, false, paint)
                         canvas.drawLine(cx - r * 0.22f, cy - r * 0.75f, cx - r * 0.22f, cy + r * 0.18f, paint)
                         canvas.drawLine(cx + r * 0.22f, cy - r * 0.75f, cx + r * 0.22f, cy + r * 0.18f, paint)
                         canvas.drawArc(RectF(cx - r * 0.22f, cy - r * 0.92f, cx + r * 0.22f, cy - r * 0.55f), 180f, 180f, false, paint)
                         canvas.drawCircle(cx + r * 0.58f, cy - r * 0.45f, r * 0.13f, paint)
                     }
-                    7 -> { // 7. מחשבון מתכנתים: סוגרי קוד < / >
+                    7 -> {
                         canvas.drawLine(cx - r * 0.32f, cy - r * 0.48f, cx - r * 0.82f, cy, paint)
                         canvas.drawLine(cx - r * 0.82f, cy, cx - r * 0.32f, cy + r * 0.48f, paint)
                         canvas.drawLine(cx + r * 0.32f, cy - r * 0.48f, cx + r * 0.82f, cy, paint)
                         canvas.drawLine(cx + r * 0.82f, cy, cx + r * 0.32f, cy + r * 0.48f, paint)
                         canvas.drawLine(cx + r * 0.15f, cy - r * 0.58f, cx - r * 0.15f, cy + r * 0.58f, paint)
                     }
-                    8 -> { // 8. חישוב אחוזים: סמל %
+                    8 -> {
                         canvas.drawLine(cx - r * 0.62f, cy + r * 0.62f, cx + r * 0.62f, cy - r * 0.62f, paint)
                         canvas.drawCircle(cx - r * 0.40f, cy - r * 0.40f, r * 0.22f, paint)
                         canvas.drawCircle(cx + r * 0.40f, cy + r * 0.40f, r * 0.22f, paint)
                     }
-                    9 -> { // 9. חישוב הנחות: תגית מחיר אלכסונית עם חור תלייה
+                    9 -> {
                         val tag = Path().apply {
                             moveTo(cx - r * 0.78f, cy - r * 0.78f)
                             lineTo(cx + r * 0.12f, cy - r * 0.78f)
@@ -1275,14 +1840,14 @@ object MinimalistTheme {
                         canvas.drawPath(tag, paint)
                         canvas.drawCircle(cx - r * 0.38f, cy - r * 0.38f, r * 0.13f, paint)
                     }
-                    10 -> { // 10. חלוקת טיפים: ספל קפה חם על תחתית
+                    10 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.65f, cy - r * 0.35f, cx + r * 0.42f, cy + r * 0.52f), r * 0.22f, r * 0.22f, paint)
                         canvas.drawArc(RectF(cx + r * 0.25f, cy - r * 0.20f, cx + r * 0.82f, cy + r * 0.32f), -90f, 180f, false, paint)
                         canvas.drawLine(cx - r * 0.82f, cy + r * 0.72f, cx + r * 0.65f, cy + r * 0.72f, paint)
                         canvas.drawLine(cx - r * 0.25f, cy - r * 0.58f, cx - r * 0.25f, cy - r * 0.82f, paint)
                         canvas.drawLine(cx + r * 0.08f, cy - r * 0.58f, cx + r * 0.08f, cy - r * 0.82f, paint)
                     }
-                    11 -> { // 11. מדד BMI: לב עם פעימת אק"ג (ECG Heart)
+                    11 -> {
                         val ecg = Path().apply {
                             moveTo(cx - r * 0.88f, cy + r * 0.05f)
                             lineTo(cx - r * 0.35f, cy + r * 0.05f)
@@ -1293,18 +1858,18 @@ object MinimalistTheme {
                         }
                         canvas.drawPath(ecg, paint)
                     }
-                    12 -> { // 12. חישוב גיל: עוגת יום הולדת עם נר דולק
+                    12 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.76f, cy + r * 0.02f, cx + r * 0.76f, cy + r * 0.78f), r * 0.16f, r * 0.16f, paint)
                         canvas.drawLine(cx - r * 0.76f, cy + r * 0.38f, cx + r * 0.76f, cy + r * 0.38f, paint)
                         canvas.drawLine(cx, cy + r * 0.02f, cx, cy - r * 0.48f, paint)
                         canvas.drawCircle(cx, cy - r * 0.68f, r * 0.13f, paint)
                     }
-                    13 -> { // 13. מטבעות לייב: גלובוס עם קווי אורך ורוחב
+                    13 -> {
                         canvas.drawCircle(cx, cy, r * 0.80f, paint)
                         canvas.drawOval(RectF(cx - r * 0.40f, cy - r * 0.80f, cx + r * 0.40f, cy + r * 0.80f), paint)
                         canvas.drawLine(cx - r * 0.80f, cy, cx + r * 0.80f, cy, paint)
                     }
-                    14 -> { // 14. מחשבון BMR: להבת אנרגיה ומטבוליזם
+                    14 -> {
                         val flame = Path().apply {
                             moveTo(cx, cy - r * 0.88f)
                             cubicTo(cx + r * 0.82f, cy - r * 0.10f, cx + r * 0.65f, cy + r * 0.78f, cx, cy + r * 0.86f)
@@ -1313,7 +1878,7 @@ object MinimalistTheme {
                         canvas.drawPath(flame, paint)
                         canvas.drawCircle(cx, cy + r * 0.35f, r * 0.22f, paint)
                     }
-                    15 -> { // 15. משוואות ריבועיות: סמל שורש √
+                    15 -> {
                         val rootPath = Path().apply {
                             moveTo(cx - r * 0.84f, cy + r * 0.12f)
                             lineTo(cx - r * 0.48f, cy + r * 0.12f)
@@ -1323,13 +1888,13 @@ object MinimalistTheme {
                         }
                         canvas.drawPath(rootPath, paint)
                     }
-                    16 -> { // 16. מחשבון שברים: 1/2
+                    16 -> {
                         canvas.drawLine(cx - r * 0.62f, cy + r * 0.62f, cx + r * 0.62f, cy - r * 0.62f, paint)
                         canvas.drawLine(cx - r * 0.38f, cy - r * 0.66f, cx - r * 0.38f, cy - r * 0.16f, paint)
                         canvas.drawLine(cx + r * 0.24f, cy + r * 0.24f, cx + r * 0.60f, cy + r * 0.24f, paint)
                         canvas.drawLine(cx + r * 0.24f, cy + r * 0.62f, cx + r * 0.60f, cy + r * 0.62f, paint)
                     }
-                    17 -> { // 17. ריבית דריבית: גרף צמיחה מעריכי עם חץ עליון
+                    17 -> {
                         val trend = Path().apply {
                             moveTo(cx - r * 0.78f, cy + r * 0.68f)
                             lineTo(cx - r * 0.22f, cy + r * 0.18f)
@@ -1340,12 +1905,12 @@ object MinimalistTheme {
                         canvas.drawLine(cx + r * 0.36f, cy - r * 0.58f, cx + r * 0.78f, cy - r * 0.58f, paint)
                         canvas.drawLine(cx + r * 0.78f, cy - r * 0.58f, cx + r * 0.78f, cy - r * 0.16f, paint)
                     }
-                    18 -> { // 18. המרת מהירות: מד מהירות (Speedometer) עם מחוג
+                    18 -> {
                         canvas.drawArc(RectF(cx - r * 0.84f, cy - r * 0.62f, cx + r * 0.84f, cy + r * 0.84f), 165f, 210f, false, paint)
                         canvas.drawLine(cx, cy + r * 0.22f, cx + r * 0.48f, cy - r * 0.34f, paint)
                         canvas.drawCircle(cx, cy + r * 0.22f, r * 0.12f, dotPaint)
                     }
-                    19 -> { // 19. הגדרות: גלגל שיניים קווי 8 שיניים
+                    19 -> {
                         canvas.drawCircle(cx, cy, r * 0.34f, paint)
                         for (i in 0 until 8) {
                             val a = Math.toRadians((i * 45).toDouble())
@@ -1358,13 +1923,13 @@ object MinimalistTheme {
                             )
                         }
                     }
-                    20 -> { // 20. מחשבון עלות דלק: משאבת דלק עם ידית תדלוק
+                    20 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.58f, cy - r * 0.76f, cx + r * 0.34f, cy + r * 0.76f), r * 0.14f, r * 0.14f, paint)
                         canvas.drawRect(cx - r * 0.36f, cy - r * 0.52f, cx + r * 0.12f, cy - r * 0.14f, paint)
                         canvas.drawLine(cx + r * 0.34f, cy - r * 0.28f, cx + r * 0.74f, cy + r * 0.12f, paint)
                         canvas.drawLine(cx + r * 0.74f, cy + r * 0.12f, cx + r * 0.74f, cy + r * 0.58f, paint)
                     }
-                    21 -> { // 21. יעילות שריפת דלק: עלה אקולוגי (Eco Leaf) עם עורק מרכזי
+                    21 -> {
                         val leaf = Path().apply {
                             moveTo(cx - r * 0.68f, cy + r * 0.68f)
                             quadTo(cx - r * 0.75f, cy - r * 0.65f, cx + r * 0.75f, cy - r * 0.75f)
@@ -1373,7 +1938,7 @@ object MinimalistTheme {
                         canvas.drawPath(leaf, paint)
                         canvas.drawLine(cx - r * 0.68f, cy + r * 0.68f, cx + r * 0.38f, cy - r * 0.38f, paint)
                     }
-                    22 -> { // 22. ממוצע ציונים: כובע אקדמי (Graduation Cap)
+                    22 -> {
                         val cap = Path().apply {
                             moveTo(cx, cy - r * 0.72f)
                             lineTo(cx + r * 0.88f, cy - r * 0.18f)
@@ -1384,27 +1949,27 @@ object MinimalistTheme {
                         canvas.drawPath(cap, paint)
                         canvas.drawLine(cx + r * 0.68f, cy - r * 0.05f, cx + r * 0.68f, cy + r * 0.68f, paint)
                     }
-                    23 -> { // 23. מחשבון תשר מתקדם: פעמון הגשה למסעדה (Cloche)
+                    23 -> {
                         canvas.drawArc(RectF(cx - r * 0.76f, cy - r * 0.48f, cx + r * 0.76f, cy + r * 0.85f), 180f, 180f, true, paint)
                         canvas.drawCircle(cx, cy - r * 0.62f, r * 0.14f, paint)
                         canvas.drawLine(cx - r * 0.88f, cy + r * 0.42f, cx + r * 0.88f, cy + r * 0.42f, paint)
                     }
-                    24 -> { // 24. מחשבון מס מכירות: שקית קניות עם ידית קשתית
+                    24 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.66f, cy - r * 0.32f, cx + r * 0.66f, cy + r * 0.80f), r * 0.16f, r * 0.16f, paint)
                         canvas.drawArc(RectF(cx - r * 0.36f, cy - r * 0.78f, cx + r * 0.36f, cy + r * 0.02f), 180f, 180f, false, paint)
                     }
-                    25 -> { // 25. מחשבון מחיר יחידתי: שתי קופסאות להשוואה עם חץ ביניהן
+                    25 -> {
                         canvas.drawRect(cx - r * 0.82f, cy - r * 0.45f, cx - r * 0.18f, cy + r * 0.45f, paint)
                         canvas.drawRect(cx + r * 0.18f, cy - r * 0.65f, cx + r * 0.82f, cy + r * 0.45f, paint)
                     }
-                    26 -> { // 26. ממיר שעון עולמי: פני שעון עם מחוגים ונקודות שעה
+                    26 -> {
                         canvas.drawCircle(cx, cy, r * 0.82f, paint)
                         canvas.drawLine(cx, cy - r * 0.48f, cx, cy, paint)
                         canvas.drawLine(cx, cy, cx + r * 0.38f, cy + r * 0.22f, paint)
                         canvas.drawCircle(cx, cy - r * 0.66f, r * 0.06f, dotPaint)
                         canvas.drawCircle(cx + r * 0.66f, cy, r * 0.06f, dotPaint)
                     }
-                    27 -> { // 27. מחשבון ביוץ: פרח 6 עלי כותרת
+                    27 -> {
                         canvas.drawCircle(cx, cy, r * 0.22f, paint)
                         for (i in 0 until 6) {
                             val a = Math.toRadians((i * 60).toDouble())
@@ -1416,13 +1981,13 @@ object MinimalistTheme {
                             )
                         }
                     }
-                    28 -> { // 28. ממיר הקסדצימלי: סולמית # (Hex Grid)
+                    28 -> {
                         canvas.drawLine(cx - r * 0.32f, cy - r * 0.76f, cx - r * 0.32f, cy + r * 0.76f, paint)
                         canvas.drawLine(cx + r * 0.32f, cy - r * 0.76f, cx + r * 0.32f, cy + r * 0.76f, paint)
                         canvas.drawLine(cx - r * 0.76f, cy - r * 0.32f, cx + r * 0.76f, cy - r * 0.32f, paint)
                         canvas.drawLine(cx - r * 0.76f, cy + r * 0.32f, cx + r * 0.76f, cy + r * 0.32f, paint)
                     }
-                    29 -> { // 29. מחשבון חסכונות: יהלום מלוטש (Diamond Gem)
+                    29 -> {
                         val gem = Path().apply {
                             moveTo(cx - r * 0.48f, cy - r * 0.72f)
                             lineTo(cx + r * 0.48f, cy - r * 0.72f)
@@ -1434,32 +1999,31 @@ object MinimalistTheme {
                         canvas.drawPath(gem, paint)
                         canvas.drawLine(cx - r * 0.84f, cy - r * 0.18f, cx + r * 0.84f, cy - r * 0.18f, paint)
                     }
-                    30 -> { // 30. מחשבון תאריך: לוח שנה עם טבעות תלייה עליונות
+                    30 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.76f, cy - r * 0.62f, cx + r * 0.76f, cy + r * 0.78f), r * 0.18f, r * 0.18f, paint)
                         canvas.drawLine(cx - r * 0.76f, cy - r * 0.18f, cx + r * 0.76f, cy - r * 0.18f, paint)
                         canvas.drawLine(cx - r * 0.36f, cy - r * 0.84f, cx - r * 0.36f, cy - r * 0.42f, paint)
                         canvas.drawLine(cx + r * 0.36f, cy - r * 0.84f, cx + r * 0.36f, cy - r * 0.42f, paint)
                     }
-                    // --- סמלים וקטוריים ייחודיים לכל כלי ה-Pro (31..65) ---
-                    31, 305 -> { // 31. כל 87 קטגוריות היחידות: קליבר מדידה הנדסי (Vernier Caliper)
+                    31, 305 -> {
                         canvas.drawLine(cx - r * 0.84f, cy - r * 0.36f, cx + r * 0.84f, cy - r * 0.36f, paint)
                         canvas.drawLine(cx - r * 0.84f, cy - r * 0.36f, cx - r * 0.84f, cy + r * 0.66f, paint)
                         canvas.drawLine(cx - r * 0.16f, cy - r * 0.56f, cx - r * 0.16f, cy + r * 0.56f, paint)
                         canvas.drawRect(cx - r * 0.16f, cy - r * 0.56f, cx + r * 0.36f, cy - r * 0.16f, paint)
                     }
-                    32, 306 -> { // 32. אינסטלציה, צנרת, ספיקה ולחץ: צינור עם ברז וטיפה
+                    32, 306 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.82f, cy - r * 0.18f, cx + r * 0.82f, cy + r * 0.18f), r * 0.10f, r * 0.10f, paint)
                         canvas.drawLine(cx, cy - r * 0.18f, cx, cy - r * 0.66f, paint)
                         canvas.drawLine(cx - r * 0.42f, cy - r * 0.66f, cx + r * 0.42f, cy - r * 0.66f, paint)
                         canvas.drawCircle(cx, cy + r * 0.58f, r * 0.16f, paint)
                     }
-                    33 -> { // 33. מינון תרופות, עירוי IV וסוכר: שקית עירוי עם צלב רפואי
+                    33 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.52f, cy - r * 0.74f, cx + r * 0.52f, cy + r * 0.42f), r * 0.18f, r * 0.18f, paint)
                         canvas.drawLine(cx - r * 0.24f, cy - r * 0.16f, cx + r * 0.24f, cy - r * 0.16f, paint)
                         canvas.drawLine(cx, cy - r * 0.40f, cx, cy + r * 0.08f, paint)
                         canvas.drawLine(cx, cy + r * 0.42f, cx, cy + r * 0.84f, paint)
                     }
-                    34 -> { // 34. בנייה, בטון, ריצוף ומיזוג BTU: קובייה איזומטרית תלת-ממדית
+                    34 -> {
                         val cube = Path().apply {
                             moveTo(cx, cy - r * 0.82f)
                             lineTo(cx + r * 0.74f, cy - r * 0.38f)
@@ -1474,7 +2038,7 @@ object MinimalistTheme {
                         canvas.drawLine(cx + r * 0.74f, cy - r * 0.38f, cx, cy + r * 0.05f, paint)
                         canvas.drawLine(cx, cy + r * 0.05f, cx, cy + r * 0.82f, paint)
                     }
-                    35 -> { // 35. קודי צבע של נגדים: נגד חשמלי עם 3 פסי צבע
+                    35 -> {
                         canvas.drawLine(cx - r * 0.90f, cy, cx - r * 0.56f, cy, paint)
                         canvas.drawLine(cx + r * 0.56f, cy, cx + r * 0.90f, cy, paint)
                         canvas.drawRoundRect(RectF(cx - r * 0.56f, cy - r * 0.34f, cx + r * 0.56f, cy + r * 0.34f), r * 0.14f, r * 0.14f, paint)
@@ -1482,13 +2046,13 @@ object MinimalistTheme {
                         canvas.drawLine(cx, cy - r * 0.34f, cx, cy + r * 0.34f, paint)
                         canvas.drawLine(cx + r * 0.25f, cy - r * 0.34f, cx + r * 0.25f, cy + r * 0.34f, paint)
                     }
-                    36 -> { // 36. מפענח קודי קבלים: קבל לוחות מקבילים
+                    36 -> {
                         canvas.drawLine(cx - r * 0.86f, cy, cx - r * 0.18f, cy, paint)
                         canvas.drawLine(cx + r * 0.18f, cy, cx + r * 0.86f, cy, paint)
                         canvas.drawLine(cx - r * 0.18f, cy - r * 0.62f, cx - r * 0.18f, cy + r * 0.62f, paint)
                         canvas.drawLine(cx + r * 0.18f, cy - r * 0.62f, cx + r * 0.18f, cy + r * 0.62f, paint)
                     }
-                    37 -> { // 37. עוביי חוטים AWG/SWG: חתך כבל רב-גידי
+                    37 -> {
                         canvas.drawCircle(cx, cy, r * 0.82f, paint)
                         canvas.drawCircle(cx, cy, r * 0.20f, dotPaint)
                         for (i in 0 until 6) {
@@ -1496,18 +2060,18 @@ object MinimalistTheme {
                             canvas.drawCircle((cx + cos(a) * r * 0.46f).toFloat(), (cy + sin(a) * r * 0.46f).toFloat(), r * 0.12f, dotPaint)
                         }
                     }
-                    38, 307 -> { // 38. מעבדת חוק אוהם: סמל אומגה (Ω)
+                    38, 307 -> {
                         canvas.drawArc(RectF(cx - r * 0.66f, cy - r * 0.72f, cx + r * 0.66f, cy + r * 0.48f), 135f, 270f, false, paint)
                         canvas.drawLine(cx - r * 0.78f, cy + r * 0.56f, cx - r * 0.28f, cy + r * 0.56f, paint)
                         canvas.drawLine(cx + r * 0.28f, cy + r * 0.56f, cx + r * 0.78f, cy + r * 0.56f, paint)
                     }
-                    39 -> { // 39. פלס בנאים דו-צירי: מבחנת פלס אופקית עם בועה במרכז
+                    39 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.86f, cy - r * 0.32f, cx + r * 0.86f, cy + r * 0.32f), r * 0.32f, r * 0.32f, paint)
                         canvas.drawLine(cx - r * 0.26f, cy - r * 0.32f, cx - r * 0.26f, cy + r * 0.32f, paint)
                         canvas.drawLine(cx + r * 0.26f, cy - r * 0.32f, cx + r * 0.26f, cy + r * 0.32f, paint)
                         canvas.drawCircle(cx, cy, r * 0.16f, dotPaint)
                     }
-                    40, 308 -> { // 40. מצפן 3D מכויל: חוגת מצפן עם מחט מעוינת
+                    40, 308 -> {
                         canvas.drawCircle(cx, cy, r * 0.82f, paint)
                         val needle = Path().apply {
                             moveTo(cx + r * 0.46f, cy - r * 0.46f)
@@ -1519,12 +2083,12 @@ object MinimalistTheme {
                         canvas.drawPath(needle, paint)
                         canvas.drawCircle(cx, cy, r * 0.09f, dotPaint)
                     }
-                    41 -> { // 41. מד-זווית דו-זרועי וסרגל: קשת מד-זווית עם זרוע
+                    41 -> {
                         canvas.drawArc(RectF(cx - r * 0.82f, cy - r * 0.40f, cx + r * 0.82f, cy + r * 1.12f), 180f, 180f, true, paint)
                         canvas.drawLine(cx, cy + r * 0.36f, cx + r * 0.54f, cy - r * 0.24f, paint)
                         canvas.drawCircle(cx, cy + r * 0.36f, r * 0.11f, dotPaint)
                     }
-                    42 -> { // 42. שעון עצר כרונוגרף: סטופר עם לחצן עליון
+                    42 -> {
                         canvas.drawCircle(cx, cy + r * 0.10f, r * 0.70f, paint)
                         canvas.drawLine(cx - r * 0.24f, cy - r * 0.82f, cx + r * 0.24f, cy - r * 0.82f, paint)
                         canvas.drawLine(cx, cy - r * 0.82f, cx, cy - r * 0.60f, paint)
@@ -1532,7 +2096,7 @@ object MinimalistTheme {
                         canvas.drawLine(cx, cy + r * 0.10f, cx, cy - r * 0.30f, paint)
                         canvas.drawLine(cx, cy + r * 0.10f, cx + r * 0.34f, cy + r * 0.10f, paint)
                     }
-                    43 -> { // 43. פנס LED פיזי ואיתות SOS: פנס יד עם קרני אור
+                    43 -> {
                         val body = Path().apply {
                             moveTo(cx - r * 0.26f, cy + r * 0.78f)
                             lineTo(cx + r * 0.26f, cy + r * 0.78f)
@@ -1547,7 +2111,7 @@ object MinimalistTheme {
                         canvas.drawLine(cx - r * 0.36f, cy - r * 0.46f, cx - r * 0.60f, cy - r * 0.76f, paint)
                         canvas.drawLine(cx + r * 0.36f, cy - r * 0.46f, cx + r * 0.60f, cy - r * 0.76f, paint)
                     }
-                    44 -> { // 44. הטבלה המחזורית ואטום: מודל אטום עם 2 מסלולים אליפטיים וגרעין
+                    44, 309 -> {
                         canvas.save(); canvas.rotate(30f, cx, cy)
                         canvas.drawOval(RectF(cx - r * 0.86f, cy - r * 0.34f, cx + r * 0.86f, cy + r * 0.34f), paint)
                         canvas.restore(); canvas.save(); canvas.rotate(-30f, cx, cy)
@@ -1555,25 +2119,25 @@ object MinimalistTheme {
                         canvas.restore()
                         canvas.drawCircle(cx, cy, r * 0.15f, dotPaint)
                     }
-                    45 -> { // 45. מתרגם ומשדר קוד מורס: בועית שידור עם נקודה-קו-נקודה
+                    45 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.84f, cy - r * 0.58f, cx + r * 0.84f, cy + r * 0.52f), r * 0.30f, r * 0.30f, paint)
                         canvas.drawCircle(cx - r * 0.48f, cy - r * 0.03f, r * 0.11f, dotPaint)
                         canvas.drawLine(cx - r * 0.18f, cy - r * 0.03f, cx + r * 0.22f, cy - r * 0.03f, paint)
                         canvas.drawCircle(cx + r * 0.52f, cy - r * 0.03f, r * 0.11f, dotPaint)
                     }
-                    46 -> { // 46. מחולל סיסמאות ומד אנטרופיה: מנעול אבטחה (Padlock)
+                    46 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.56f, cy - r * 0.08f, cx + r * 0.56f, cy + r * 0.76f), r * 0.16f, r * 0.16f, paint)
                         canvas.drawArc(RectF(cx - r * 0.36f, cy - r * 0.76f, cx + r * 0.36f, cy + r * 0.08f), 180f, 180f, false, paint)
                         canvas.drawCircle(cx, cy + r * 0.32f, r * 0.13f, dotPaint)
                     }
-                    47 -> { // 47. גימטריה, אתב״ש וספרות רומיות: לוח ספרות רומיות I V
+                    47 -> {
                         canvas.drawLine(cx - r * 0.72f, cy - r * 0.62f, cx + r * 0.72f, cy - r * 0.62f, paint)
                         canvas.drawLine(cx - r * 0.72f, cy + r * 0.62f, cx + r * 0.72f, cy + r * 0.62f, paint)
                         canvas.drawLine(cx - r * 0.42f, cy - r * 0.62f, cx - r * 0.42f, cy + r * 0.62f, paint)
                         canvas.drawLine(cx, cy - r * 0.62f, cx + r * 0.30f, cy + r * 0.62f, paint)
                         canvas.drawLine(cx + r * 0.60f, cy - r * 0.62f, cx + r * 0.30f, cy + r * 0.62f, paint)
                     }
-                    48 -> { // 48. מתכות יקרות: שני מטילי זהב טרפזיים מונחים זה על זה
+                    48 -> {
                         val ingotBot = Path().apply {
                             moveTo(cx - r * 0.52f, cy + r * 0.22f)
                             lineTo(cx + r * 0.52f, cy + r * 0.22f)
@@ -1591,7 +2155,7 @@ object MinimalistTheme {
                         canvas.drawPath(ingotBot, paint)
                         canvas.drawPath(ingotTop, paint)
                     }
-                    49 -> { // 49. משכנתא ולוח סילוקין שפיצר: בית עם גג ודלת
+                    49 -> {
                         val roof = Path().apply {
                             moveTo(cx - r * 0.84f, cy - r * 0.05f)
                             lineTo(cx, cy - r * 0.80f)
@@ -1601,18 +2165,18 @@ object MinimalistTheme {
                         canvas.drawRect(cx - r * 0.56f, cy - r * 0.05f, cx + r * 0.56f, cy + r * 0.76f, paint)
                         canvas.drawRect(cx - r * 0.16f, cy + r * 0.32f, cx + r * 0.16f, cy + r * 0.76f, paint)
                     }
-                    50, 310 -> { // 50. תשואת ROI ו-CAGR: גרף 3 עמודות עולות
+                    50, 310 -> {
                         canvas.drawLine(cx - r * 0.80f, cy + r * 0.72f, cx + r * 0.80f, cy + r * 0.72f, paint)
                         canvas.drawRect(cx - r * 0.65f, cy + r * 0.15f, cx - r * 0.35f, cy + r * 0.72f, paint)
                         canvas.drawRect(cx - r * 0.15f, cy - r * 0.20f, cx + r * 0.15f, cy + r * 0.72f, paint)
                         canvas.drawRect(cx + r * 0.35f, cy - r * 0.65f, cx + r * 0.65f, cy + r * 0.72f, paint)
                     }
-                    51 -> { // 51. מרווח רווח ונקודת איזון: מזוודת עסקים
+                    51 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.76f, cy - r * 0.38f, cx + r * 0.76f, cy + r * 0.72f), r * 0.16f, r * 0.16f, paint)
                         canvas.drawRect(cx - r * 0.30f, cy - r * 0.72f, cx + r * 0.30f, cy - r * 0.38f, paint)
                         canvas.drawLine(cx - r * 0.76f, cy + r * 0.12f, cx + r * 0.76f, cy + r * 0.12f, paint)
                     }
-                    52 -> { // 52. סטטיסטיקה ועקומת פעמון: פעמון גאוס עם קו ממוצע
+                    52 -> {
                         val bell = Path().apply {
                             moveTo(cx - r * 0.84f, cy + r * 0.62f)
                             cubicTo(cx - r * 0.34f, cy + r * 0.62f, cx - r * 0.30f, cy - r * 0.72f, cx, cy - r * 0.72f)
@@ -1621,7 +2185,7 @@ object MinimalistTheme {
                         canvas.drawPath(bell, paint)
                         canvas.drawLine(cx, cy - r * 0.72f, cx, cy + r * 0.62f, paint)
                     }
-                    53 -> { // 53. גאומטריה 2D/3D ופיתגורס: משולש ישר-זווית עם סימון 90°
+                    53 -> {
                         val tri = Path().apply {
                             moveTo(cx - r * 0.72f, cy + r * 0.68f)
                             lineTo(cx + r * 0.74f, cy + r * 0.68f)
@@ -1631,7 +2195,7 @@ object MinimalistTheme {
                         canvas.drawPath(tri, paint)
                         canvas.drawRect(cx - r * 0.72f, cy + r * 0.38f, cx - r * 0.42f, cy + r * 0.68f, paint)
                     }
-                    54, 311 -> { // 54. תורת המספרים וקומבינטוריקה: סמל סכום סיגמא (Σ)
+                    54, 311 -> {
                         val sigma = Path().apply {
                             moveTo(cx + r * 0.62f, cy - r * 0.70f)
                             lineTo(cx - r * 0.62f, cy - r * 0.70f)
@@ -1641,14 +2205,14 @@ object MinimalistTheme {
                         }
                         canvas.drawPath(sigma, paint)
                     }
-                    55 -> { // 55. ייצוא PDF/CSV וגיבוי Drive: ענן עם חץ העלאה
+                    55 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.76f, cy - r * 0.25f, cx + r * 0.76f, cy + r * 0.45f), r * 0.35f, r * 0.35f, paint)
                         canvas.drawArc(RectF(cx - r * 0.40f, cy - r * 0.68f, cx + r * 0.36f, cy + r * 0.05f), 180f, 180f, false, paint)
                         canvas.drawLine(cx, cy + r * 0.76f, cx, cy - r * 0.10f, paint)
                         canvas.drawLine(cx - r * 0.22f, cy + r * 0.12f, cx, cy - r * 0.10f, paint)
                         canvas.drawLine(cx + r * 0.22f, cy + r * 0.12f, cx, cy - r * 0.10f, paint)
                     }
-                    56, 102, 103, 300 -> { // 56. כוכב 4-קודקודים קווי (✧)
+                    56, 102, 103, 300 -> {
                         val star4 = Path().apply {
                             moveTo(cx, cy - r * 0.95f)
                             quadTo(cx + r * 0.12f, cy - r * 0.12f, cx + r * 0.95f, cy)
@@ -1666,7 +2230,7 @@ object MinimalistTheme {
                         canvas.drawPath(star4, paint)
                         canvas.drawCircle(cx, cy, r * 0.12f, dotPaint)
                     }
-                    57 -> { // 57. ממירי מכניקה, כוח ומומנט: מפתח ברגים / גלגל תנופה
+                    57 -> {
                         canvas.drawCircle(cx, cy, r * 0.78f, paint)
                         canvas.drawCircle(cx, cy, r * 0.26f, paint)
                         for (i in 0 until 3) {
@@ -1680,7 +2244,7 @@ object MinimalistTheme {
                             )
                         }
                     }
-                    58 -> { // 58. ממירי זורמים, צמיגות וספיקה: טיפת מים קווית
+                    58 -> {
                         val drop = Path().apply {
                             moveTo(cx, cy - r * 0.85f)
                             quadTo(cx + r * 0.76f, cy + r * 0.15f, cx, cy + r * 0.82f)
@@ -1688,7 +2252,7 @@ object MinimalistTheme {
                         }
                         canvas.drawPath(drop, paint)
                     }
-                    59 -> { // 59. ממירי תרמודינמיקה וחום: 3 גלי חום אנכיים
+                    59 -> {
                         for (offset in listOf(-0.38f, 0f, 0.38f)) {
                             val ox = cx + r * offset
                             val wPath = Path().apply {
@@ -1699,7 +2263,7 @@ object MinimalistTheme {
                             canvas.drawPath(wPath, paint)
                         }
                     }
-                    60 -> { // 60. ממירי חשמל, מגנטיות ושדה: ברק אנרגיה (Lightning Bolt)
+                    60 -> {
                         val bolt = Path().apply {
                             moveTo(cx + r * 0.16f, cy - r * 0.86f)
                             lineTo(cx - r * 0.54f, cy + r * 0.06f)
@@ -1711,7 +2275,7 @@ object MinimalistTheme {
                         }
                         canvas.drawPath(bolt, paint)
                     }
-                    61 -> { // 61. ממירי אופטיקה, אקוסטיקה וקרינה: שמש אופטית עם קרניים
+                    61 -> {
                         canvas.drawCircle(cx, cy, r * 0.38f, paint)
                         for (i in 0 until 8) {
                             val a = Math.toRadians((i * 45).toDouble())
@@ -1724,7 +2288,7 @@ object MinimalistTheme {
                             )
                         }
                     }
-                    62 -> { // 62. ממירי רפואה, כימיה ומעבדה: בקבוק מעבדה קוני (Erlenmeyer Flask)
+                    62 -> {
                         val flask = Path().apply {
                             moveTo(cx - r * 0.24f, cy - r * 0.78f)
                             lineTo(cx + r * 0.24f, cy - r * 0.78f)
@@ -1737,17 +2301,17 @@ object MinimalistTheme {
                         canvas.drawPath(flask, paint)
                         canvas.drawLine(cx - r * 0.48f, cy + r * 0.28f, cx + r * 0.48f, cy + r * 0.28f, paint)
                     }
-                    63 -> { // 63. ממירי תקשורת, טיפוגרפיה, חלל ובישול: כוכב לכת מוקף טבעת
+                    63 -> {
                         canvas.drawCircle(cx, cy, r * 0.42f, paint)
                         canvas.save(); canvas.rotate(-25f, cx, cy)
                         canvas.drawOval(RectF(cx - r * 0.88f, cy - r * 0.20f, cx + r * 0.88f, cy + r * 0.20f), paint)
                         canvas.restore()
                     }
-                    64 -> { // 64. מחשבון שכר, שעות נוספות, פנסיה ונטו: תלוש שכר ושטר כסף
+                    64 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.82f, cy - r * 0.48f, cx + r * 0.82f, cy + r * 0.48f), r * 0.14f, r * 0.14f, paint)
                         canvas.drawCircle(cx, cy, r * 0.22f, paint)
                     }
-                    65 -> { // 65. מטריצות, דטרמיננטה ומערכת משוואות: סוגרי מטריצה [ :: ]
+                    65 -> {
                         canvas.drawLine(cx - r * 0.72f, cy - r * 0.70f, cx - r * 0.44f, cy - r * 0.70f, paint)
                         canvas.drawLine(cx - r * 0.72f, cy - r * 0.70f, cx - r * 0.72f, cy + r * 0.70f, paint)
                         canvas.drawLine(cx - r * 0.72f, cy + r * 0.70f, cx - r * 0.44f, cy + r * 0.70f, paint)
@@ -1759,50 +2323,49 @@ object MinimalistTheme {
                         canvas.drawCircle(cx - r * 0.26f, cy + r * 0.26f, r * 0.10f, dotPaint)
                         canvas.drawCircle(cx + r * 0.26f, cy + r * 0.26f, r * 0.10f, dotPaint)
                     }
-                    100 -> { // 100. חלון צף PiP
+                    100 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.85f, cy - r * 0.80f, cx + r * 0.85f, cy + r * 0.80f), r * 0.22f, r * 0.22f, paint)
                         canvas.drawLine(cx - r * 0.85f, cy - r * 0.35f, cx + r * 0.85f, cy - r * 0.35f, paint)
                         canvas.drawRoundRect(RectF(cx + r * 0.08f, cy + r * 0.05f, cx + r * 0.58f, cy + r * 0.52f), r * 0.08f, r * 0.08f, dotPaint)
                     }
-                    101 -> { // 101. שעון היסטוריה
+                    101 -> {
                         canvas.drawCircle(cx, cy, r * 0.86f, paint)
                         canvas.drawLine(cx, cy - r * 0.48f, cx, cy, paint)
                         canvas.drawLine(cx, cy, cx + r * 0.36f, cy + r * 0.24f, paint)
                     }
-                    200 -> { // 200. חיפוש: זכוכית מגדלת
+                    200 -> {
                         canvas.drawCircle(cx - r * 0.12f, cy - r * 0.12f, r * 0.52f, paint)
                         canvas.drawLine(cx + r * 0.25f, cy + r * 0.25f, cx + r * 0.78f, cy + r * 0.78f, paint)
                     }
-                    201 -> { // 201. צליל: גלי קול
+                    201 -> {
                         canvas.drawLine(cx - r * 0.60f, cy - r * 0.25f, cx - r * 0.60f, cy + r * 0.25f, paint)
                         canvas.drawLine(cx - r * 0.20f, cy - r * 0.65f, cx - r * 0.20f, cy + r * 0.65f, paint)
                         canvas.drawLine(cx + r * 0.20f, cy - r * 0.42f, cx + r * 0.20f, cy + r * 0.42f, paint)
                         canvas.drawLine(cx + r * 0.60f, cy - r * 0.75f, cx + r * 0.60f, cy + r * 0.75f, paint)
                     }
-                    202 -> { // 202. בהירות
+                    202 -> {
                         canvas.drawCircle(cx, cy, r * 0.42f, paint)
                     }
-                    203 -> { // 203. שקיפות
+                    203 -> {
                         canvas.drawCircle(cx - r * 0.22f, cy, r * 0.48f, paint)
                         canvas.drawCircle(cx + r * 0.22f, cy, r * 0.48f, paint)
                     }
-                    // --- סמלי קטגוריות העל בתפריט הצד (301..304) ---
-                    301 -> { // 301. מתמטיקה ומדע: ארבע פעולות החשבון (+ − × ÷) בריבוע
+                    301 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.78f, cy - r * 0.78f, cx + r * 0.78f, cy + r * 0.78f), r * 0.22f, r * 0.22f, paint)
                         canvas.drawLine(cx - r * 0.35f, cy, cx + r * 0.35f, cy, paint)
                         canvas.drawLine(cx, cy - r * 0.35f, cx, cy + r * 0.35f, paint)
                     }
-                    302 -> { // 302. פיננסים וצרכנות: שטר כסף ומטבע
+                    302 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.82f, cy - r * 0.48f, cx + r * 0.82f, cy + r * 0.48f), r * 0.14f, r * 0.14f, paint)
                         canvas.drawCircle(cx, cy, r * 0.22f, paint)
                     }
-                    303 -> { // 303. המרות, רכב ודלק: שני חצי החלפה מעגליים (🔄)
+                    303 -> {
                         canvas.drawArc(RectF(cx - r * 0.74f, cy - r * 0.74f, cx + r * 0.74f, cy + r * 0.74f), -150f, 130f, false, paint)
                         canvas.drawArc(RectF(cx - r * 0.74f, cy - r * 0.74f, cx + r * 0.74f, cy + r * 0.74f), 30f, 130f, false, paint)
                         canvas.drawLine(cx + r * 0.35f, cy - r * 0.72f, cx + r * 0.68f, cy - r * 0.38f, paint)
                         canvas.drawLine(cx - r * 0.35f, cy + r * 0.72f, cx - r * 0.68f, cy + r * 0.38f, paint)
                     }
-                    304 -> { // 304. בריאות, זמן ותאריכים: לב קווי קלאסי (❤️)
+                    304 -> {
                         val heart = Path().apply {
                             moveTo(cx, cy + r * 0.76f)
                             lineTo(cx - r * 0.78f, cy - r * 0.10f)
@@ -1960,4 +2523,3 @@ class MinimalistLineSliderView(
         canvas.drawCircle(kx, cy, kr, knobBorderPaint)
     }
 }
- 
