@@ -79,7 +79,7 @@ object IosGlassTheme {
 
     fun styleSymbolTextView(tv: TextView, activity: MainActivity, symbol: String, isPressed: Boolean = false) {
         if (activity.isMinimalistMode) {
-            tv.setTextColor(MinimalistTheme.TEXT_DARK)
+            tv.setTextColor(MinimalistTheme.TEXT_CHARCOAL)
             tv.text = formatSymbolText(symbol, true)
             tv.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
             return
@@ -241,7 +241,7 @@ object IosGlassTheme {
 
     fun createLiquidAmbientBackground(activity: MainActivity): Drawable {
         if (activity.isMinimalistMode) {
-            return GradientDrawable().apply { setColor(MinimalistTheme.getBackgroundColor()) }
+            return GradientDrawable().apply { setColor(MinimalistTheme.getBackgroundColor(activity)) }
         }
         if (activity.isAuroraMode) {
             return AuroraBorealisTheme.createAuroraAtmosphericBackground()
@@ -267,6 +267,12 @@ object IosGlassTheme {
     }
 
     fun apply3DElevation(view: View, dpElevation: Float = 8f) {
+        if ((view.context as? MainActivity)?.isMinimalistMode == true) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                view.elevation = 0f
+            }
+            return
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             val scale = (glassBlurRadius / 28f).coerceIn(0.4f, 1.8f)
             view.elevation = dpElevation * scale * view.resources.displayMetrics.density
@@ -287,13 +293,15 @@ object IosGlassTheme {
         }
     }
 
-    // חבילת האייקונים של עיצוב הזכוכית (Apple SF Symbols 6 Frosted Squircle Style)
     fun createSfSymbolDrawable(
         context: Context,
         categoryIndex: Int,
         tintColor: Int,
         sizeDp: Float = 22f
     ): Drawable {
+        if ((context as? MainActivity)?.isMinimalistMode == true) {
+            return MinimalistTheme.createMinimalistVectorIcon(context, categoryIndex, tintColor, sizeDp)
+        }
         val sizePx = (sizeDp * context.resources.displayMetrics.density).toInt().coerceAtLeast(24)
         return object : Drawable() {
             private val d = context.resources.displayMetrics.density
