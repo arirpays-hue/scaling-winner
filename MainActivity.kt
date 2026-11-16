@@ -401,12 +401,12 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             val minBg = MinimalistTheme.getBackgroundColor(this)
             mainContent?.setBackgroundColor(minBg)
             drawerScroll.setBackgroundColor(MinimalistTheme.DRAWER_BG)
-            val inkCol = MinimalistTheme.TEXT_CHARCOAL
+            val inkCol = MinimalistTheme.ensureReadableTextOnBg(MinimalistTheme.TEXT_CHARCOAL, minBg, 2.2)
             titleText.setTextColor(inkCol)
             menuBtn.setTextColor(inkCol)
 
             val logoBgCol = MinimalistTheme.DRAWER_HEADER_YELLOW
-            val logoTxtCol = MinimalistTheme.LOGO_TEXT_COLOR
+            val logoTxtCol = MinimalistTheme.ensureReadableTextOnBg(MinimalistTheme.LOGO_TEXT_COLOR, logoBgCol, 2.2)
             appLogoView?.apply {
                 setTextColor(logoTxtCol)
                 background = GradientDrawable().apply {
@@ -454,13 +454,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             isMin -> GradientDrawable().apply {
                 cornerRadius = dp(26f).toFloat()
                 setColor(MinimalistTheme.BG_CREAM)
-                setStroke(dp(1.2f), Color.parseColor("#E0DBD3"))
+                setStroke(dp(1.2f), MinimalistTheme.resolveBorderStrokeColor(this@MainActivity, Color.parseColor("#E0DBD3")))
             }
             isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this, 26f)
             else -> GradientDrawable().apply {
                 cornerRadius = dp(26f).toFloat()
                 setColor(Utils.lightenColor(bgColor, 0.08f))
-                setStroke(dp(1.2f), primaryColor)
+                setStroke(dp(1.2f), MinimalistTheme.resolveBorderStrokeColor(this@MainActivity, primaryColor))
             }
         }
 
@@ -539,7 +539,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                         cornerRadius = dp(18f).toFloat()
                         if (isMin) {
                             setColor(MinimalistTheme.CARD_WHITE)
-                            setStroke(dp(1f), Color.parseColor("#EAE5DE"))
+                            setStroke(dp(1f), MinimalistTheme.resolveBorderStrokeColor(this@MainActivity, Color.parseColor("#EAE5DE")))
                         } else {
                             setColor(Color.argb(40, 255, 255, 255))
                             setStroke(dp(1f), Color.argb(35, 255, 255, 255))
@@ -617,16 +617,17 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             ).apply { topMargin = dp(12f) }
         }
 
+        val clearBtnBg = if (isMin) MinimalistTheme.ACCENT_TERRACOTTA else Color.parseColor("#D32F2F")
         val clearAllBtn = TextView(this).apply {
             text = "נקה היסטוריה"
-            setTextColor(if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE)
+            setTextColor(MinimalistTheme.ensureReadableTextOnBg(if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE, clearBtnBg, 2.3))
             textSize = 14.5f
             typeface = if (isMin) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             setPadding(dp(12f), dp(12f), dp(12f), dp(12f))
             background = GradientDrawable().apply {
                 cornerRadius = dp(999f).toFloat()
-                setColor(if (isMin) MinimalistTheme.ACCENT_TERRACOTTA else Color.parseColor("#D32F2F"))
+                setColor(clearBtnBg)
             }
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
                 rightMargin = dp(6f)
@@ -642,7 +643,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         val closeBtn = TextView(this).apply {
             text = "סגור"
-            setTextColor(if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.parseColor("#08090C"))
+            setTextColor(MinimalistTheme.ensureReadableTextOnBg(if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.parseColor("#08090C"), accentCol, 2.3))
             textSize = 14.5f
             typeface = if (isMin) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
@@ -681,13 +682,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             isMin -> GradientDrawable().apply {
                 cornerRadius = dp(26f).toFloat()
                 setColor(MinimalistTheme.BG_CREAM)
-                setStroke(dp(1.2f), Color.parseColor("#E0DBD3"))
+                setStroke(dp(1.2f), MinimalistTheme.resolveBorderStrokeColor(this@MainActivity, Color.parseColor("#E0DBD3")))
             }
             isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this, 26f)
             else -> GradientDrawable().apply {
                 cornerRadius = dp(26f).toFloat()
                 setColor(Utils.lightenColor(bgColor, 0.08f))
-                setStroke(dp(1.2f), primaryColor)
+                setStroke(dp(1.2f), MinimalistTheme.resolveBorderStrokeColor(this@MainActivity, primaryColor))
             }
         }
 
@@ -726,17 +727,18 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             listContainer.removeAllViews()
             val filtered = if (q.isBlank()) items else items.filter { it.contains(q, ignoreCase = true) }
             for (item in filtered) {
+                val rowBgCol = if (isMin) MinimalistTheme.CARD_WHITE else Color.argb(32, 255, 255, 255)
                 val row = TextView(this).apply {
                     text = item
-                    setTextColor(textPrimary)
+                    setTextColor(MinimalistTheme.ensureReadableTextOnBg(textPrimary, rowBgCol, 2.3))
                     textSize = 16f
                     typeface = Typeface.create("sans-serif", Typeface.NORMAL)
                     gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
                     setPadding(dp(16f), dp(13f), dp(16f), dp(13f))
                     background = GradientDrawable().apply {
                         cornerRadius = dp(16f).toFloat()
-                        setColor(if (isMin) MinimalistTheme.CARD_WHITE else Color.argb(32, 255, 255, 255))
-                        if (isMin) setStroke(dp(1f), Color.parseColor("#EAE5DE"))
+                        setColor(rowBgCol)
+                        if (isMin) setStroke(dp(1f), MinimalistTheme.resolveBorderStrokeColor(this@MainActivity, Color.parseColor("#EAE5DE")))
                     }
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
@@ -989,15 +991,17 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             mainContent?.setBackgroundColor(minBg)
             drawerScroll.setBackgroundColor(MinimalistTheme.DRAWER_BG)
             drawerMenu?.background = null
-            titleText.setTextColor(MinimalistTheme.TEXT_CHARCOAL)
-            menuBtn.setTextColor(MinimalistTheme.TEXT_CHARCOAL)
+            val headerInk = MinimalistTheme.ensureReadableTextOnBg(MinimalistTheme.TEXT_CHARCOAL, minBg, 2.2)
+            titleText.setTextColor(headerInk)
+            menuBtn.setTextColor(headerInk)
 
-            val logoTxtCol = MinimalistTheme.LOGO_TEXT_COLOR
+            val logoBgCol = MinimalistTheme.DRAWER_HEADER_YELLOW
+            val logoTxtCol = MinimalistTheme.ensureReadableTextOnBg(MinimalistTheme.LOGO_TEXT_COLOR, logoBgCol, 2.2)
             appLogoView?.apply {
                 setTextColor(logoTxtCol)
                 background = GradientDrawable().apply {
                     cornerRadius = dp(24f).toFloat()
-                    setColor(MinimalistTheme.DRAWER_HEADER_YELLOW)
+                    setColor(logoBgCol)
                 }
                 val calcIcon = MinimalistTheme.createMinimalistVectorIcon(this@MainActivity, 0, logoTxtCol, 28f)
                 setCompoundDrawables(calcIcon, null, null, null)
@@ -1005,9 +1009,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
 
             pipBtn.text = ""
-            pipBtn.setCompoundDrawables(MinimalistTheme.createMinimalistVectorIcon(this, 100, MinimalistTheme.TEXT_CHARCOAL, 22f), null, null, null)
+            pipBtn.setCompoundDrawables(MinimalistTheme.createMinimalistVectorIcon(this, 100, headerInk, 22f), null, null, null)
             historyBtn.text = ""
-            historyBtn.setCompoundDrawables(MinimalistTheme.createMinimalistVectorIcon(this, 101, MinimalistTheme.TEXT_CHARCOAL, 22f), null, null, null)
+            historyBtn.setCompoundDrawables(MinimalistTheme.createMinimalistVectorIcon(this, 101, headerInk, 22f), null, null, null)
         } else if (isAuroraMode) {
             mainContent?.background = AuroraBorealisTheme.createAuroraAtmosphericBackground()
             val drawerBg = AuroraBorealisTheme.createAuroraCardDrawable(this, 0f, isDrawer = true)
@@ -1055,8 +1059,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             mainContent?.setBackgroundColor(bgColor)
             drawerScroll.setBackgroundColor(Utils.lightenColor(bgColor, 0.06f))
             drawerMenu?.background = null
-            titleText.setTextColor(Color.WHITE)
-            menuBtn.setTextColor(Color.WHITE)
+            val headerInk = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_TEXT_ICONS]) {
+                MinimalistTheme.ensureReadableTextOnBg(MinimalistTheme.TEXT_CHARCOAL, bgColor, 2.2)
+            } else Color.WHITE
+            titleText.setTextColor(headerInk)
+            menuBtn.setTextColor(headerInk)
             appLogoView?.apply {
                 setTextColor(if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_TEXT]) MinimalistTheme.LOGO_TEXT_COLOR else Color.WHITE)
                 background = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_BG]) {
@@ -1071,7 +1078,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             historyBtn.setCompoundDrawables(null, null, null, null)
             pipBtn.text = "🧮"; historyBtn.text = "🕒"
             pipBtn.textSize = 21f; historyBtn.textSize = 20f
-            pipBtn.setTextColor(Color.WHITE); historyBtn.setTextColor(Color.WHITE)
+            pipBtn.setTextColor(headerInk); historyBtn.setTextColor(headerInk)
         }
 
         refreshFavHeaderIcon()
@@ -1115,11 +1122,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     fun copyToClipboard(text: String) { val cb = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager; cb.setPrimaryClip(ClipData.newPlainText("CalcResult", text)); Toast.makeText(this, if (isCleanGlassActive) "הועתק ללוח" else "הועתק ללוח 📋", Toast.LENGTH_SHORT).show() }
 
     fun updateDrawerSelection() {
-        val baseInk = if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
+        val drawerBgCol = if (isMinimalistMode) MinimalistTheme.DRAWER_BG else bgColor
+        val baseInk = if (isMinimalistMode) {
+            MinimalistTheme.ensureReadableTextOnBg(MinimalistTheme.TEXT_CHARCOAL, drawerBgCol, 2.2)
+        } else Color.WHITE
         val activeAccent = when {
-            isMinimalistMode -> MinimalistTheme.TEXT_CHARCOAL
+            isMinimalistMode -> MinimalistTheme.ensureReadableTextOnBg(MinimalistTheme.TEXT_CHARCOAL, MinimalistTheme.ACCENT_SAGE_GREEN, 2.2)
             isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
-            else -> primaryColor
+            else -> MinimalistTheme.ensureReadableTextOnBg(primaryColor, drawerBgCol, 2.2)
         }
         val proActive = ProState.isProEnabled(prefs)
         val sepColor = when {
@@ -1213,7 +1223,12 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     isMinimalistMode -> MinimalistTheme.createMinimalistActiveDrawerCapsule(this)
                     isCleanGlassActive -> AuroraBorealisTheme.createActiveDrawerCapsule(this, isAuroraMode)
                     else -> GradientDrawable().apply {
-                        setColor(Color.argb(50, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor)))
+                        val activeFill = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_ACTIVE_PILL]) {
+                            MinimalistTheme.ACCENT_SAGE_GREEN
+                        } else {
+                            Color.argb(50, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor))
+                        }
+                        setColor(activeFill)
                         cornerRadius = dp(12f).toFloat()
                     }
                 }
@@ -1225,12 +1240,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
-    // =========================================================================
-    // מסדר את מסך ההגדרות כך שיציג:
-    // 1. סרגל פלטות מותאם אישית לערכת הנושא הפעילה (12 פלטות ייחודיות לכל ערכת נושא!)
-    // 2. כפתור "מצב תצוגה" מאוחד עם כל 4 ערכות הנושא
-    // 3. גלגל צבעים 2D אחד ויחיד (10 אלמנטים) ללא שאריות/עיגולים שחורים של הגלגל הישן!
-    // =========================================================================
     private fun unifyThemeSelectorAndCustomizerInSettings(settingsRoot: View?) {
         if (settingsRoot == null) return
         val scrollObj = settingsRoot as? ScrollView
@@ -1245,7 +1254,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
         }
 
-        // בודק אם רכיב ב-mainContainer הוא שורת הגדרה תקנית שאנחנו רוצים לשמור (רטט, צליל, דיוק, Pro, יד דומיננטית, רשימת סימון וכו')
         fun isValidSettingItemToKeep(v: View): Boolean {
             if (v is TextView) {
                 val t = v.text?.toString() ?: ""
@@ -1269,7 +1277,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     if (sub is TextView && sub.text.toString().contains("רשימת סימון")) {
                         return true
                     }
-                    // שמירת סליידרי הזכוכית/אורורה רק כאשר המשתמש נמצא במצב זכוכית או אורורה!
                     if (!isMinimalistMode && (isIosGlassMode || isAuroraMode)) {
                         if (sub is TextView && (sub.text.contains("שקיפות זכוכית") || sub.text.contains("טשטוש") || sub.text.contains("עוצמת זוהר"))) {
                             return true
@@ -1280,7 +1287,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             return false
         }
 
-        // מסיר את כל רכיבי העיצוב/הפלטות/גלגלי הצבעים הישנים (כולל סרגל 18 הפלטות הישן והעיגול השחור!)
         for (i in mainContainer.childCount - 1 downTo 0) {
             val child = mainContainer.getChildAt(i)
             if (!isValidSettingItemToKeep(child)) {
@@ -1288,17 +1294,17 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
         }
 
-        // 1. הוספת סרגל 12 הפלטות המותאמות אישית לערכת הנושא הפעילה בראש ההגדרות
+        // 1. סרגל 12 הפלטות המותאמות אישית לערכת הנושא הפעילה
         val matchedPalettesBar = MinimalistTheme.createThemeMatchedPalettesBar(this)
         mainContainer.addView(matchedPalettesBar, 0)
 
-        // 2. הוספת כפתור בחירת מצב התצוגה המאוחד מיד מתחת לסרגל הפלטות
+        // 2. כפתור "מצב תצוגה" מאוחד
         val displayModeBtn = createActionBtn("מצב תצוגה: ${currentThemeDisplayName()}", false) {
             MinimalistTheme.showUnifiedDisplayModeDialog(this)
         }
         mainContainer.addView(displayModeBtn, 1)
 
-        // 3. הוספת מנוע התאמת הצבעים הרב-אלמנטי (10 אלמנטים + גלגל צבעים 2D) מיד מתחת לכפתור מצב התצוגה
+        // 3. מנוע התאמת הצבעים הרב-אלמנטי (15 אלמנטים כולל צבעי ספרות, סימונים ומסגרות)
         val customizerPanel = MinimalistTheme.createColorThemeCustomizerSection(this)
         mainContainer.addView(customizerPanel, 2)
     }
@@ -1441,7 +1447,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 else -> GradientDrawable().apply {
                     setColor(Utils.lightenColor(bgColor, 0.06f))
                     cornerRadius = dp(20f).toFloat()
-                    setStroke(dp(1f), Utils.lightenColor(bgColor, 0.16f))
+                    setStroke(dp(1f), MinimalistTheme.resolveBorderStrokeColor(this@MainActivity, Utils.lightenColor(bgColor, 0.16f)))
                 }
             }
             layoutParams = LinearLayout.LayoutParams(
@@ -1622,7 +1628,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 container?.addView(handBtn)
                 container?.addView(createDrawerCalculatorsChecklistSection())
 
-                // מחליף את סרגל 18 הפלטות הישן בסרגל הפלטות התואם לערכת הנושא + גלגל הצבעים החדש
                 unifyThemeSelectorAndCustomizerInSettings(settingsView)
 
                 scrollObj?.viewTreeObserver?.addOnScrollChangedListener {
@@ -1745,17 +1750,29 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private fun createCalculatorLayout(rows: List<List<String>>, isGrid5x7: Boolean = false): View {
         keypadButtons.clear()
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; layoutDirection = View.LAYOUT_DIRECTION_LTR; setPadding(dp(14f), dp(0f), dp(14f), dp(14f)) }
+        val displayCardBgColor = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_CARDS_INPUTS]) {
+            MinimalistTheme.CARD_WHITE
+        } else if (isMinimalistMode) {
+            MinimalistTheme.getBackgroundColor(this)
+        } else {
+            Utils.lightenColor(bgColor, 0.07f)
+        }
+
         val displayCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.BOTTOM or Gravity.END; setPadding(dp(22f), dp(14f), dp(22f), dp(16f))
             background = when {
-                isMinimalistMode -> null
+                isMinimalistMode && !MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_CARDS_INPUTS] && !MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_BORDERS] -> null
+                isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@MainActivity, 28f, 0)
                 isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@MainActivity, if (isAuroraMode) 28f else IosGlassTheme.glassCornerPt)
                 else -> {
-                    val cardFill = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_CARDS_INPUTS]) MinimalistTheme.CARD_WHITE else Utils.lightenColor(bgColor, 0.07f)
+                    val strokeCol = MinimalistTheme.resolveBorderStrokeColor(
+                        this@MainActivity,
+                        Color.argb(70, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor))
+                    )
                     GradientDrawable().apply {
-                        setColor(cardFill)
+                        setColor(displayCardBgColor)
                         cornerRadius = dp(28f).toFloat()
-                        setStroke(dp(1.5f), Color.argb(70, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor)))
+                        setStroke(dp(1.5f), strokeCol)
                     }
                 }
             }
@@ -1776,12 +1793,18 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             displayCard.addView(pillBar)
         }
 
+        val displayNumCol = MinimalistTheme.ensureReadableTextOnBg(
+            MinimalistTheme.resolveDisplayTextColor(this),
+            displayCardBgColor,
+            2.2
+        )
+
         memoryIndicator = TextView(this).apply {
             text = if (memoryValue != 0.0) "M = ${Utils.formatResult(memoryValue, calcPrecision)}" else ""
             setTextColor(when {
                 isMinimalistMode -> MinimalistTheme.TEXT_MUTED_GREY
                 isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
-                else -> primaryColor
+                else -> MinimalistTheme.ensureReadableTextOnBg(primaryColor, displayCardBgColor, 2.2)
             })
             textSize = 12f
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
@@ -1801,7 +1824,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         currentView = TextView(this).apply {
             text = if(currentInput.isEmpty()) "0" else currentInput
-            setTextColor(if (isMinimalistMode || MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_TEXT_ICONS]) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE)
+            setTextColor(displayNumCol)
             typeface = if (isMinimalistMode) Typeface.create("sans-serif-light", Typeface.NORMAL)
             else if (isCleanGlassActive) Typeface.create("sans-serif-medium", Typeface.BOLD)
             else Typeface.create("sans-serif-light", Typeface.NORMAL)
@@ -1861,26 +1884,22 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         root.addView(keypad, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, if(isGrid5x7) 0.72f else 0.68f)); return root
     }
 
+    // יוצר כפתור מקלדת עם התאמה אישית מלאה לצבע הרקע, צבע הספרה/הסימון וצבע המסגרת + הגנת ניגודיות חכמה!
     private fun createAnimatedButton(symbol: String, isSmall: Boolean): TextView {
         val isMem = symbol in listOf("MC", "MR", "M+", "M-")
         val isOp = symbol in listOf("÷", "×", "−", "+", "sin", "cos", "tan", "log", "ln", "√", "x²", "x³", "x^y", "!", "π", "e", "(", ")")
-        val defaultBg = when {
-            symbol == "AC" -> if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_MEM_CMD_KEYS]) MinimalistTheme.ACCENT_SKY_BLUE else Utils.lightenColor(Color.RED, 0.2f)
-            symbol == "=" -> if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_ACTION_2]) MinimalistTheme.getSecondaryActionColor(this) else primaryColor
-            isMem -> if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_MEM_CMD_KEYS]) MinimalistTheme.ACCENT_PASTEL_BLUE else Utils.lightenColor(bgColor, 0.03f)
-            symbol in listOf("⌫", "%", "÷", "×", "−", "+") -> if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_ACTION_1]) MinimalistTheme.getPrimaryActionColor(this) else Utils.lightenColor(bgColor, 0.1f)
-            else -> if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_NUM_KEYS]) MinimalistTheme.PILL_NUM_WHITE else Utils.lightenColor(bgColor, 0.06f)
+
+        val defaultBg = MinimalistTheme.resolveKeypadButtonBgColor(this, symbol)
+        val textColor = MinimalistTheme.resolveKeypadSymbolTextColor(this, symbol, defaultBg)
+        val baseStrokeColor = if (symbol == "=" || symbol == "AC") Color.TRANSPARENT else Utils.lightenColor(bgColor, 0.15f)
+        val strokeColor = MinimalistTheme.resolveBorderStrokeColor(this, baseStrokeColor)
+
+        val shape = GradientDrawable().apply {
+            this.shape = GradientDrawable.RECTANGLE
+            cornerRadius = dp(buttonCornerStyle).toFloat()
+            setColor(defaultBg)
+            setStroke(dp(1.5f), strokeColor)
         }
-        val strokeColor = if (symbol == "=" || symbol == "AC") Color.TRANSPARENT else Utils.lightenColor(bgColor, 0.15f)
-        val textColor = when {
-            isMinimalistMode -> MinimalistTheme.TEXT_CHARCOAL
-            isCleanGlassActive -> Color.WHITE
-            symbol == "AC" -> Color.WHITE
-            symbol == "=" -> Color.parseColor("#08090C")
-            isMem || symbol in listOf("⌫", "%", "÷", "×", "−", "+") -> primaryColor
-            else -> Color.WHITE
-        }
-        val shape = GradientDrawable().apply { this.shape = GradientDrawable.RECTANGLE; cornerRadius = dp(buttonCornerStyle).toFloat(); setColor(defaultBg); setStroke(dp(1.5f), strokeColor) }
         val btnDrawable = when {
             isMinimalistMode -> MinimalistTheme.createMinimalistKeypadButtonDrawable(this, symbol, false)
             isCleanGlassActive -> IosGlassTheme.createGlassButtonDrawable(this, symbol, isMem, false)
@@ -1914,6 +1933,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                         feedback(v, symbol)
                         if (isMinimalistMode) {
                             tv.background = MinimalistTheme.createMinimalistKeypadButtonDrawable(this@MainActivity, symbol, true)
+                            tv.setTextColor(MinimalistTheme.resolveKeypadSymbolTextColor(this@MainActivity, symbol))
                         } else if (isCleanGlassActive) {
                             tv.background = IosGlassTheme.createGlassButtonDrawable(this@MainActivity, symbol, isMem, true)
                             IosGlassTheme.styleSymbolTextView(tv, this@MainActivity, symbol, true)
@@ -1924,6 +1944,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                         if (isMinimalistMode) {
                             tv.background = MinimalistTheme.createMinimalistKeypadButtonDrawable(this@MainActivity, symbol, false)
+                            tv.setTextColor(MinimalistTheme.resolveKeypadSymbolTextColor(this@MainActivity, symbol))
                         } else if (isCleanGlassActive) {
                             tv.background = IosGlassTheme.createGlassButtonDrawable(this@MainActivity, symbol, isMem, false)
                             IosGlassTheme.styleSymbolTextView(tv, this@MainActivity, symbol, false)
@@ -1974,6 +1995,16 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     fun createInputBox(hintText: String): EditText {
+        val boxBgCol = if (isMinimalistMode || MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_CARDS_INPUTS]) {
+            MinimalistTheme.CARD_WHITE
+        } else {
+            Utils.lightenColor(bgColor, 0.06f)
+        }
+        val boxTextCol = MinimalistTheme.ensureReadableTextOnBg(
+            if (isMinimalistMode || MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_TEXT_ICONS]) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE,
+            boxBgCol,
+            2.2
+        )
         return EditText(this).apply {
             hint = hintText
             setHintTextColor(when {
@@ -1981,7 +2012,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 isCleanGlassActive -> Color.parseColor("#B0BEC5")
                 else -> Color.parseColor("#5C657A")
             })
-            setTextColor(if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE)
+            setTextColor(boxTextCol)
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED
             textSize = 17f
             setPadding(dp(18f), dp(18f), dp(18f), dp(18f))
@@ -1989,9 +2020,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 isMinimalistMode -> MinimalistTheme.createMinimalistInputDrawable(this@MainActivity, 0)
                 isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@MainActivity, 16f)
                 else -> GradientDrawable().apply {
-                    setColor(Utils.lightenColor(bgColor, 0.06f))
+                    setColor(boxBgCol)
                     cornerRadius = dp(16f).toFloat()
-                    setStroke(dp(1.5f), Utils.lightenColor(bgColor, 0.15f))
+                    setStroke(dp(1.5f), MinimalistTheme.resolveBorderStrokeColor(this@MainActivity, Utils.lightenColor(bgColor, 0.15f)))
                 }
             }
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(14f) }
@@ -2001,10 +2032,17 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     fun createActionBtn(textStr: String, isPrimary: Boolean = true, onClick: (View) -> Unit): TextView {
         val cleanText = IosGlassTheme.cleanCategoryTitle(textStr, isCleanGlassActive)
         val isSwapBtn = cleanText.contains("החלף כיוון")
+        val fillCol = when {
+            isMinimalistMode -> if (isSwapBtn) MinimalistTheme.ACCENT_BUTTER_YELLOW else if (isPrimary) MinimalistTheme.getPrimaryActionColor(this) else MinimalistTheme.NEUTRAL_SECONDARY_BG
+            isPrimary -> MinimalistTheme.getPrimaryActionColor(this)
+            else -> Utils.lightenColor(bgColor, 0.06f)
+        }
         val shape = GradientDrawable().apply {
-            setColor(if (isPrimary) primaryColor else Utils.lightenColor(bgColor, 0.06f))
+            setColor(fillCol)
             cornerRadius = dp(buttonCornerStyle).toFloat()
-            if (!isPrimary) setStroke(dp(1.5f), Utils.lightenColor(bgColor, 0.15f))
+            if (!isPrimary || MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_BORDERS]) {
+                setStroke(dp(1.5f), MinimalistTheme.resolveBorderStrokeColor(this@MainActivity, Utils.lightenColor(bgColor, 0.15f)))
+            }
         }
         val bgDraw = when {
             isMinimalistMode -> MinimalistTheme.createMinimalistActionButtonDrawable(
@@ -2015,15 +2053,20 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             isCleanGlassActive -> IosGlassTheme.createGlassButtonDrawable(this, if (isPrimary) "=" else "0", false)
             else -> RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33FFFFFF")), shape, null)
         }
+        val rawBtnTextCol = when {
+            MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_OP_TEXT] && isPrimary ->
+                MinimalistTheme.getSlotEffectiveColor(MinimalistTheme.SLOT_OP_TEXT, MinimalistTheme.TEXT_CHARCOAL)
+            isMinimalistMode -> MinimalistTheme.TEXT_CHARCOAL
+            isPrimary && isAuroraMode -> AuroraBorealisTheme.EMERALD_NIGHT
+            isPrimary && !isCleanGlassActive -> Color.parseColor("#08090C")
+            else -> Color.WHITE
+        }
+        val safeBtnTextCol = MinimalistTheme.ensureReadableTextOnBg(rawBtnTextCol, fillCol, 2.3)
+
         return TextView(this).apply {
             text = if (isMinimalistMode && isSwapBtn) "⇅ החלף כיוון" else cleanText
             gravity = Gravity.CENTER
-            setTextColor(when {
-                isMinimalistMode -> MinimalistTheme.TEXT_CHARCOAL
-                isPrimary && isAuroraMode -> AuroraBorealisTheme.EMERALD_NIGHT
-                isPrimary && !isCleanGlassActive -> Color.parseColor("#08090C")
-                else -> Color.WHITE
-            })
+            setTextColor(safeBtnTextCol)
             textSize = 15.5f
             typeface = if (isMinimalistMode) Typeface.create("sans-serif", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
             background = bgDraw
@@ -2042,7 +2085,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     fun createResultTextView(): TextView = TextView(this).apply {
-        setTextColor(if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE)
+        setTextColor(MinimalistTheme.resolveDisplayTextColor(this@MainActivity))
         textSize = 20f
         gravity = Gravity.CENTER
         setPadding(0, dp(20f), 0, 0)
