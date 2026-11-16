@@ -396,6 +396,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val hasCustomLogoBg = MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_BG]
         val hasCustomLogoText = MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_TEXT]
         val hasCustomTextIcons = MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_TEXT_ICONS]
+        val topIconCol = MinimalistTheme.resolveTopHeaderIconColor(this)
 
         if (isMinimalistMode) {
             val minBg = MinimalistTheme.getBackgroundColor(this)
@@ -403,7 +404,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             drawerScroll.setBackgroundColor(MinimalistTheme.DRAWER_BG)
             val inkCol = MinimalistTheme.ensureReadableTextOnBg(MinimalistTheme.TEXT_CHARCOAL, minBg, 2.2)
             titleText.setTextColor(inkCol)
-            menuBtn.setTextColor(inkCol)
+            menuBtn.setTextColor(topIconCol)
 
             val logoBgCol = MinimalistTheme.DRAWER_HEADER_YELLOW
             val logoTxtCol = MinimalistTheme.ensureReadableTextOnBg(MinimalistTheme.LOGO_TEXT_COLOR, logoBgCol, 2.2)
@@ -419,25 +420,43 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
 
             pipBtn.text = ""
-            pipBtn.setCompoundDrawables(MinimalistTheme.createMinimalistVectorIcon(this, 100, inkCol, 22f), null, null, null)
+            pipBtn.setCompoundDrawables(MinimalistTheme.createMinimalistVectorIcon(this, 100, topIconCol, 22f), null, null, null)
             historyBtn.text = ""
-            historyBtn.setCompoundDrawables(MinimalistTheme.createMinimalistVectorIcon(this, 101, inkCol, 22f), null, null, null)
+            historyBtn.setCompoundDrawables(MinimalistTheme.createMinimalistVectorIcon(this, 101, topIconCol, 22f), null, null, null)
         } else {
-            val headerInk = if (hasCustomTextIcons) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
+            val headerInk = if (hasCustomTextIcons) MinimalistTheme.ensureReadableTextOnBg(MinimalistTheme.TEXT_CHARCOAL, bgColor, 2.2) else Color.WHITE
             titleText.setTextColor(headerInk)
-            menuBtn.setTextColor(headerInk)
+            menuBtn.setTextColor(topIconCol)
+            drawerScroll.setBackgroundColor(MinimalistTheme.resolveDrawerBgColor(this))
 
             appLogoView?.apply {
-                val logoTxt = if (hasCustomLogoText) MinimalistTheme.LOGO_TEXT_COLOR else Color.WHITE
-                setTextColor(logoTxt)
+                val logoBgCol = if (hasCustomLogoBg) MinimalistTheme.DRAWER_HEADER_YELLOW else MinimalistTheme.resolveDrawerBgColor(this@MainActivity)
+                val rawLogoTxt = if (hasCustomLogoText) MinimalistTheme.LOGO_TEXT_COLOR else Color.WHITE
+                val safeLogoTxt = MinimalistTheme.ensureReadableTextOnBg(rawLogoTxt, logoBgCol, 2.2)
+                setTextColor(safeLogoTxt)
                 if (hasCustomLogoBg) {
                     background = GradientDrawable().apply {
                         cornerRadius = dp(24f).toFloat()
-                        setColor(MinimalistTheme.DRAWER_HEADER_YELLOW)
+                        setColor(logoBgCol)
                     }
                 } else {
                     background = null
                 }
+            }
+
+            if (isAuroraMode) {
+                pipBtn.text = ""
+                pipBtn.setCompoundDrawables(AuroraBorealisTheme.createVectorIcon(this, 100, topIconCol, 22f, true), null, null, null)
+                historyBtn.text = ""
+                historyBtn.setCompoundDrawables(AuroraBorealisTheme.createVectorIcon(this, 101, topIconCol, 22f, true), null, null, null)
+            } else if (isIosGlassMode) {
+                pipBtn.text = ""
+                pipBtn.setCompoundDrawables(IosGlassTheme.createSfSymbolDrawable(this, 100, topIconCol, 22f), null, null, null)
+                historyBtn.text = ""
+                historyBtn.setCompoundDrawables(IosGlassTheme.createSfSymbolDrawable(this, 101, topIconCol, 22f), null, null, null)
+            } else {
+                pipBtn.setTextColor(topIconCol)
+                historyBtn.setTextColor(topIconCol)
             }
         }
         refreshFavHeaderIcon()
@@ -786,13 +805,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         favHeaderBtn.visibility = View.VISIBLE
         val isFav = ProFavoritesEngine.isFavoriteTab(prefs, currentTabIndex)
+        val topIconCol = MinimalistTheme.resolveTopHeaderIconColor(this)
         if (isMinimalistMode) {
             favHeaderBtn.text = ""
             val iconCode = if (isFav) 102 else 103
-            favHeaderBtn.setCompoundDrawables(MinimalistTheme.createMinimalistVectorIcon(this, iconCode, MinimalistTheme.TEXT_CHARCOAL, 22f), null, null, null)
+            favHeaderBtn.setCompoundDrawables(MinimalistTheme.createMinimalistVectorIcon(this, iconCode, topIconCol, 22f), null, null, null)
             return
         }
-        val starCol = if (isFav) Color.parseColor("#FFD700") else if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else Color.WHITE
+        val starCol = if (isFav) Color.parseColor("#FFD700") else topIconCol
         if (isCleanGlassActive) {
             favHeaderBtn.text = ""
             val iconCode = if (isFav) 102 else 103
@@ -986,6 +1006,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         window.statusBarColor = statusNavCol
         window.navigationBarColor = statusNavCol
 
+        val topIconCol = MinimalistTheme.resolveTopHeaderIconColor(this)
+
         if (isMinimalistMode) {
             val minBg = MinimalistTheme.getBackgroundColor(this)
             mainContent?.setBackgroundColor(minBg)
@@ -993,7 +1015,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             drawerMenu?.background = null
             val headerInk = MinimalistTheme.ensureReadableTextOnBg(MinimalistTheme.TEXT_CHARCOAL, minBg, 2.2)
             titleText.setTextColor(headerInk)
-            menuBtn.setTextColor(headerInk)
+            menuBtn.setTextColor(topIconCol)
 
             val logoBgCol = MinimalistTheme.DRAWER_HEADER_YELLOW
             val logoTxtCol = MinimalistTheme.ensureReadableTextOnBg(MinimalistTheme.LOGO_TEXT_COLOR, logoBgCol, 2.2)
@@ -1009,67 +1031,72 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
 
             pipBtn.text = ""
-            pipBtn.setCompoundDrawables(MinimalistTheme.createMinimalistVectorIcon(this, 100, headerInk, 22f), null, null, null)
+            pipBtn.setCompoundDrawables(MinimalistTheme.createMinimalistVectorIcon(this, 100, topIconCol, 22f), null, null, null)
             historyBtn.text = ""
-            historyBtn.setCompoundDrawables(MinimalistTheme.createMinimalistVectorIcon(this, 101, headerInk, 22f), null, null, null)
+            historyBtn.setCompoundDrawables(MinimalistTheme.createMinimalistVectorIcon(this, 101, topIconCol, 22f), null, null, null)
         } else if (isAuroraMode) {
             mainContent?.background = AuroraBorealisTheme.createAuroraAtmosphericBackground()
             val drawerBg = AuroraBorealisTheme.createAuroraCardDrawable(this, 0f, isDrawer = true)
             drawerScroll.background = drawerBg
             drawerMenu?.background = null
             titleText.setTextColor(Color.WHITE)
-            menuBtn.setTextColor(Color.WHITE)
+            menuBtn.setTextColor(topIconCol)
             appLogoView?.apply {
-                setTextColor(if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_TEXT]) MinimalistTheme.LOGO_TEXT_COLOR else Color.WHITE)
+                val logoBgCol = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_BG]) MinimalistTheme.DRAWER_HEADER_YELLOW else AuroraBorealisTheme.ARCTIC_BLUE
+                val rawLogoTxt = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_TEXT]) MinimalistTheme.LOGO_TEXT_COLOR else Color.WHITE
+                setTextColor(MinimalistTheme.ensureReadableTextOnBg(rawLogoTxt, logoBgCol, 2.2))
                 background = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_BG]) {
                     GradientDrawable().apply {
                         cornerRadius = dp(24f).toFloat()
-                        setColor(MinimalistTheme.DRAWER_HEADER_YELLOW)
+                        setColor(logoBgCol)
                     }
                 } else null
                 setCompoundDrawables(null, null, null, null)
             }
-            val iconCol = AuroraBorealisTheme.AURORA_PRIMARY
             pipBtn.text = ""
-            pipBtn.setCompoundDrawables(AuroraBorealisTheme.createVectorIcon(this, 100, iconCol, 22f, true), null, null, null)
+            pipBtn.setCompoundDrawables(AuroraBorealisTheme.createVectorIcon(this, 100, topIconCol, 22f, true), null, null, null)
             historyBtn.text = ""
-            historyBtn.setCompoundDrawables(AuroraBorealisTheme.createVectorIcon(this, 101, iconCol, 22f, true), null, null, null)
+            historyBtn.setCompoundDrawables(AuroraBorealisTheme.createVectorIcon(this, 101, topIconCol, 22f, true), null, null, null)
         } else if (isIosGlassMode) {
             mainContent?.background = IosGlassTheme.createLiquidAmbientBackground(this)
             val drawerBg = IosGlassTheme.createGlassCardDrawable(this, 0f)
             drawerScroll.background = drawerBg
             drawerMenu?.background = null
             titleText.setTextColor(Color.WHITE)
-            menuBtn.setTextColor(Color.WHITE)
+            menuBtn.setTextColor(topIconCol)
             appLogoView?.apply {
-                setTextColor(if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_TEXT]) MinimalistTheme.LOGO_TEXT_COLOR else Color.WHITE)
+                val logoBgCol = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_BG]) MinimalistTheme.DRAWER_HEADER_YELLOW else bgColor
+                val rawLogoTxt = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_TEXT]) MinimalistTheme.LOGO_TEXT_COLOR else Color.WHITE
+                setTextColor(MinimalistTheme.ensureReadableTextOnBg(rawLogoTxt, logoBgCol, 2.2))
                 background = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_BG]) {
                     GradientDrawable().apply {
                         cornerRadius = dp(24f).toFloat()
-                        setColor(MinimalistTheme.DRAWER_HEADER_YELLOW)
+                        setColor(logoBgCol)
                     }
                 } else null
                 setCompoundDrawables(null, null, null, null)
             }
             pipBtn.text = ""
-            pipBtn.setCompoundDrawables(IosGlassTheme.createSfSymbolDrawable(this, 100, primaryColor, 22f), null, null, null)
+            pipBtn.setCompoundDrawables(IosGlassTheme.createSfSymbolDrawable(this, 100, topIconCol, 22f), null, null, null)
             historyBtn.text = ""
-            historyBtn.setCompoundDrawables(IosGlassTheme.createSfSymbolDrawable(this, 101, primaryColor, 22f), null, null, null)
+            historyBtn.setCompoundDrawables(IosGlassTheme.createSfSymbolDrawable(this, 101, topIconCol, 22f), null, null, null)
         } else {
             mainContent?.setBackgroundColor(bgColor)
-            drawerScroll.setBackgroundColor(Utils.lightenColor(bgColor, 0.06f))
+            drawerScroll.setBackgroundColor(MinimalistTheme.resolveDrawerBgColor(this))
             drawerMenu?.background = null
             val headerInk = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_TEXT_ICONS]) {
                 MinimalistTheme.ensureReadableTextOnBg(MinimalistTheme.TEXT_CHARCOAL, bgColor, 2.2)
             } else Color.WHITE
             titleText.setTextColor(headerInk)
-            menuBtn.setTextColor(headerInk)
+            menuBtn.setTextColor(topIconCol)
             appLogoView?.apply {
-                setTextColor(if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_TEXT]) MinimalistTheme.LOGO_TEXT_COLOR else Color.WHITE)
+                val logoBgCol = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_BG]) MinimalistTheme.DRAWER_HEADER_YELLOW else MinimalistTheme.resolveDrawerBgColor(this@MainActivity)
+                val rawLogoTxt = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_TEXT]) MinimalistTheme.LOGO_TEXT_COLOR else Color.WHITE
+                setTextColor(MinimalistTheme.ensureReadableTextOnBg(rawLogoTxt, logoBgCol, 2.2))
                 background = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_BG]) {
                     GradientDrawable().apply {
                         cornerRadius = dp(24f).toFloat()
-                        setColor(MinimalistTheme.DRAWER_HEADER_YELLOW)
+                        setColor(logoBgCol)
                     }
                 } else null
                 setCompoundDrawables(null, null, null, null)
@@ -1078,7 +1105,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             historyBtn.setCompoundDrawables(null, null, null, null)
             pipBtn.text = "🧮"; historyBtn.text = "🕒"
             pipBtn.textSize = 21f; historyBtn.textSize = 20f
-            pipBtn.setTextColor(headerInk); historyBtn.setTextColor(headerInk)
+            pipBtn.setTextColor(topIconCol); historyBtn.setTextColor(topIconCol)
         }
 
         refreshFavHeaderIcon()
@@ -1121,16 +1148,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     fun copyToClipboard(text: String) { val cb = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager; cb.setPrimaryClip(ClipData.newPlainText("CalcResult", text)); Toast.makeText(this, if (isCleanGlassActive) "הועתק ללוח" else "הועתק ללוח 📋", Toast.LENGTH_SHORT).show() }
 
+    // =========================================================================
+    // עדכון תפריט הצד והסמלים שבו עם הגנת ניגודיות מלאה לכל פריט ולפריט הנבחר!
+    // =========================================================================
     fun updateDrawerSelection() {
-        val drawerBgCol = if (isMinimalistMode) MinimalistTheme.DRAWER_BG else bgColor
-        val baseInk = if (isMinimalistMode) {
-            MinimalistTheme.ensureReadableTextOnBg(MinimalistTheme.TEXT_CHARCOAL, drawerBgCol, 2.2)
-        } else Color.WHITE
-        val activeAccent = when {
-            isMinimalistMode -> MinimalistTheme.ensureReadableTextOnBg(MinimalistTheme.TEXT_CHARCOAL, MinimalistTheme.ACCENT_SAGE_GREEN, 2.2)
-            isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
-            else -> MinimalistTheme.ensureReadableTextOnBg(primaryColor, drawerBgCol, 2.2)
-        }
         val proActive = ProState.isProEnabled(prefs)
         val sepColor = when {
             isMinimalistMode -> Color.argb(22, 44, 44, 44)
@@ -1176,27 +1197,39 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             headerTv.text = if (isRightHanded) "$cleanTitle  $arrow" else "$arrow  $cleanTitle"
 
             val hasActiveChild = secItemIndices.contains(currentTabIndex) && isCalculatorVisibleInDrawer(currentTabIndex)
-            val headerTint = if (isExpanded || hasActiveChild) activeAccent else baseInk
-            headerTv.setTextColor(headerTint)
+            val isHeaderHighlighted = isExpanded || hasActiveChild
+
+            val headerTextCol = MinimalistTheme.resolveDrawerItemTextColor(
+                this,
+                isSelected = false,
+                isExpandedHeader = isHeaderHighlighted
+            )
+            val headerIconCol = MinimalistTheme.resolveDrawerIconColor(
+                this,
+                isSelected = false,
+                isExpandedHeader = isHeaderHighlighted
+            )
+            headerTv.setTextColor(headerTextCol)
 
             val secIcon = if (isMinimalistMode) {
-                MinimalistTheme.createMinimalistVectorIcon(this, secIconCode, headerTint, 22f)
+                MinimalistTheme.createMinimalistVectorIcon(this, secIconCode, headerIconCol, 22f)
             } else {
-                AuroraBorealisTheme.createVectorIcon(this, secIconCode, headerTint, 22f, isAuroraMode)
+                AuroraBorealisTheme.createVectorIcon(this, secIconCode, headerIconCol, 22f, isAuroraMode)
             }
             if (isRightHanded) headerTv.setCompoundDrawables(null, null, secIcon, null)
             else headerTv.setCompoundDrawables(secIcon, null, null, null)
 
-            if (isExpanded || hasActiveChild) {
+            if (isHeaderHighlighted) {
                 headerTv.background = when {
                     isMinimalistMode -> GradientDrawable().apply {
                         cornerRadius = dp(18f).toFloat()
                         setColor(MinimalistTheme.NEUTRAL_SECONDARY_BG)
                     }
-                    isCleanGlassActive -> AuroraBorealisTheme.createActiveDrawerCapsule(this, isAuroraMode)
                     else -> GradientDrawable().apply {
-                        setColor(Color.argb(35, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor)))
-                        cornerRadius = dp(12f).toFloat()
+                        val pillCol = MinimalistTheme.resolveActivePillBgColor(this@MainActivity)
+                        setColor(Color.argb(38, Color.red(pillCol), Color.green(pillCol), Color.blue(pillCol)))
+                        cornerRadius = dp(14f).toFloat()
+                        setStroke(dp(1f), Color.argb(95, Color.red(pillCol), Color.green(pillCol), Color.blue(pillCol)))
                     }
                 }
             } else {
@@ -1208,12 +1241,23 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         for (i in drawerItemsViews.indices) {
             val tv = drawerItemsViews[i] as TextView
             val isSelected = (i == currentTabIndex)
-            val tint = if (isSelected) activeAccent else baseInk
+
+            val itemTextCol = MinimalistTheme.resolveDrawerItemTextColor(
+                this,
+                isSelected = isSelected,
+                isExpandedHeader = false
+            )
+            val itemIconCol = MinimalistTheme.resolveDrawerIconColor(
+                this,
+                isSelected = isSelected,
+                isExpandedHeader = false
+            )
+
             tv.text = IosGlassTheme.cleanCategoryTitle(categories[i], true)
             val icon = if (isMinimalistMode) {
-                MinimalistTheme.createMinimalistVectorIcon(this, i, tint, 20f)
+                MinimalistTheme.createMinimalistVectorIcon(this, i, itemIconCol, 20f)
             } else {
-                AuroraBorealisTheme.createVectorIcon(this, i, tint, 20f, isAuroraMode)
+                AuroraBorealisTheme.createVectorIcon(this, i, itemIconCol, 20f, isAuroraMode)
             }
             if (isRightHanded) tv.setCompoundDrawables(null, null, icon, null)
             else tv.setCompoundDrawables(icon, null, null, null)
@@ -1221,21 +1265,17 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             if (isSelected) {
                 tv.background = when {
                     isMinimalistMode -> MinimalistTheme.createMinimalistActiveDrawerCapsule(this)
-                    isCleanGlassActive -> AuroraBorealisTheme.createActiveDrawerCapsule(this, isAuroraMode)
                     else -> GradientDrawable().apply {
-                        val activeFill = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_ACTIVE_PILL]) {
-                            MinimalistTheme.ACCENT_SAGE_GREEN
-                        } else {
-                            Color.argb(50, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor))
-                        }
+                        val activeFill = MinimalistTheme.resolveActivePillBgColor(this@MainActivity)
                         setColor(activeFill)
-                        cornerRadius = dp(12f).toFloat()
+                        cornerRadius = dp(if (isCleanGlassActive) 16f else 14f).toFloat()
+                        setStroke(dp(1f), MinimalistTheme.resolveBorderStrokeColor(this@MainActivity, Color.argb(140, 255, 255, 255)))
                     }
                 }
-                tv.setTextColor(activeAccent)
+                tv.setTextColor(itemTextCol)
             } else {
                 tv.background = null
-                tv.setTextColor(baseInk)
+                tv.setTextColor(itemTextCol)
             }
         }
     }
@@ -1294,17 +1334,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
         }
 
-        // 1. סרגל 12 הפלטות המותאמות אישית לערכת הנושא הפעילה
         val matchedPalettesBar = MinimalistTheme.createThemeMatchedPalettesBar(this)
         mainContainer.addView(matchedPalettesBar, 0)
 
-        // 2. כפתור "מצב תצוגה" מאוחד
         val displayModeBtn = createActionBtn("מצב תצוגה: ${currentThemeDisplayName()}", false) {
             MinimalistTheme.showUnifiedDisplayModeDialog(this)
         }
         mainContainer.addView(displayModeBtn, 1)
 
-        // 3. מנוע התאמת הצבעים הרב-אלמנטי (15 אלמנטים כולל צבעי ספרות, סימונים ומסגרות)
         val customizerPanel = MinimalistTheme.createColorThemeCustomizerSection(this)
         mainContainer.addView(customizerPanel, 2)
     }
@@ -1884,7 +1921,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         root.addView(keypad, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, if(isGrid5x7) 0.72f else 0.68f)); return root
     }
 
-    // יוצר כפתור מקלדת עם התאמה אישית מלאה לצבע הרקע, צבע הספרה/הסימון וצבע המסגרת + הגנת ניגודיות חכמה!
     private fun createAnimatedButton(symbol: String, isSmall: Boolean): TextView {
         val isMem = symbol in listOf("MC", "MR", "M+", "M-")
         val isOp = symbol in listOf("÷", "×", "−", "+", "sin", "cos", "tan", "log", "ln", "√", "x²", "x³", "x^y", "!", "π", "e", "(", ")")
@@ -2105,3 +2141,4 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         handleVoiceActivityResult(requestCode, resultCode, data)
     }
 }
+ 
