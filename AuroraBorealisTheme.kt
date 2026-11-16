@@ -53,7 +53,7 @@ object AuroraBorealisTheme {
                 if (isMin) {
                     tv.paint.shader = null
                     tv.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
-                    tv.setTextColor(MinimalistTheme.TEXT_DARK)
+                    tv.setTextColor(MinimalistTheme.TEXT_CHARCOAL)
                     tv.invalidate()
                     return@post
                 }
