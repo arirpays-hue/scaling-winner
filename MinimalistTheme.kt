@@ -57,21 +57,27 @@ object MinimalistTheme {
     private val DEFAULT_ACCENT_TERRACOTTA = Color.parseColor("#FFA48E")
     private val DEFAULT_ACCENT_BUTTER_YELLOW = Color.parseColor("#FFE094")
     private val DEFAULT_ACCENT_WARM_MUSTARD = Color.parseColor("#FFD54F")
+    private val DEFAULT_BORDER_SUBTLE = Color.parseColor("#E3DFD9")
 
     // =========================================================================
-    // מערכת 10 ערוצי צבע מותאמים אישית לכל אלמנט באפליקציה
+    // מערכת 15 ערוצי צבע מותאמים אישית לכל אלמנט, ספרה וסימון באפליקציה!
     // =========================================================================
-    const val SLOT_ACTION_1 = 0       // כפתורי פעולה 1 (÷ − + וכפתורים ראשיים)
-    const val SLOT_ACTION_2 = 1       // כפתורי פעולה 2 (= × וכפתורים משניים / צהוב)
-    const val SLOT_LOGO_BG = 2        // צבע לוגו 1 (רקע באנר לוגו בתפריט הצד)
-    const val SLOT_LOGO_TEXT = 3      // צבע לוגו 2 (טקסט וסמל הלוגו בתפריט הצד)
-    const val SLOT_MAIN_BG = 4        // צבע רקע ראשי (מסך ותפריט צד)
-    const val SLOT_CARDS_INPUTS = 5   // צבע כרטיסים ותיבות קלט
-    const val SLOT_MEM_CMD_KEYS = 6   // צבע כפתורי זיכרון ופקודות (AC, ⌫, %, MC, MR, M+, M-)
-    const val SLOT_NUM_KEYS = 7       // צבע מקשי מספרים (0-9)
-    const val SLOT_ACTIVE_PILL = 8    // צבע פריט פעיל בתפריט וכותרות Pro
-    const val SLOT_TEXT_ICONS = 9     // צבע טקסט ואייקונים ראשי
-    const val TOTAL_COLOR_SLOTS = 10
+    const val SLOT_ACTION_1 = 0       // 0: רקע כפתורי פעולה 1 (÷ − + וכפתורים ראשיים)
+    const val SLOT_ACTION_2 = 1       // 1: רקע כפתורי פעולה 2 (= × וכפתורים משניים)
+    const val SLOT_LOGO_BG = 2        // 2: צבע לוגו 1 (רקע באנר לוגו בתפריט הצד)
+    const val SLOT_LOGO_TEXT = 3      // 3: צבע לוגו 2 (טקסט וסמל הלוגו בתפריט הצד)
+    const val SLOT_MAIN_BG = 4        // 4: צבע רקע ראשי (מסך ותפריט צד)
+    const val SLOT_CARDS_INPUTS = 5   // 5: רקע כרטיסים, צג ותיבות קלט
+    const val SLOT_MEM_CMD_KEYS = 6   // 6: רקע מקשי זיכרון ופקודות (AC, ⌫, %, MC, MR, M+, M-)
+    const val SLOT_NUM_KEYS = 7       // 7: רקע מקשי מספרים (0-9)
+    const val SLOT_ACTIVE_PILL = 8    // 8: צבע פריט פעיל בתפריט וכותרות Pro
+    const val SLOT_TEXT_ICONS = 9     // 9: צבע טקסט כותרות ואייקונים כללי
+    const val SLOT_NUM_TEXT = 10      // 10: צבע הספרות עצמן על המקשים (0-9 . ( ))
+    const val SLOT_OP_TEXT = 11       // 11: צבע סימוני הפעולות (+ − × ÷ = ופונקציות מדעיות)
+    const val SLOT_MEM_CMD_TEXT = 12  // 12: צבע כיתוב מקשי זיכרון ופקודות (AC, ⌫, %, MC..M-)
+    const val SLOT_DISPLAY_TEXT = 13  // 13: צבע ספרות הצג הראשי והתוצאות
+    const val SLOT_BORDERS = 14       // 14: צבע מסגרות כפתורים וכרטיסים
+    const val TOTAL_COLOR_SLOTS = 15
 
     val slotCustomized = BooleanArray(TOTAL_COLOR_SLOTS) { false }
     val slotBaseColors = IntArray(TOTAL_COLOR_SLOTS)
@@ -515,17 +521,154 @@ object MinimalistTheme {
     }
 
     private fun getDefaultSlotColors(): IntArray = intArrayOf(
-        DEFAULT_ACCENT_TERRACOTTA,     // 0: כפתורי פעולה 1
-        DEFAULT_ACCENT_BUTTER_YELLOW,  // 1: כפתורי פעולה 2
-        DEFAULT_DRAWER_HEADER_YELLOW,  // 2: צבע לוגו 1 (רקע)
-        DEFAULT_TEXT_CHARCOAL,         // 3: צבע לוגו 2 (טקסט וסמל)
-        DEFAULT_BG_CREAM,              // 4: רקע ראשי
-        DEFAULT_CARD_WHITE,            // 5: כרטיסים ותיבות קלט
-        DEFAULT_ACCENT_SKY_BLUE,       // 6: כפתורי זיכרון ופקודות
-        DEFAULT_CARD_WHITE,            // 7: מקשי מספרים
-        DEFAULT_ACCENT_SAGE_GREEN,     // 8: פריט פעיל וכותרות
-        DEFAULT_TEXT_CHARCOAL          // 9: טקסט ואייקונים ראשי
+        DEFAULT_ACCENT_TERRACOTTA,     // 0: SLOT_ACTION_1 (רקע כפתורי פעולה 1)
+        DEFAULT_ACCENT_BUTTER_YELLOW,  // 1: SLOT_ACTION_2 (רקע כפתורי פעולה 2)
+        DEFAULT_DRAWER_HEADER_YELLOW,  // 2: SLOT_LOGO_BG (רקע לוגו)
+        DEFAULT_TEXT_CHARCOAL,         // 3: SLOT_LOGO_TEXT (טקסט וסמל לוגו)
+        DEFAULT_BG_CREAM,              // 4: SLOT_MAIN_BG (רקע ראשי)
+        DEFAULT_CARD_WHITE,            // 5: SLOT_CARDS_INPUTS (כרטיסים ותיבות קלט)
+        DEFAULT_ACCENT_SKY_BLUE,       // 6: SLOT_MEM_CMD_KEYS (רקע מקשי זיכרון ופקודות)
+        DEFAULT_CARD_WHITE,            // 7: SLOT_NUM_KEYS (רקע מקשי מספרים)
+        DEFAULT_ACCENT_SAGE_GREEN,     // 8: SLOT_ACTIVE_PILL (פריט פעיל וכותרות)
+        DEFAULT_TEXT_CHARCOAL,         // 9: SLOT_TEXT_ICONS (טקסט כותרות ואייקונים כללי)
+        DEFAULT_TEXT_CHARCOAL,         // 10: SLOT_NUM_TEXT (צבע הספרות עצמן 0-9)
+        DEFAULT_TEXT_CHARCOAL,         // 11: SLOT_OP_TEXT (צבע סימוני הפעולות + - × ÷ =)
+        DEFAULT_TEXT_CHARCOAL,         // 12: SLOT_MEM_CMD_TEXT (צבע כיתוב זיכרון ופקודות)
+        DEFAULT_TEXT_CHARCOAL,         // 13: SLOT_DISPLAY_TEXT (צבע ספרות הצג והתוצאות)
+        DEFAULT_BORDER_SUBTLE          // 14: SLOT_BORDERS (צבע מסגרות כפתורים וכרטיסים)
     )
+
+    // =========================================================================
+    // מנוע הגנת ניגודיות חכם (Smart Contrast Guard) - מונע היעלמות ספרות וסימונים!
+    // =========================================================================
+    private fun computeLuminance(color: Int): Double {
+        fun chan(v: Int): Double {
+            val s = v / 255.0
+            return if (s <= 0.03928) s / 12.92 else ((s + 0.055) / 1.055).pow(2.4)
+        }
+        return 0.2126 * chan(Color.red(color)) + 0.7152 * chan(Color.green(color)) + 0.0722 * chan(Color.blue(color))
+    }
+
+    fun computeContrastRatio(fg: Int, bg: Int): Double {
+        val l1 = computeLuminance(fg)
+        val l2 = computeLuminance(bg)
+        return (max(l1, l2) + 0.05) / (min(l1, l2) + 0.05)
+    }
+
+    fun ensureReadableTextOnBg(desiredTextCol: Int, bgCol: Int, minContrast: Double = 2.35): Int {
+        if (Color.alpha(bgCol) < 70) return desiredTextCol
+        val ratio = computeContrastRatio(desiredTextCol, bgCol)
+        if (ratio >= minContrast) return desiredTextCol
+        val bgLum = computeLuminance(bgCol)
+        return if (bgLum > 0.40) Color.parseColor("#14171F") else Color.WHITE
+    }
+
+    // מחשב את צבע הרקע המדויק של מקש במקלדת (לצורך בדיקת ניגודיות וציור)
+    fun resolveKeypadButtonBgColor(activity: MainActivity, symbol: String): Int {
+        val isMem = symbol in listOf("MC", "MR", "M+", "M-")
+        val isCmd = symbol in listOf("AC", "⌫", "%") || isMem
+        val isOp1 = symbol in listOf("÷", "−", "-", "+", "sin", "cos", "tan", "log", "ln", "√", "x²", "x³", "x^y", "!", "π", "e")
+        val isOp2 = symbol in listOf("=", "×")
+
+        if (activity.isMinimalistMode) {
+            val action1Col = getPrimaryActionColor(activity)
+            val action2Col = getSecondaryActionColor(activity)
+            return when (symbol) {
+                "MC" -> PILL_MC_BLUE
+                "MR" -> PILL_MR_MINT
+                "M+" -> PILL_MPLUS_LIME
+                "M-" -> PILL_MMINUS_YELLOW
+                "AC" -> ACCENT_SKY_BLUE
+                "⌫", "%" -> ACCENT_PASTEL_BLUE
+                "÷" -> if (slotCustomized[SLOT_ACTION_1]) action1Col else Color.parseColor("#F9B487")
+                "−", "-" -> if (slotCustomized[SLOT_ACTION_1]) action1Col else DEFAULT_ACCENT_TERRACOTTA
+                "+" -> if (slotCustomized[SLOT_ACTION_1]) action1Col else DEFAULT_ACCENT_TERRACOTTA
+                "×" -> if (slotCustomized[SLOT_ACTION_2]) action2Col else if (slotCustomized[SLOT_ACTION_1]) action1Col else DEFAULT_ACCENT_MUTED_PEACH
+                "=" -> if (slotCustomized[SLOT_ACTION_2]) action2Col else Color.parseColor("#F48484")
+                else -> PILL_NUM_WHITE
+            }
+        }
+
+        // במצב קלאסי / זכוכית / זוהר הצפון:
+        return when {
+            symbol == "AC" -> if (slotCustomized[SLOT_MEM_CMD_KEYS]) ACCENT_SKY_BLUE else Utils.lightenColor(Color.RED, 0.2f)
+            isOp2 -> if (slotCustomized[SLOT_ACTION_2]) getSecondaryActionColor(activity) else activity.primaryColor
+            isCmd -> if (slotCustomized[SLOT_MEM_CMD_KEYS]) ACCENT_PASTEL_BLUE else Utils.lightenColor(activity.bgColor, 0.10f)
+            isOp1 -> if (slotCustomized[SLOT_ACTION_1]) getPrimaryActionColor(activity) else Utils.lightenColor(activity.bgColor, 0.10f)
+            else -> if (slotCustomized[SLOT_NUM_KEYS]) PILL_NUM_WHITE else Utils.lightenColor(activity.bgColor, 0.06f)
+        }
+    }
+
+    // מחשב את צבע הספרה או הסימון שעל המקש לפי ערוצי ההתאמה האישית (10, 11, 12) + הגנת ניגודיות אוטומטית!
+    fun resolveKeypadSymbolTextColor(activity: MainActivity, symbol: String, buttonBgColor: Int? = null): Int {
+        val bgCol = buttonBgColor ?: resolveKeypadButtonBgColor(activity, symbol)
+        val isMem = symbol in listOf("MC", "MR", "M+", "M-")
+        val isCmd = symbol in listOf("AC", "⌫", "%") || isMem
+        val isOperatorOrSci = symbol in listOf(
+            "÷", "×", "−", "-", "+", "=",
+            "sin", "cos", "tan", "log", "ln", "√", "x²", "x³", "x^y", "!", "π", "e"
+        )
+
+        // 1. אם המשתמש התאים אישית בגלגל הצבעים את צבע הסימון/הספרה הספציפי:
+        if (isCmd && slotCustomized[SLOT_MEM_CMD_TEXT]) {
+            val chosen = getSlotEffectiveColor(SLOT_MEM_CMD_TEXT, DEFAULT_TEXT_CHARCOAL)
+            return ensureReadableTextOnBg(chosen, bgCol, minContrast = 1.45)
+        }
+        if (isOperatorOrSci && slotCustomized[SLOT_OP_TEXT]) {
+            val chosen = getSlotEffectiveColor(SLOT_OP_TEXT, DEFAULT_TEXT_CHARCOAL)
+            return ensureReadableTextOnBg(chosen, bgCol, minContrast = 1.45)
+        }
+        if (!isCmd && !isOperatorOrSci && slotCustomized[SLOT_NUM_TEXT]) {
+            val chosen = getSlotEffectiveColor(SLOT_NUM_TEXT, DEFAULT_TEXT_CHARCOAL)
+            return ensureReadableTextOnBg(chosen, bgCol, minContrast = 1.45)
+        }
+
+        // 2. אם המשתמש שינה את צבע הטקסט הכללי (SLOT_TEXT_ICONS):
+        if (slotCustomized[SLOT_TEXT_ICONS]) {
+            val generalText = TEXT_CHARCOAL
+            return ensureReadableTextOnBg(generalText, bgCol, minContrast = 2.35)
+        }
+
+        // 3. ברירת מחדל חכמה לפי ערכת הנושא עם הגנת ניגודיות מובטחת (מונע ב-100% היעלמות סימונים!)
+        val candidate = when {
+            activity.isMinimalistMode -> DEFAULT_TEXT_CHARCOAL
+            activity.isAuroraMode -> {
+                when {
+                    symbol in listOf("÷", "×", "−", "-", "+", "=") -> AuroraBorealisTheme.EMERALD_NIGHT
+                    isCmd -> AuroraBorealisTheme.AURORA_PRIMARY
+                    else -> Color.WHITE
+                }
+            }
+            activity.isIosGlassMode -> Color.WHITE
+            else -> {
+                // מצב קלאסי
+                when {
+                    symbol == "AC" -> Color.WHITE
+                    symbol == "=" -> Color.parseColor("#08090C")
+                    isCmd || isOperatorOrSci -> activity.primaryColor
+                    else -> Color.WHITE
+                }
+            }
+        }
+        return ensureReadableTextOnBg(candidate, bgCol, minContrast = 2.45)
+    }
+
+    fun resolveDisplayTextColor(activity: MainActivity): Int {
+        if (slotCustomized[SLOT_DISPLAY_TEXT]) {
+            return getSlotEffectiveColor(SLOT_DISPLAY_TEXT, DEFAULT_TEXT_CHARCOAL)
+        }
+        if (activity.isMinimalistMode || slotCustomized[SLOT_TEXT_ICONS]) {
+            return ensureReadableTextOnBg(TEXT_CHARCOAL, getBackgroundColor(activity), minContrast = 2.2)
+        }
+        return Color.WHITE
+    }
+
+    fun resolveBorderStrokeColor(activity: MainActivity, defaultColor: Int): Int {
+        if (slotCustomized[SLOT_BORDERS]) {
+            return getSlotEffectiveColor(SLOT_BORDERS, defaultColor)
+        }
+        return defaultColor
+    }
 
     fun getPalettesForCurrentTheme(activity: MainActivity): List<ThemePalettePreset> {
         return when {
@@ -536,9 +679,16 @@ object MinimalistTheme {
         }
     }
 
-    // מחיל פלטת צבעים שנבחרה מסרגל הפלטות בהתאם לערכת הנושא הפעילה!
+    // מחיל פלטת צבעים שנבחרה מסרגל הפלטות יחד עם צבעי ספרות וסימונים בעלי ניגודיות מושלמת!
     fun applyThemePalettePreset(activity: MainActivity, preset: ThemePalettePreset) {
         activePaletteId = preset.id
+
+        val autoNumText = ensureReadableTextOnBg(preset.textIconsColor, preset.numKeysBg, 2.5)
+        val autoOpText = ensureReadableTextOnBg(preset.textIconsColor, preset.primaryAccent, 2.5)
+        val autoMemText = ensureReadableTextOnBg(preset.textIconsColor, preset.memKeysBg, 2.5)
+        val autoDisplayText = ensureReadableTextOnBg(preset.textIconsColor, preset.mainBg, 2.5)
+        val autoBorder = if (activity.isMinimalistMode) DEFAULT_BORDER_SUBTLE else preset.primaryAccent
+
         val colors = intArrayOf(
             preset.primaryAccent,   // 0: SLOT_ACTION_1
             preset.secondaryAccent, // 1: SLOT_ACTION_2
@@ -549,10 +699,16 @@ object MinimalistTheme {
             preset.memKeysBg,       // 6: SLOT_MEM_CMD_KEYS
             preset.numKeysBg,       // 7: SLOT_NUM_KEYS
             preset.activePillBg,    // 8: SLOT_ACTIVE_PILL
-            preset.textIconsColor   // 9: SLOT_TEXT_ICONS
+            preset.textIconsColor,  // 9: SLOT_TEXT_ICONS
+            autoNumText,            // 10: SLOT_NUM_TEXT
+            autoOpText,             // 11: SLOT_OP_TEXT
+            autoMemText,            // 12: SLOT_MEM_CMD_TEXT
+            autoDisplayText,        // 13: SLOT_DISPLAY_TEXT
+            autoBorder              // 14: SLOT_BORDERS
         )
         for (i in 0 until TOTAL_COLOR_SLOTS) {
-            slotCustomized[i] = true
+            // ערוצי הרקע (0..9) מופעלים מהפלטה, וערוצי הטקסט והמסגרות (10..14) מקבלים ערך התחלתי חכם עם הגנת ניגודיות אוטומטית
+            slotCustomized[i] = (i in 0..9)
             slotBaseColors[i] = colors[i]
             slotBrightness[i] = 1.0f
             slotOpacity[i] = 1.0f
@@ -623,8 +779,11 @@ object MinimalistTheme {
         for (preset in palettes) {
             val isSelected = (activePaletteId == preset.id)
             val chipBgColor = if (isMin) preset.activePillBg else preset.cardBg
-            val lum = (0.299 * Color.red(chipBgColor) + 0.587 * Color.green(chipBgColor) + 0.114 * Color.blue(chipBgColor)) / 255.0
-            val readableTextCol = if (lum > 0.56) Color.parseColor("#242424") else Color.WHITE
+            val readableTextCol = ensureReadableTextOnBg(
+                if (isMin) Color.parseColor("#242424") else Color.WHITE,
+                chipBgColor,
+                2.5
+            )
 
             val chip = TextView(activity).apply {
                 tag = "PRO_STAR_CHIP"
@@ -863,7 +1022,6 @@ object MinimalistTheme {
                     if (activity.isMinimalistMode) {
                         activity.buttonCornerStyle = pillCornerPt
                     }
-                    // בעת החלפת ערכת נושא, טוענים את פלטת ברירת המחדל התואמת לאותה ערכת נושא
                     val defaultPreset = getPalettesForCurrentTheme(activity).first()
                     dlg.dismiss()
                     applyThemePalettePreset(activity, defaultPreset)
@@ -1064,29 +1222,15 @@ object MinimalistTheme {
         isPressed: Boolean = false
     ): Drawable {
         val radius = activity.dp(pillCornerPt.coerceIn(10f, 40f)).toFloat()
-        val action1Col = getPrimaryActionColor(activity)
-        val action2Col = getSecondaryActionColor(activity)
-        val baseFill = when (symbol) {
-            "MC" -> PILL_MC_BLUE
-            "MR" -> PILL_MR_MINT
-            "M+" -> PILL_MPLUS_LIME
-            "M-" -> PILL_MMINUS_YELLOW
-            "AC" -> ACCENT_SKY_BLUE
-            "⌫", "%" -> ACCENT_PASTEL_BLUE
-            "÷" -> if (slotCustomized[SLOT_ACTION_1]) action1Col else Color.parseColor("#F9B487")
-            "−", "-" -> if (slotCustomized[SLOT_ACTION_1]) action1Col else DEFAULT_ACCENT_TERRACOTTA
-            "+" -> if (slotCustomized[SLOT_ACTION_1]) action1Col else DEFAULT_ACCENT_TERRACOTTA
-            "×" -> if (slotCustomized[SLOT_ACTION_2]) action2Col else if (slotCustomized[SLOT_ACTION_1]) action1Col else DEFAULT_ACCENT_MUTED_PEACH
-            "=" -> if (slotCustomized[SLOT_ACTION_2]) action2Col else Color.parseColor("#F48484")
-            else -> PILL_NUM_WHITE
-        }
+        val baseFill = resolveKeypadButtonBgColor(activity, symbol)
 
         val fillColor = if (isPressed) Utils.lightenColor(baseFill, -0.06f) else baseFill
+        val borderStrokeCol = resolveBorderStrokeColor(activity, Color.argb(18, 44, 44, 44))
         val pillBody = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = radius
             setColor(fillColor)
-            setStroke(activity.dp(1f), Color.argb(18, 44, 44, 44))
+            setStroke(activity.dp(1.2f), borderStrokeCol)
         }
         return RippleDrawable(ColorStateList.valueOf(Color.parseColor("#18000000")), pillBody, null)
     }
@@ -1104,36 +1248,38 @@ object MinimalistTheme {
             4 -> ACCENT_BUTTER_YELLOW
             else -> CARD_WHITE
         }
+        val strokeAlpha = if (cardStyle == 2) 35 else 18
+        val borderCol = resolveBorderStrokeColor(activity, Color.argb(strokeAlpha, 44, 44, 44))
         return GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = radius
             setColor(fillCol)
-            val strokeAlpha = if (cardStyle == 2) 35 else 18
-            setStroke(activity.dp(1f), Color.argb(strokeAlpha, 44, 44, 44))
+            setStroke(activity.dp(1.2f), borderCol)
         }
     }
 
     fun createMinimalistInputDrawable(activity: MainActivity, variant: Int = 0): Drawable {
         val radius = activity.dp(20f).toFloat()
+        val customBorder = if (slotCustomized[SLOT_BORDERS]) getSlotEffectiveColor(SLOT_BORDERS) else null
         return GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = radius
             if (slotCustomized[SLOT_CARDS_INPUTS]) {
                 setColor(CARD_WHITE)
-                setStroke(activity.dp(1.2f), ACCENT_SKY_BLUE)
+                setStroke(activity.dp(1.2f), customBorder ?: ACCENT_SKY_BLUE)
             } else {
                 when (variant % 3) {
                     0 -> {
                         setColor(CARD_WHITE)
-                        setStroke(activity.dp(1.2f), Color.parseColor("#E3DFD9"))
+                        setStroke(activity.dp(1.2f), customBorder ?: Color.parseColor("#E3DFD9"))
                     }
                     1 -> {
                         setColor(NEUTRAL_SECONDARY_BG)
-                        setStroke(activity.dp(1f), Color.parseColor("#E0DBD3"))
+                        setStroke(activity.dp(1f), customBorder ?: Color.parseColor("#E0DBD3"))
                     }
                     else -> {
                         setColor(ACCENT_PASTEL_BLUE)
-                        setStroke(activity.dp(1.2f), ACCENT_SKY_BLUE)
+                        setStroke(activity.dp(1.2f), customBorder ?: ACCENT_SKY_BLUE)
                     }
                 }
             }
@@ -1158,8 +1304,8 @@ object MinimalistTheme {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = radius
             setColor(bgCol)
-            if (pillTone == 5) {
-                setStroke(activity.dp(1f), Color.parseColor("#EAE5DE"))
+            if (pillTone == 5 || slotCustomized[SLOT_BORDERS]) {
+                setStroke(activity.dp(1.2f), resolveBorderStrokeColor(activity, Color.parseColor("#EAE5DE")))
             }
         }
         return RippleDrawable(ColorStateList.valueOf(Color.parseColor("#18000000")), pill, null)
@@ -1190,7 +1336,7 @@ object MinimalistTheme {
                     val variant = inputCounter % 3
                     inputCounter++
                     v.background = createMinimalistInputDrawable(activity, variant)
-                    v.setTextColor(TEXT_CHARCOAL)
+                    v.setTextColor(ensureReadableTextOnBg(TEXT_CHARCOAL, CARD_WHITE, 2.2))
                     v.setHintTextColor(TEXT_MUTED_GREY)
                     v.typeface = Typeface.create("sans-serif", Typeface.NORMAL)
                 }
@@ -1212,7 +1358,6 @@ object MinimalistTheme {
                     }
 
                     if (v.isClickable && v.background != null) {
-                        v.setTextColor(TEXT_CHARCOAL)
                         v.typeface = Typeface.create("sans-serif", Typeface.NORMAL)
 
                         if (isSettingsTab) {
@@ -1224,6 +1369,16 @@ object MinimalistTheme {
                                 txt.contains("כייל") || txt.contains("Tare") || txt.startsWith("חשב") || txt.startsWith("פתור") || txt.startsWith("נתח") || txt.startsWith("פענח") || txt.startsWith("צור") || txt.startsWith("התחל") || txt.startsWith("▶️") || txt.startsWith("🆘") || txt.startsWith("🔆") -> 1
                                 else -> 4
                             }
+                            val btnBgCol = when (tone) {
+                                1 -> getPrimaryActionColor(activity)
+                                2 -> ACCENT_BUTTER_YELLOW
+                                3 -> ACCENT_SKY_BLUE
+                                else -> NEUTRAL_SECONDARY_BG
+                            }
+                            val desiredBtnTxt = if (slotCustomized[SLOT_OP_TEXT] && tone in 1..2) {
+                                getSlotEffectiveColor(SLOT_OP_TEXT, TEXT_CHARCOAL)
+                            } else TEXT_CHARCOAL
+                            v.setTextColor(ensureReadableTextOnBg(desiredBtnTxt, btnBgCol, 2.3))
                             v.background = createMinimalistActionButtonDrawable(activity, tone == 1, tone)
                             if (txt.contains("החלף כיוון")) {
                                 v.text = "⇅ החלף כיוון"
@@ -1259,6 +1414,9 @@ object MinimalistTheme {
         tv.compoundDrawablePadding = activity.dp(12f)
 
         val isChecklistBtn = clean.contains("רשימת סימון")
+        val rowBgCol = if (isChecklistBtn) ACCENT_SKY_BLUE else CARD_WHITE
+        val rowTextCol = ensureReadableTextOnBg(TEXT_CHARCOAL, rowBgCol, 2.3)
+        tv.setTextColor(rowTextCol)
         tv.background = createMinimalistActionButtonDrawable(
             activity,
             isPrimary = false,
@@ -1274,7 +1432,7 @@ object MinimalistTheme {
             clean.contains("צליל AC") -> createSettingsBadgeDrawable(activity, 8)
             clean.contains("מסך תמיד דולק") -> createSettingsBadgeDrawable(activity, 5)
             clean.contains("צורת כפתורים") -> createSettingsBadgeDrawable(activity, 6)
-            clean.contains("דיוק עשרוני") || clean.contains("הגדרות") -> createMinimalistVectorIcon(activity, 19, TEXT_CHARCOAL, 20f)
+            clean.contains("דיוק עשרוני") || clean.contains("הגדרות") -> createMinimalistVectorIcon(activity, 19, rowTextCol, 20f)
             clean.contains("יד דומיננטית") -> createSettingsBadgeDrawable(activity, 9)
             else -> null
         }
@@ -1371,7 +1529,7 @@ object MinimalistTheme {
     }
 
     // =========================================================================
-    // SCREEN 5: מנוע התאמת צבעים רב-אלמנטי (10 אלמנטים) עם גלגל צבעים 2D יחיד ופעיל!
+    // SCREEN 5: מנוע התאמת צבעים רב-אלמנטי (15 אלמנטים כולל צבעי ספרות וסימונים!)
     // =========================================================================
     fun createColorThemeCustomizerSection(activity: MainActivity): View {
         val isMin = activity.isMinimalistMode
@@ -1385,7 +1543,7 @@ object MinimalistTheme {
         }
 
         val sectionHeaderTv = TextView(activity).apply {
-            text = "🎨 התאמת צבעים מתקדמת לכל אלמנט (בחר אלמנט לעריכה):"
+            text = "🎨 התאמת צבעים ל-15 אלמנטים (כולל ספרות וסימונים על המקשים):"
             setTextColor(if (isMin) TEXT_CHARCOAL else Color.WHITE)
             textSize = 14.5f
             typeface = if (isMin) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
@@ -1395,16 +1553,21 @@ object MinimalistTheme {
         root.addView(sectionHeaderTv)
 
         val elementSpecs = listOf(
-            SLOT_ACTION_1 to "🎨 כפתורי פעולה 1 (ראשי / + − ÷)",
-            SLOT_ACTION_2 to "🟠 כפתורי פעולה 2 (= / × / משני)",
+            SLOT_NUM_TEXT to "🔢 צבע הספרות עצמן (0-9 .)",
+            SLOT_OP_TEXT to "➕ צבע סימוני הפעולות (+ − × ÷ =)",
+            SLOT_MEM_CMD_TEXT to "🔤 צבע כיתוב זיכרון ופקודות (AC ⌫ MC)",
+            SLOT_DISPLAY_TEXT to "🖥️ צבע ספרות הצג והתוצאות",
+            SLOT_ACTION_1 to "🎨 רקע כפתורי פעולה 1 (+ − ÷)",
+            SLOT_ACTION_2 to "🟠 רקע כפתורי פעולה 2 (= × / משני)",
+            SLOT_MEM_CMD_KEYS to "🔵 רקע מקשי זיכרון ופקודות (AC / MR)",
+            SLOT_NUM_KEYS to "🔢 רקע מקשי מספרים (0-9)",
             SLOT_LOGO_BG to "🏷️ צבע לוגו 1 (רקע באנר תפריט)",
             SLOT_LOGO_TEXT to "✒️ צבע לוגו 2 (טקסט וסמל לוגו)",
             SLOT_MAIN_BG to "🖼️ צבע רקע ראשי (מסך ותפריט)",
-            SLOT_CARDS_INPUTS to "🗂️ כרטיסים ותיבות קלט",
-            SLOT_MEM_CMD_KEYS to "🔵 מקשי זיכרון ופקודות (AC / MR)",
-            SLOT_NUM_KEYS to "🔢 מקשי מספרים (0-9)",
-            SLOT_ACTIVE_PILL to "🟢 סימון פעיל וכותרות Pro",
-            SLOT_TEXT_ICONS to "🖋️ צבע טקסט ואייקונים"
+            SLOT_CARDS_INPUTS to "🗂️ רקע כרטיסים ותיבות קלט",
+            SLOT_ACTIVE_PILL to "🟢 סימון פעיל בתפריט וכותרות Pro",
+            SLOT_TEXT_ICONS to "🖋️ טקסט כותרות ואייקונים כללי",
+            SLOT_BORDERS to "🔲 צבע מסגרות כפתורים וכרטיסים"
         )
 
         val chipsScroll = HorizontalScrollView(activity).apply {
@@ -1480,19 +1643,21 @@ object MinimalistTheme {
             for ((sIdx, chipTv) in chipViews) {
                 val isSel = (sIdx == slot)
                 val chipDotCol = getSlotEffectiveColor(sIdx)
+                val selBg = if (isMin) DEFAULT_ACCENT_TERRACOTTA else activity.primaryColor
+                val unselBg = if (isMin) DEFAULT_NEUTRAL_SECONDARY_BG else Color.argb(45, 255, 255, 255)
                 chipTv.background = GradientDrawable().apply {
                     cornerRadius = activity.dp(999f).toFloat()
                     if (isSel) {
-                        setColor(if (isMin) DEFAULT_ACCENT_TERRACOTTA else activity.primaryColor)
+                        setColor(selBg)
                         setStroke(activity.dp(1.5f), if (isMin) DEFAULT_TEXT_CHARCOAL else Color.WHITE)
                     } else {
-                        setColor(if (isMin) DEFAULT_NEUTRAL_SECONDARY_BG else Color.argb(45, 255, 255, 255))
-                        setStroke(activity.dp(1f), chipDotCol)
+                        setColor(unselBg)
+                        setStroke(activity.dp(1.2f), chipDotCol)
                     }
                 }
                 chipTv.setTextColor(
-                    if (isMin) DEFAULT_TEXT_CHARCOAL
-                    else if (isSel) Color.parseColor("#08090C")
+                    if (isSel) ensureReadableTextOnBg(Color.WHITE, selBg, 2.3)
+                    else if (isMin) DEFAULT_TEXT_CHARCOAL
                     else Color.WHITE
                 )
                 chipTv.typeface = if (isSel) Typeface.DEFAULT_BOLD else Typeface.create("sans-serif", Typeface.NORMAL)
