@@ -11,8 +11,15 @@ import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.content.res.ColorStateList
 import android.content.res.Configuration
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.ColorFilter
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.PixelFormat
+import android.graphics.RectF
 import android.graphics.Typeface
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.Icon
 import android.graphics.drawable.RippleDrawable
@@ -71,9 +78,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     var isRightHanded = true
     var isIosGlassMode = false
     var isAuroraMode = false
+    var isMinimalistMode = false
     val isCleanGlassActive: Boolean get() = isIosGlassActiveOrAurora
 
-    private val isIosGlassActiveOrAurora: Boolean get() = isIosGlassMode || isAuroraMode
+    private val isIosGlassActiveOrAurora: Boolean get() = isIosGlassMode || isAuroraMode || isMinimalistMode
 
     private val hiddenDrawerTabs = mutableSetOf<Int>()
     private var isDrawerChecklistExpanded = false
@@ -389,13 +397,19 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     private fun refreshFavHeaderIcon() {
-        // הסתרת כפתור הכוכב כאשר אנו נמצאים בתוך מסך "מרכז המועדפים" עצמו (56) כדי שלא יהיה ניתן להוסיפו למועדפים
         if (currentTabIndex == ProFavoritesEngine.FAVORITES_CENTER_TAB_INDEX) {
             favHeaderBtn.visibility = View.GONE
             return
         }
         favHeaderBtn.visibility = View.VISIBLE
         val isFav = ProFavoritesEngine.isFavoriteTab(prefs, currentTabIndex)
+        if (isMinimalistMode) {
+            favHeaderBtn.text = ""
+            val iconCode = if (isFav) 102 else 103
+            val col = if (isFav) MinimalistTheme.ACTION_CORAL_PRIMARY else MinimalistTheme.TEXT_DARK
+            favHeaderBtn.setCompoundDrawables(MinimalistTheme.createMinimalistVectorIcon(this, iconCode, col, 22f), null, null, null)
+            return
+        }
         val starCol = if (isFav) Color.parseColor("#FFD700") else if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else Color.WHITE
         if (isCleanGlassActive) {
             favHeaderBtn.text = ""
@@ -505,8 +519,15 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         isRightHanded = prefs?.getBoolean("isRightHanded", true) ?: true
         isIosGlassMode = prefs?.getBoolean("isIosGlassMode", false) ?: false
         isAuroraMode = prefs?.getBoolean("isAuroraMode", false) ?: false
-        if (isAuroraMode && isIosGlassMode) isIosGlassMode = false
+        isMinimalistMode = prefs?.getBoolean("isMinimalistMode", false) ?: false
+        if (isMinimalistMode) {
+            isIosGlassMode = false
+            isAuroraMode = false
+        } else if (isAuroraMode && isIosGlassMode) {
+            isIosGlassMode = false
+        }
         IosGlassTheme.loadIosPrefs(prefs)
+        MinimalistTheme.loadMinimalistPrefs(prefs)
         calcPrecision = prefs?.getInt("calcPrecision", 8) ?: 8; buttonCornerStyle = prefs?.getFloat("buttonCornerStyle", 24f) ?: 24f
         primaryColor = prefs?.getInt("primaryColor", Color.parseColor("#64B5F6")) ?: Color.parseColor("#64B5F6"); bgColor = prefs?.getInt("bgColor", Color.parseColor("#08090C")) ?: Color.parseColor("#08090C")
         memoryValue = Double.fromBits(prefs?.getLong("memoryValue", 0L) ?: 0L); val savedHist = prefs?.getString("history", "") ?: ""
@@ -530,6 +551,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     fun savePreferences() {
         IosGlassTheme.saveIosPrefs(prefs)
+        MinimalistTheme.saveMinimalistPrefs(prefs)
         val maxHist = if (ProState.isProEnabled(prefs)) 500 else 30
         prefs?.edit()
             ?.putBoolean("useHaptic", useHaptic)
@@ -540,6 +562,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             ?.putBoolean("isRightHanded", isRightHanded)
             ?.putBoolean("isIosGlassMode", isIosGlassMode)
             ?.putBoolean("isAuroraMode", isAuroraMode)
+            ?.putBoolean("isMinimalistMode", isMinimalistMode)
             ?.putInt("soundType", soundType.coerceIn(0, 3))
             ?.putInt("calcPrecision", calcPrecision)
             ?.putFloat("buttonCornerStyle", buttonCornerStyle)
@@ -564,19 +587,38 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     fun updateKeepScreenOn() { if (keepScreenOn) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
 
     fun applyTheme() {
-        if (!isCleanGlassActive || !isDrawerOpen) {
+        if (!isCleanGlassActive || !isDrawerOpen || isMinimalistMode) {
             IosGlassTheme.applyRealtimeGlassBlur(mainContent, false)
         }
 
-        val statusNavCol = if (isAuroraMode) AuroraBorealisTheme.ARCTIC_BLUE else bgColor
+        val statusNavCol = when {
+            isMinimalistMode -> MinimalistTheme.getBackgroundColor()
+            isAuroraMode -> AuroraBorealisTheme.ARCTIC_BLUE
+            else -> bgColor
+        }
         window.statusBarColor = statusNavCol
         window.navigationBarColor = statusNavCol
 
-        if (isAuroraMode) {
+        if (isMinimalistMode) {
+            val minBg = MinimalistTheme.getBackgroundColor()
+            mainContent?.setBackgroundColor(minBg)
+            drawerScroll.setBackgroundColor(MinimalistTheme.DRAWER_CREAM)
+            drawerMenu?.background = null
+            titleText.setTextColor(MinimalistTheme.TEXT_DARK)
+            menuBtn.setTextColor(MinimalistTheme.TEXT_DARK)
+            appLogoView?.setTextColor(MinimalistTheme.TEXT_DARK)
+            pipBtn.text = ""
+            pipBtn.setCompoundDrawables(MinimalistTheme.createMinimalistVectorIcon(this, 100, MinimalistTheme.TEXT_DARK, 22f), null, null, null)
+            historyBtn.text = ""
+            historyBtn.setCompoundDrawables(MinimalistTheme.createMinimalistVectorIcon(this, 101, MinimalistTheme.TEXT_DARK, 22f), null, null, null)
+        } else if (isAuroraMode) {
             mainContent?.background = AuroraBorealisTheme.createAuroraAtmosphericBackground()
             val drawerBg = AuroraBorealisTheme.createAuroraCardDrawable(this, 0f, isDrawer = true)
             drawerScroll.background = drawerBg
             drawerMenu?.background = null
+            titleText.setTextColor(Color.WHITE)
+            menuBtn.setTextColor(Color.WHITE)
+            appLogoView?.setTextColor(Color.WHITE)
             val iconCol = AuroraBorealisTheme.AURORA_PRIMARY
             pipBtn.text = ""
             pipBtn.setCompoundDrawables(AuroraBorealisTheme.createVectorIcon(this, 100, iconCol, 22f, true), null, null, null)
@@ -587,6 +629,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             val drawerBg = IosGlassTheme.createGlassCardDrawable(this, 0f)
             drawerScroll.background = drawerBg
             drawerMenu?.background = null
+            titleText.setTextColor(Color.WHITE)
+            menuBtn.setTextColor(Color.WHITE)
+            appLogoView?.setTextColor(Color.WHITE)
             pipBtn.text = ""
             pipBtn.setCompoundDrawables(IosGlassTheme.createSfSymbolDrawable(this, 100, primaryColor, 22f), null, null, null)
             historyBtn.text = ""
@@ -595,6 +640,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             mainContent?.setBackgroundColor(bgColor)
             drawerScroll.setBackgroundColor(Utils.lightenColor(bgColor, 0.06f))
             drawerMenu?.background = null
+            titleText.setTextColor(Color.WHITE)
+            menuBtn.setTextColor(Color.WHITE)
+            appLogoView?.setTextColor(Color.WHITE)
             pipBtn.setCompoundDrawables(null, null, null, null)
             historyBtn.setCompoundDrawables(null, null, null, null)
             pipBtn.text = "🧮"; historyBtn.text = "🕒"
@@ -610,7 +658,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     private fun openDrawer() {
         updateHandednessLayout()
-        if (isCleanGlassActive) IosGlassTheme.applyRealtimeGlassBlur(mainContent, true)
+        if (isCleanGlassActive && !isMinimalistMode) IosGlassTheme.applyRealtimeGlassBlur(mainContent, true)
         dimView.visibility = View.VISIBLE; dimView.animate().alpha(1f).setDuration(250).start()
         drawerScroll.animate().translationX(0f).setDuration(330)
             .setInterpolator(if (isCleanGlassActive) OvershootInterpolator(0.85f) else DecelerateInterpolator())
@@ -644,9 +692,15 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     fun copyToClipboard(text: String) { val cb = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager; cb.setPrimaryClip(ClipData.newPlainText("CalcResult", text)); Toast.makeText(this, if (isCleanGlassActive) "הועתק ללוח" else "הועתק ללוח 📋", Toast.LENGTH_SHORT).show() }
 
     private fun updateDrawerSelection() {
-        val activeAccent = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
+        val baseInk = if (isMinimalistMode) MinimalistTheme.TEXT_DARK else Color.WHITE
+        val activeAccent = when {
+            isMinimalistMode -> MinimalistTheme.TEXT_DARK
+            isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
+            else -> primaryColor
+        }
         val proActive = ProState.isProEnabled(prefs)
         val sepColor = when {
+            isMinimalistMode -> Color.argb(28, 43, 40, 37)
             isAuroraMode -> Color.argb(38, 0, 245, 212)
             isIosGlassMode -> Color.argb(28, 255, 255, 255)
             else -> Color.argb(25, 255, 255, 255)
@@ -689,18 +743,25 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             headerTv.text = if (isRightHanded) "$cleanTitle  $arrow" else "$arrow  $cleanTitle"
 
             val hasActiveChild = secItemIndices.contains(currentTabIndex) && isCalculatorVisibleInDrawer(currentTabIndex)
-            val headerTint = if (isExpanded || hasActiveChild) activeAccent else Color.WHITE
+            val headerTint = if (isExpanded || hasActiveChild) activeAccent else baseInk
             headerTv.setTextColor(headerTint)
 
-            val secIcon = AuroraBorealisTheme.createVectorIcon(this, secIconCode, headerTint, 22f, isAuroraMode)
+            val secIcon = if (isMinimalistMode) {
+                MinimalistTheme.createMinimalistVectorIcon(this, secIconCode, headerTint, 22f)
+            } else {
+                AuroraBorealisTheme.createVectorIcon(this, secIconCode, headerTint, 22f, isAuroraMode)
+            }
             if (isRightHanded) headerTv.setCompoundDrawables(null, null, secIcon, null)
             else headerTv.setCompoundDrawables(secIcon, null, null, null)
 
             if (isExpanded || hasActiveChild) {
-                if (isCleanGlassActive) {
-                    headerTv.background = AuroraBorealisTheme.createActiveDrawerCapsule(this, isAuroraMode)
-                } else {
-                    headerTv.setBackgroundColor(Color.argb(35, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor)))
+                headerTv.background = when {
+                    isMinimalistMode -> MinimalistTheme.createMinimalistActiveDrawerCapsule(this)
+                    isCleanGlassActive -> AuroraBorealisTheme.createActiveDrawerCapsule(this, isAuroraMode)
+                    else -> GradientDrawable().apply {
+                        setColor(Color.argb(35, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor)))
+                        cornerRadius = dp(12f).toFloat()
+                    }
                 }
             } else {
                 headerTv.background = null
@@ -711,27 +772,33 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         for (i in drawerItemsViews.indices) {
             val tv = drawerItemsViews[i] as TextView
             val isSelected = (i == currentTabIndex)
-            val tint = if (isSelected) activeAccent else Color.WHITE
+            val tint = if (isSelected) activeAccent else baseInk
             tv.text = IosGlassTheme.cleanCategoryTitle(categories[i], true)
-            val icon = AuroraBorealisTheme.createVectorIcon(this, i, tint, 20f, isAuroraMode)
+            val icon = if (isMinimalistMode) {
+                MinimalistTheme.createMinimalistVectorIcon(this, i, tint, 20f)
+            } else {
+                AuroraBorealisTheme.createVectorIcon(this, i, tint, 20f, isAuroraMode)
+            }
             if (isRightHanded) tv.setCompoundDrawables(null, null, icon, null)
             else tv.setCompoundDrawables(icon, null, null, null)
 
             if (isSelected) {
-                if (isCleanGlassActive) {
-                    tv.background = AuroraBorealisTheme.createActiveDrawerCapsule(this, isAuroraMode)
-                } else {
-                    tv.setBackgroundColor(Color.argb(50, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor)))
+                tv.background = when {
+                    isMinimalistMode -> MinimalistTheme.createMinimalistActiveDrawerCapsule(this)
+                    isCleanGlassActive -> AuroraBorealisTheme.createActiveDrawerCapsule(this, isAuroraMode)
+                    else -> GradientDrawable().apply {
+                        setColor(Color.argb(50, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor)))
+                        cornerRadius = dp(12f).toFloat()
+                    }
                 }
                 tv.setTextColor(activeAccent)
             } else {
                 tv.background = null
-                tv.setTextColor(Color.WHITE)
+                tv.setTextColor(baseInk)
             }
         }
     }
 
-    // מציג את האפשרות "צורת כפתורים" רק בערכת נושא רגילה, ומוסיף את הגדרת "צליל AC" מיד מתחת ל"סוג צליל"
     private fun applyButtonShapeVisibilityAndInsertAcSoundSetting(root: View?) {
         if (root == null) return
         if (root is ViewGroup) {
@@ -741,7 +808,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 if (ch is TextView) {
                     val txt = ch.text.toString()
                     if (txt.contains("צורת כפתורים")) {
-                        // מוצג אך ורק בערכת נושא רגילה (!isCleanGlassActive)
                         ch.visibility = if (!isCleanGlassActive) View.VISIBLE else View.GONE
                     } else if (txt.contains("סוג צליל")) {
                         val nextChild = if (i + 1 < root.childCount) root.getChildAt(i + 1) else null
@@ -772,9 +838,158 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
-    // רשימת סימון (Checklist) מוסתרת שנפתחת בלחיצה על הכפתור ונסגרת בלחיצה על כפתור "סיום"
+    // פאנל בחירה והתאמה אישית מלא עבור ערכת הנושא "עיצוב מינימליסטי" במסך ההגדרות
+    private fun createMinimalistThemeCustomizationSection(): View {
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16f), dp(14f), dp(16f), dp(14f))
+            background = if (isMinimalistMode) MinimalistTheme.createMinimalistCardDrawable(this@MainActivity, 22f, 1)
+            else if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@MainActivity, 20f)
+            else GradientDrawable().apply {
+                setColor(Utils.lightenColor(bgColor, 0.07f))
+                cornerRadius = dp(20f).toFloat()
+                setStroke(dp(1.2f), primaryColor)
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = dp(12f) }
+        }
+
+        val toggleMinBtn = createActionBtn(
+            if (isMinimalistMode) "🎨 ערכת נושא: עיצוב מינימליסטי (מופעל ✔️)"
+            else "🎨 הפעל ערכת נושא: עיצוב מינימליסטי (פסטל בהיר)",
+            isMinimalistMode
+        ) {
+            isMinimalistMode = !isMinimalistMode
+            if (isMinimalistMode) {
+                isIosGlassMode = false
+                isAuroraMode = false
+            }
+            savePreferences()
+            applyTheme()
+        }
+        box.addView(toggleMinBtn)
+
+        if (isMinimalistMode) {
+            val paperModes = listOf("קרם חם קלאסי (#FAF7F2)", "לבן שלג נקי (#F6F8FB)", "מנטה פסטל עדין (#F2F7F4)")
+            val paperBtn = createActionBtn("גוון נייר רקע: ${paperModes[MinimalistTheme.warmPaperTintMode.coerceIn(0, 2)]}", false) {
+                MinimalistTheme.warmPaperTintMode = (MinimalistTheme.warmPaperTintMode + 1) % paperModes.size
+                savePreferences()
+                applyTheme()
+            }
+
+            val cornerOptions = listOf(28f to "קפסולה מלאה (28dp)", 20f to "מעוגל רך (20dp)", 12f to "מינימליסטי ישר (12dp)")
+            val curCornerLbl = cornerOptions.minByOrNull { kotlin.math.abs(it.first - MinimalistTheme.pillCornerPt) }?.second ?: "קפסולה מלאה"
+            val cornerBtn = createActionBtn("עיגול מקשים וכרטיסים: $curCornerLbl", false) {
+                val idx = cornerOptions.indexOfFirst { kotlin.math.abs(it.first - MinimalistTheme.pillCornerPt) < 2f }
+                val next = cornerOptions[(idx + 1) % cornerOptions.size]
+                MinimalistTheme.pillCornerPt = next.first
+                savePreferences()
+                applyTheme()
+            }
+
+            val accentModeBtn = createActionBtn(
+                if (MinimalistTheme.useCustomAccentTint) "צבע כפתורים ראשיים: מותאם אישית מגלגל הצבעים 🎨"
+                else "צבע כפתורים ראשיים: אפרסק-קורל קנבה מקורי (#F69E7A)",
+                false
+            ) {
+                MinimalistTheme.useCustomAccentTint = !MinimalistTheme.useCustomAccentTint
+                savePreferences()
+                applyTheme()
+            }
+
+            box.addView(paperBtn)
+            box.addView(cornerBtn)
+            box.addView(accentModeBtn)
+        }
+
+        return box
+    }
+
+    // מוסיף במצב "עיצוב מינימליסטי" כפתור איפוס עגול בגוון מנטה (#9ED9C8) בפינה השמאלית-תחתונה של מחשבוני הטפסים (בדיוק כמו בתמונת הקנבה!)
+    private fun wrapWithMinimalistResetFabIfApplicable(formView: View, tabIdx: Int): View {
+        if (!isMinimalistMode || tabIdx in listOf(0, 1, 19, 39, 40, 41, 42, 43, 55, 56)) return formView
+        val wrapper = FrameLayout(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        }
+        wrapper.addView(
+            formView,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        val fabSize = dp(56f)
+        val fabBtn = View(this).apply {
+            layoutParams = FrameLayout.LayoutParams(fabSize, fabSize).apply {
+                gravity = Gravity.BOTTOM or Gravity.LEFT
+                leftMargin = dp(22f)
+                bottomMargin = dp(22f)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                elevation = dp(4f).toFloat()
+            }
+            background = object : Drawable() {
+                private val d = resources.displayMetrics.density
+                private val circlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = MinimalistTheme.FAB_MINT_GREEN
+                    style = Paint.Style.FILL
+                }
+                private val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = MinimalistTheme.TEXT_DARK
+                    style = Paint.Style.STROKE
+                    strokeWidth = 2.0f * d
+                    strokeCap = Paint.Cap.ROUND
+                    strokeJoin = Paint.Join.ROUND
+                }
+
+                override fun draw(canvas: Canvas) {
+                    val b = bounds
+                    val cx = b.exactCenterX()
+                    val cy = b.exactCenterY()
+                    val rad = Math.min(b.width(), b.height()) / 2f
+                    canvas.drawCircle(cx, cy, rad, circlePaint)
+
+                    // סמל החצים המתהפכים (🔁) במרכז הכפתור העגול כמו בתמונת מחשבון מס מכירות
+                    val w = rad * 0.42f
+                    val h = rad * 0.28f
+                    canvas.drawLine(cx - w, cy - h, cx + w, cy - h, iconPaint)
+                    canvas.drawLine(cx + w, cy - h, cx + w, cy - h * 0.2f, iconPaint)
+                    canvas.drawLine(cx - w, cy - h, cx - w + 4f * d, cy - h - 3.5f * d, iconPaint)
+                    canvas.drawLine(cx - w, cy - h, cx - w + 4f * d, cy - h + 3.5f * d, iconPaint)
+
+                    canvas.drawLine(cx + w, cy + h, cx - w, cy + h, iconPaint)
+                    canvas.drawLine(cx - w, cy + h, cx - w, cy + h * 0.2f, iconPaint)
+                    canvas.drawLine(cx + w, cy + h, cx + w - 4f * d, cy + h - 3.5f * d, iconPaint)
+                    canvas.drawLine(cx + w, cy + h, cx + w - 4f * d, cy + h + 3.5f * d, iconPaint)
+                }
+
+                override fun setAlpha(alpha: Int) {}
+                override fun setColorFilter(colorFilter: ColorFilter?) {}
+                @Deprecated("Deprecated in Java")
+                override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+            }
+            setOnClickListener {
+                feedback(it)
+                switchTab(tabIdx)
+            }
+        }
+        wrapper.addView(fabBtn)
+        return wrapper
+    }
+
     private fun createDrawerCalculatorsChecklistSection(): View {
-        val accent = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
+        val textCol = if (isMinimalistMode) MinimalistTheme.TEXT_DARK else Color.WHITE
+        val accent = when {
+            isMinimalistMode -> MinimalistTheme.ACTION_CORAL_PRIMARY
+            isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
+            else -> primaryColor
+        }
         val proActive = ProState.isProEnabled(prefs)
         val availableSections = drawerSections.filter { (secCode, _, _) ->
             proActive || secCode !in 305..311
@@ -828,11 +1043,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             orientation = LinearLayout.VERTICAL
             visibility = if (isDrawerChecklistExpanded) View.VISIBLE else View.GONE
             setPadding(dp(14f), dp(14f), dp(14f), dp(14f))
-            background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@MainActivity, 20f)
-            else GradientDrawable().apply {
-                setColor(Utils.lightenColor(bgColor, 0.06f))
-                cornerRadius = dp(20f).toFloat()
-                setStroke(dp(1f), Utils.lightenColor(bgColor, 0.16f))
+            background = when {
+                isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@MainActivity, 20f, 0)
+                isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@MainActivity, 20f)
+                else -> GradientDrawable().apply {
+                    setColor(Utils.lightenColor(bgColor, 0.06f))
+                    cornerRadius = dp(20f).toFloat()
+                    setStroke(dp(1f), Utils.lightenColor(bgColor, 0.16f))
+                }
             }
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -840,7 +1058,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             ).apply { bottomMargin = dp(8f) }
         }
 
-        // כפתור "סיום" עליון לסגירת הרשימה מיידית
         val topDoneBtn = createActionBtn("סיום ✔️", true) {
             closeChecklist()
         }
@@ -904,7 +1121,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             for (tabIdx in itemIndices) {
                 val cb = CheckBox(this).apply {
                     text = "  ${IosGlassTheme.cleanCategoryTitle(categories[tabIdx], isCleanGlassActive)}"
-                    setTextColor(Color.WHITE)
+                    setTextColor(textCol)
                     textSize = 14.5f
                     typeface = Typeface.DEFAULT_BOLD
                     buttonTintList = ColorStateList.valueOf(accent)
@@ -924,7 +1141,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
         }
 
-        // כפתור "סיום" תחתון לסגירת הרשימה לאחר גלילה
         val bottomDoneBtn = createActionBtn("סיום ✔️", true) {
             closeChecklist()
         }.apply {
@@ -948,7 +1164,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             settingsScrollY = 0
             isDrawerChecklistExpanded = false
         } else {
-            // בכניסה ראשונה להגדרות, רשימת הסימון תמיד מתחילה מוסתרת
             isDrawerChecklistExpanded = false
         }
         if (MiniGameEngine.isActive) MiniGameEngine.stopGame(this)
@@ -956,7 +1171,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         titleText.text = IosGlassTheme.cleanCategoryTitle(categories.getOrElse(index) { "מחשבון" }, true)
         refreshFavHeaderIcon()
         updateDrawerSelection(); contentFrame.removeAllViews()
-        val view = when (index) {
+        val rawView = when (index) {
             0 -> createBasicCalculator(); 1 -> createScientificCalculator(); 2 -> createVatCalculator(); 3 -> createLoanCalculator()
             4 -> createDistanceCalculator(); 5 -> createWeightCalculator(); 6 -> createTempCalculator(); 7 -> createProgrammerCalculator()
             8 -> createPercentageCalculator(); 9 -> createDiscountCalculator(); 10 -> createTipCalculator(); 11 -> createBMICalculator()
@@ -965,12 +1180,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             19 -> {
                 val settingsView = createSettingsPage()
                 enhanceSettingsHierarchy(settingsView)
-                // הסתרת "צורת כפתורים" בערכות הנושא המיוחדות + הוספת כפתור "צליל AC"
                 applyButtonShapeVisibilityAndInsertAcSoundSetting(settingsView)
 
                 val scrollObj = settingsView as? ScrollView
                 currentSettingsScroll = scrollObj
                 val container = scrollObj?.getChildAt(0) as? LinearLayout ?: (settingsView as? LinearLayout)
+
+                // הוספת בורר ופאנל ההתאמה האישית של "עיצוב מינימליסטי" בראש ההגדרות
+                container?.addView(createMinimalistThemeCustomizationSection(), 1.coerceAtMost(container.childCount))
 
                 var hasProBtn = false
                 if (container != null) {
@@ -1014,8 +1231,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     switchTab(19)
                 }
                 container?.addView(handBtn)
-
-                // רשימת סימון מוסתרת שנפתחת בלחיצה על הכפתור ונסגרת בלחיצה על כפתור "סיום"
                 container?.addView(createDrawerCalculatorsChecklistSection())
 
                 scrollObj?.viewTreeObserver?.addOnScrollChangedListener {
@@ -1075,10 +1290,16 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             65 -> createProMatrixAndEquationsScreen()
             else -> createBasicCalculator()
         }
-        contentFrame.addView(view)
+
+        if (isMinimalistMode && index != 0 && index != 1) {
+            MinimalistTheme.applyMinimalistStylingToHierarchy(rawView, this)
+        }
+        val finalView = wrapWithMinimalistResetFabIfApplicable(rawView, index)
+
+        contentFrame.addView(finalView)
         if (useAnimations && !wasInSettings) {
-            view.alpha = 0f; view.translationY = dp(24f).toFloat()
-            view.animate().alpha(1f).translationY(0f).setDuration(260).setInterpolator(DecelerateInterpolator()).start()
+            finalView.alpha = 0f; finalView.translationY = dp(24f).toFloat()
+            finalView.animate().alpha(1f).translationY(0f).setDuration(260).setInterpolator(DecelerateInterpolator()).start()
         }
     }
 
@@ -1135,11 +1356,15 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; layoutDirection = View.LAYOUT_DIRECTION_LTR; setPadding(dp(14f), dp(0f), dp(14f), dp(14f)) }
         val displayCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.BOTTOM or Gravity.END; setPadding(dp(22f), dp(14f), dp(22f), dp(16f))
-            background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@MainActivity, if (isAuroraMode) 28f else IosGlassTheme.glassCornerPt) else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.07f)); cornerRadius = dp(28f).toFloat(); setStroke(dp(1.5f), Color.argb(70, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor))) }
-            if (isCleanGlassActive) IosGlassTheme.apply3DElevation(this, 10f)
+            background = when {
+                isMinimalistMode -> null // בעיצוב מינימליסטי אזור המספרים פתוח ונקי על רקע הקרם ללא קופסה סגורה!
+                isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@MainActivity, if (isAuroraMode) 28f else IosGlassTheme.glassCornerPt)
+                else -> GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.07f)); cornerRadius = dp(28f).toFloat(); setStroke(dp(1.5f), Color.argb(70, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor))) }
+            }
+            if (isCleanGlassActive && !isMinimalistMode) IosGlassTheme.apply3DElevation(this, 10f)
         }
 
-        if (isCleanGlassActive) {
+        if (isCleanGlassActive && !isMinimalistMode) {
             val pillBar = View(this).apply {
                 background = GradientDrawable().apply {
                     cornerRadius = dp(4f).toFloat()
@@ -1153,10 +1378,21 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             displayCard.addView(pillBar)
         }
 
-        memoryIndicator = TextView(this).apply { text = if (memoryValue != 0.0) "M = ${Utils.formatResult(memoryValue, calcPrecision)}" else ""; setTextColor(if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor); textSize = 12f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.START }
+        memoryIndicator = TextView(this).apply {
+            text = if (memoryValue != 0.0) "M = ${Utils.formatResult(memoryValue, calcPrecision)}" else ""
+            setTextColor(when {
+                isMinimalistMode -> MinimalistTheme.TEXT_MUTED
+                isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
+                else -> primaryColor
+            })
+            textSize = 12f
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.START
+        }
         expressionView = TextView(this).apply {
             text = ""
             setTextColor(when {
+                isMinimalistMode -> MinimalistTheme.TEXT_MUTED
                 isAuroraMode -> AuroraBorealisTheme.EXPRESSION_CYAN_GREY
                 isIosGlassMode -> Color.parseColor("#B8C7D9")
                 else -> Color.parseColor("#8A94A8")
@@ -1167,9 +1403,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         currentView = TextView(this).apply {
             text = if(currentInput.isEmpty()) "0" else currentInput
-            setTextColor(Color.WHITE)
-            typeface = if (isCleanGlassActive) Typeface.create("sans-serif-medium", Typeface.BOLD) else Typeface.create("sans-serif-light", Typeface.NORMAL)
-            setAutoSizeTextTypeUniformWithConfiguration(18, 56, 2, TypedValue.COMPLEX_UNIT_SP)
+            setTextColor(if (isMinimalistMode) MinimalistTheme.TEXT_DARK else Color.WHITE)
+            typeface = if (isMinimalistMode) Typeface.create("sans-serif", Typeface.NORMAL)
+            else if (isCleanGlassActive) Typeface.create("sans-serif-medium", Typeface.BOLD)
+            else Typeface.create("sans-serif-light", Typeface.NORMAL)
+            setAutoSizeTextTypeUniformWithConfiguration(18, 60, 2, TypedValue.COMPLEX_UNIT_SP)
             gravity = Gravity.END
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 2f)
             if (isAuroraMode) {
@@ -1214,10 +1452,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 layoutDirection = View.LAYOUT_DIRECTION_LTR
             }
             for (symbol in rowSymbols) {
-                val weight = if (!isGrid5x7 && symbol == "0") 2f else 1f
+                // בעיצוב מינימליסטי כל הכפתורים בשורה התחתונה בעלי רוחב קפסולה שווה (1f) בדיוק כמו בתמונה!
+                val weight = if (!isGrid5x7 && symbol == "0" && !isMinimalistMode) 2f else 1f
                 val btn = createAnimatedButton(symbol, isGrid5x7)
                 keypadButtons[symbol] = btn
-                val marginDp = if (isCleanGlassActive) 4.5f else 3f
+                val marginDp = if (isMinimalistMode) 5.5f else if (isCleanGlassActive) 4.5f else 3f
                 rowLayout.addView(btn, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, weight).apply { setMargins(dp(marginDp), dp(marginDp), dp(marginDp), dp(marginDp)) })
             }
             keypad.addView(rowLayout, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
@@ -1230,9 +1469,20 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val isOp = symbol in listOf("÷", "×", "−", "+", "sin", "cos", "tan", "log", "ln", "√", "x²", "x³", "x^y", "!", "π", "e", "(", ")")
         val defaultBg = when { symbol == "AC" -> Utils.lightenColor(Color.RED, 0.2f); symbol == "=" -> primaryColor; isMem -> Utils.lightenColor(bgColor, 0.03f); symbol in listOf("⌫", "%", "÷", "×", "−", "+") -> Utils.lightenColor(bgColor, 0.1f); else -> Utils.lightenColor(bgColor, 0.06f) }
         val strokeColor = if (symbol == "=" || symbol == "AC") Color.TRANSPARENT else Utils.lightenColor(bgColor, 0.15f)
-        val textColor = if (isCleanGlassActive) Color.WHITE else when { symbol == "AC" -> Color.WHITE; symbol == "=" -> Color.parseColor("#08090C"); isMem || symbol in listOf("⌫", "%", "÷", "×", "−", "+") -> primaryColor; else -> Color.WHITE }
+        val textColor = when {
+            isMinimalistMode -> MinimalistTheme.TEXT_DARK
+            isCleanGlassActive -> Color.WHITE
+            symbol == "AC" -> Color.WHITE
+            symbol == "=" -> Color.parseColor("#08090C")
+            isMem || symbol in listOf("⌫", "%", "÷", "×", "−", "+") -> primaryColor
+            else -> Color.WHITE
+        }
         val shape = GradientDrawable().apply { this.shape = GradientDrawable.RECTANGLE; cornerRadius = dp(buttonCornerStyle).toFloat(); setColor(defaultBg); setStroke(dp(1.5f), strokeColor) }
-        val btnDrawable = if (isCleanGlassActive) IosGlassTheme.createGlassButtonDrawable(this, symbol, isMem, false) else RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33FFFFFF")), shape, null)
+        val btnDrawable = when {
+            isMinimalistMode -> MinimalistTheme.createMinimalistKeypadButtonDrawable(this, symbol, false)
+            isCleanGlassActive -> IosGlassTheme.createGlassButtonDrawable(this, symbol, isMem, false)
+            else -> RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33FFFFFF")), shape, null)
+        }
 
         return TextView(this).apply {
             text = symbol
@@ -1240,14 +1490,17 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             minimumWidth = dp(44f)
             minimumHeight = dp(44f)
             setPadding(dp(6f), dp(4f), dp(6f), dp(4f))
-            setAutoSizeTextTypeUniformWithConfiguration(10, if(isSmall) 21 else 27, 2, TypedValue.COMPLEX_UNIT_SP)
-            typeface = if (isCleanGlassActive) Typeface.create("sans-serif-medium", Typeface.BOLD) else if (symbol == "=" || isOp || isMem) Typeface.DEFAULT_BOLD else Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            setAutoSizeTextTypeUniformWithConfiguration(10, if(isSmall) 21 else 26, 2, TypedValue.COMPLEX_UNIT_SP)
+            typeface = if (isMinimalistMode) Typeface.create("sans-serif", Typeface.NORMAL)
+            else if (isCleanGlassActive) Typeface.create("sans-serif-medium", Typeface.BOLD)
+            else if (symbol == "=" || isOp || isMem) Typeface.DEFAULT_BOLD
+            else Typeface.create("sans-serif-medium", Typeface.NORMAL)
             gravity = Gravity.CENTER
             background = btnDrawable
             isClickable = true
 
             if (isCleanGlassActive) {
-                IosGlassTheme.apply3DElevation(this, 6f)
+                if (!isMinimalistMode) IosGlassTheme.apply3DElevation(this, 6f)
                 IosGlassTheme.styleSymbolTextView(this, this@MainActivity, symbol, false)
             }
 
@@ -1256,15 +1509,19 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 when (e.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
                         feedback(v, symbol)
-                        if (isCleanGlassActive) {
+                        if (isMinimalistMode) {
+                            tv.background = MinimalistTheme.createMinimalistKeypadButtonDrawable(this@MainActivity, symbol, true)
+                        } else if (isCleanGlassActive) {
                             tv.background = IosGlassTheme.createGlassButtonDrawable(this@MainActivity, symbol, isMem, true)
                             IosGlassTheme.styleSymbolTextView(tv, this@MainActivity, symbol, true)
                             IosGlassTheme.apply3DElevation(tv, 2f)
                         }
-                        if (useAnimations) v.animate().scaleX(if (isCleanGlassActive) 0.91f else 0.84f).scaleY(if (isCleanGlassActive) 0.91f else 0.84f).translationY(if (isCleanGlassActive) dp(2f).toFloat() else 0f).setDuration(65).setInterpolator(DecelerateInterpolator()).start()
+                        if (useAnimations) v.animate().scaleX(if (isCleanGlassActive) 0.93f else 0.84f).scaleY(if (isCleanGlassActive) 0.93f else 0.84f).translationY(if (isCleanGlassActive) dp(1.5f).toFloat() else 0f).setDuration(65).setInterpolator(DecelerateInterpolator()).start()
                     }
                     MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                        if (isCleanGlassActive) {
+                        if (isMinimalistMode) {
+                            tv.background = MinimalistTheme.createMinimalistKeypadButtonDrawable(this@MainActivity, symbol, false)
+                        } else if (isCleanGlassActive) {
                             tv.background = IosGlassTheme.createGlassButtonDrawable(this@MainActivity, symbol, isMem, false)
                             IosGlassTheme.styleSymbolTextView(tv, this@MainActivity, symbol, false)
                             IosGlassTheme.apply3DElevation(tv, 6f)
@@ -1313,9 +1570,77 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
-    fun createInputBox(hintText: String): EditText { return EditText(this).apply { hint = hintText; setHintTextColor(if (isCleanGlassActive) Color.parseColor("#B0BEC5") else Color.parseColor("#5C657A")); setTextColor(Color.WHITE); inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED; textSize = 17f; setPadding(dp(18f), dp(18f), dp(18f), dp(18f)); background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@MainActivity, 16f) else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(16f).toFloat(); setStroke(dp(1.5f), Utils.lightenColor(bgColor, 0.15f)) }; layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(14f) } } }
-    fun createActionBtn(textStr: String, isPrimary: Boolean = true, onClick: (View) -> Unit): TextView { val cleanText = IosGlassTheme.cleanCategoryTitle(textStr, isCleanGlassActive); val shape = GradientDrawable().apply { setColor(if (isPrimary) primaryColor else Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(buttonCornerStyle).toFloat(); if (!isPrimary) setStroke(dp(1.5f), Utils.lightenColor(bgColor, 0.15f)) }; val bgDraw = if (isCleanGlassActive) IosGlassTheme.createGlassButtonDrawable(this, if (isPrimary) "=" else "0", false) else RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33FFFFFF")), shape, null); return TextView(this).apply { text = cleanText; gravity = Gravity.CENTER; setTextColor(if (isPrimary && isAuroraMode) AuroraBorealisTheme.EMERALD_NIGHT else if (isPrimary && !isCleanGlassActive) Color.parseColor("#08090C") else Color.WHITE); textSize = 15f; typeface = Typeface.DEFAULT_BOLD; background = bgDraw; setPadding(dp(12f), dp(16f), dp(12f), dp(16f)); layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(10f) }; isClickable = true; if (isCleanGlassActive) IosGlassTheme.apply3DElevation(this, 5f); setOnClickListener { feedback(it); onClick(it) } } }
-    fun createResultTextView(): TextView = TextView(this).apply { setTextColor(Color.WHITE); textSize = 20f; gravity = Gravity.CENTER; setPadding(0, dp(20f), 0, 0); setOnClickListener { if (text.isNotEmpty()) copyToClipboard(text.toString()) } }
+    fun createInputBox(hintText: String): EditText {
+        return EditText(this).apply {
+            hint = hintText
+            setHintTextColor(when {
+                isMinimalistMode -> MinimalistTheme.TEXT_MUTED
+                isCleanGlassActive -> Color.parseColor("#B0BEC5")
+                else -> Color.parseColor("#5C657A")
+            })
+            setTextColor(if (isMinimalistMode) MinimalistTheme.TEXT_DARK else Color.WHITE)
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED
+            textSize = 17f
+            setPadding(dp(18f), dp(18f), dp(18f), dp(18f))
+            background = when {
+                isMinimalistMode -> MinimalistTheme.createMinimalistInputDrawable(this@MainActivity, 0)
+                isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@MainActivity, 16f)
+                else -> GradientDrawable().apply {
+                    setColor(Utils.lightenColor(bgColor, 0.06f))
+                    cornerRadius = dp(16f).toFloat()
+                    setStroke(dp(1.5f), Utils.lightenColor(bgColor, 0.15f))
+                }
+            }
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(14f) }
+        }
+    }
+
+    fun createActionBtn(textStr: String, isPrimary: Boolean = true, onClick: (View) -> Unit): TextView {
+        val cleanText = IosGlassTheme.cleanCategoryTitle(textStr, isCleanGlassActive)
+        val isSwapBtn = cleanText.contains("החלף כיוון")
+        val shape = GradientDrawable().apply {
+            setColor(if (isPrimary) primaryColor else Utils.lightenColor(bgColor, 0.06f))
+            cornerRadius = dp(buttonCornerStyle).toFloat()
+            if (!isPrimary) setStroke(dp(1.5f), Utils.lightenColor(bgColor, 0.15f))
+        }
+        val bgDraw = when {
+            isMinimalistMode -> MinimalistTheme.createMinimalistActionButtonDrawable(this, isPrimary, isSwapBtn)
+            isCleanGlassActive -> IosGlassTheme.createGlassButtonDrawable(this, if (isPrimary) "=" else "0", false)
+            else -> RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33FFFFFF")), shape, null)
+        }
+        return TextView(this).apply {
+            text = if (isMinimalistMode && isSwapBtn) "⇅ החלף כיוון" else cleanText
+            gravity = Gravity.CENTER
+            setTextColor(when {
+                isMinimalistMode -> MinimalistTheme.TEXT_DARK
+                isPrimary && isAuroraMode -> AuroraBorealisTheme.EMERALD_NIGHT
+                isPrimary && !isCleanGlassActive -> Color.parseColor("#08090C")
+                else -> Color.WHITE
+            })
+            textSize = 15.5f
+            typeface = Typeface.DEFAULT_BOLD
+            background = bgDraw
+            setPadding(dp(if (isMinimalistMode && isSwapBtn) 24f else 14f), dp(if (isMinimalistMode && isSwapBtn) 10f else 15f), dp(if (isMinimalistMode && isSwapBtn) 24f else 14f), dp(if (isMinimalistMode && isSwapBtn) 10f else 15f))
+            layoutParams = LinearLayout.LayoutParams(
+                if (isMinimalistMode && isSwapBtn) LinearLayout.LayoutParams.WRAP_CONTENT else LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dp(10f)
+                if (isMinimalistMode && isSwapBtn) gravity = Gravity.CENTER_HORIZONTAL
+            }
+            isClickable = true
+            if (isCleanGlassActive && !isMinimalistMode) IosGlassTheme.apply3DElevation(this, 5f)
+            setOnClickListener { feedback(it); onClick(it) }
+        }
+    }
+
+    fun createResultTextView(): TextView = TextView(this).apply {
+        setTextColor(if (isMinimalistMode) MinimalistTheme.TEXT_DARK else Color.WHITE)
+        textSize = 20f
+        gravity = Gravity.CENTER
+        setPadding(0, dp(20f), 0, 0)
+        setOnClickListener { if (text.isNotEmpty()) copyToClipboard(text.toString()) }
+    }
 
     override fun onDestroy() { tts?.shutdown(); soundPool.release(); super.onDestroy() }
     fun dp(value: Float): Int = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, resources.displayMetrics).toInt()
