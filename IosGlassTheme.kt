@@ -20,6 +20,7 @@ object IosGlassTheme {
 
     const val LIQUID_GLASS_THEME_NAME = "Liquid Glass Pro"
     const val AURORA_THEME_NAME = "Aurora Borealis (זוהר הצפון)"
+    const val MINIMALIST_THEME_NAME = "עיצוב מינימליסטי"
 
     var glassOpacity: Int = 185
     var glassBlurRadius: Float = 28f
@@ -39,10 +40,12 @@ object IosGlassTheme {
         pressGlowIntensity = prefs.getInt("ios_pressGlowIntensity", 220)
         useClassicOrangeOps = prefs.getBoolean("ios_useClassicOrangeOps", true)
         AuroraBorealisTheme.loadAuroraPrefs(prefs)
+        MinimalistTheme.loadMinimalistPrefs(prefs)
     }
 
     fun saveIosPrefs(prefs: SharedPreferences?) {
         AuroraBorealisTheme.saveAuroraPrefs(prefs)
+        MinimalistTheme.saveMinimalistPrefs(prefs)
         prefs?.edit()
             ?.putInt("ios_glassOpacity", glassOpacity)
             ?.putFloat("ios_glassBlurRadius", glassBlurRadius)
@@ -75,6 +78,12 @@ object IosGlassTheme {
     }
 
     fun styleSymbolTextView(tv: TextView, activity: MainActivity, symbol: String, isPressed: Boolean = false) {
+        if (activity.isMinimalistMode) {
+            tv.setTextColor(MinimalistTheme.TEXT_DARK)
+            tv.text = formatSymbolText(symbol, true)
+            tv.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
+            return
+        }
         if (activity.isAuroraMode) {
             AuroraBorealisTheme.styleAuroraSymbol(tv, symbol, isPressed)
             return
@@ -113,6 +122,9 @@ object IosGlassTheme {
         isMem: Boolean,
         isPressed: Boolean = false
     ): Drawable {
+        if (activity.isMinimalistMode) {
+            return MinimalistTheme.createMinimalistKeypadButtonDrawable(activity, symbol, isPressed)
+        }
         if (activity.isAuroraMode) {
             return AuroraBorealisTheme.createAuroraButtonDrawable(activity, symbol, isMem, isPressed)
         }
@@ -191,6 +203,9 @@ object IosGlassTheme {
     }
 
     fun createGlassCardDrawable(activity: MainActivity, cornerDp: Float = glassCornerPt): Drawable {
+        if (activity.isMinimalistMode) {
+            return MinimalistTheme.createMinimalistCardDrawable(activity, cornerDp, 0)
+        }
         if (activity.isAuroraMode) {
             return AuroraBorealisTheme.createAuroraCardDrawable(activity, cornerDp, cornerDp == 0f)
         }
@@ -225,6 +240,9 @@ object IosGlassTheme {
     }
 
     fun createLiquidAmbientBackground(activity: MainActivity): Drawable {
+        if (activity.isMinimalistMode) {
+            return GradientDrawable().apply { setColor(MinimalistTheme.getBackgroundColor()) }
+        }
         if (activity.isAuroraMode) {
             return AuroraBorealisTheme.createAuroraAtmosphericBackground()
         }
@@ -314,13 +332,12 @@ object IosGlassTheme {
                 val cy = b.top + h / 2f
                 val r = Math.min(w, h) * 0.38f
 
-                // רקע Squircle של אפל עם הברקת זכוכית דקה
                 val sqRect = RectF(cx - r * 1.15f, cy - r * 1.15f, cx + r * 1.15f, cy + r * 1.15f)
                 canvas.drawRoundRect(sqRect, r * 0.48f, r * 0.48f, fillPaint)
                 canvas.drawRoundRect(sqRect, r * 0.48f, r * 0.48f, rimPaint)
 
                 when (categoryIndex) {
-                    0, 301 -> { // SF Symbol: plus.forwardslash.minus
+                    0, 301 -> {
                         val o = r * 0.45f
                         canvas.drawLine(cx - o - r * 0.2f, cy - o, cx - o + r * 0.2f, cy - o, paint)
                         canvas.drawLine(cx - o, cy - o - r * 0.2f, cx - o, cy - o + r * 0.2f, paint)
@@ -330,16 +347,16 @@ object IosGlassTheme {
                         canvas.drawLine(cx + o - r * 0.2f, cy + o - r * 0.1f, cx + o + r * 0.2f, cy + o - r * 0.1f, paint)
                         canvas.drawLine(cx + o - r * 0.2f, cy + o + r * 0.1f, cx + o + r * 0.2f, cy + o + r * 0.1f, paint)
                     }
-                    1 -> { // SF Symbol: function f(x)
+                    1 -> {
                         val path = Path().apply { moveTo(cx - r * 0.8f, cy); cubicTo(cx - r * 0.3f, cy - r * 0.9f, cx + r * 0.3f, cy + r * 0.9f, cx + r * 0.8f, cy) }
                         canvas.drawPath(path, paint)
                     }
-                    2, 24 -> { // SF Symbol: doc.text
+                    2, 24 -> {
                         canvas.drawRoundRect(cx - r * 0.65f, cy - r * 0.8f, cx + r * 0.65f, cy + r * 0.8f, r * 0.2f, r * 0.2f, paint)
                         canvas.drawLine(cx - r * 0.35f, cy - r * 0.3f, cx + r * 0.35f, cy - r * 0.3f, paint)
                         canvas.drawLine(cx - r * 0.35f, cy + r * 0.2f, cx + r * 0.15f, cy + r * 0.2f, paint)
                     }
-                    3, 29, 302 -> { // SF Symbol: building.columns
+                    3, 29, 302 -> {
                         val path = Path().apply { moveTo(cx - r * 0.8f, cy - r * 0.25f); lineTo(cx, cy - r * 0.8f); lineTo(cx + r * 0.8f, cy - r * 0.25f); close() }
                         canvas.drawPath(path, paint)
                         canvas.drawLine(cx - r * 0.5f, cy - r * 0.2f, cx - r * 0.5f, cy + r * 0.65f, paint)
@@ -347,36 +364,36 @@ object IosGlassTheme {
                         canvas.drawLine(cx + r * 0.5f, cy - r * 0.2f, cx + r * 0.5f, cy + r * 0.65f, paint)
                         canvas.drawLine(cx - r * 0.8f, cy + r * 0.7f, cx + r * 0.8f, cy + r * 0.7f, paint)
                     }
-                    4, 303 -> { // SF Symbol: ruler
+                    4, 303 -> {
                         canvas.drawRoundRect(cx - r * 0.85f, cy - r * 0.4f, cx + r * 0.85f, cy + r * 0.4f, r * 0.15f, r * 0.15f, paint)
                         canvas.drawLine(cx - r * 0.4f, cy - r * 0.4f, cx - r * 0.4f, cy, paint)
                         canvas.drawLine(cx, cy - r * 0.4f, cx, cy + r * 0.1f, paint)
                         canvas.drawLine(cx + r * 0.4f, cy - r * 0.4f, cx + r * 0.4f, cy, paint)
                     }
-                    5 -> { // SF Symbol: scalemass
+                    5 -> {
                         canvas.drawLine(cx, cy - r * 0.75f, cx, cy + r * 0.75f, paint)
                         canvas.drawLine(cx - r * 0.7f, cy - r * 0.35f, cx + r * 0.7f, cy - r * 0.35f, paint)
                         canvas.drawArc(cx - r * 0.85f, cy - r * 0.05f, cx - r * 0.35f, cy + r * 0.4f, 0f, 180f, false, paint)
                         canvas.drawArc(cx + r * 0.35f, cy - r * 0.05f, cx + r * 0.85f, cy + r * 0.4f, 0f, 180f, false, paint)
                     }
-                    6 -> { // SF Symbol: thermometer
+                    6 -> {
                         canvas.drawArc(cx - r * 0.45f, cy + r * 0.05f, cx + r * 0.45f, cy + r * 0.85f, -45f, 270f, false, paint)
                         canvas.drawLine(cx - r * 0.22f, cy - r * 0.75f, cx - r * 0.22f, cy + r * 0.2f, paint)
                         canvas.drawLine(cx + r * 0.22f, cy - r * 0.75f, cx + r * 0.22f, cy + r * 0.2f, paint)
                     }
-                    7, 28 -> { // SF Symbol: chevron.left.forwardslash.chevron.right
+                    7, 28 -> {
                         canvas.drawLine(cx - r * 0.35f, cy - r * 0.45f, cx - r * 0.8f, cy, paint)
                         canvas.drawLine(cx - r * 0.8f, cy, cx - r * 0.35f, cy + r * 0.45f, paint)
                         canvas.drawLine(cx + r * 0.35f, cy - r * 0.45f, cx + r * 0.8f, cy, paint)
                         canvas.drawLine(cx + r * 0.8f, cy, cx + r * 0.35f, cy + r * 0.45f, paint)
                         canvas.drawLine(cx + r * 0.15f, cy - r * 0.55f, cx - r * 0.15f, cy + r * 0.55f, paint)
                     }
-                    8 -> { // SF Symbol: percent
+                    8 -> {
                         canvas.drawLine(cx - r * 0.6f, cy + r * 0.6f, cx + r * 0.6f, cy - r * 0.6f, paint)
                         canvas.drawCircle(cx - r * 0.4f, cy - r * 0.4f, r * 0.22f, paint)
                         canvas.drawCircle(cx + r * 0.4f, cy + r * 0.4f, r * 0.22f, paint)
                     }
-                    9, 25 -> { // SF Symbol: tag
+                    9, 25 -> {
                         val path = Path().apply {
                             moveTo(cx - r * 0.75f, cy - r * 0.75f); lineTo(cx + r * 0.1f, cy - r * 0.75f)
                             lineTo(cx + r * 0.8f, cy); lineTo(cx, cy + r * 0.8f); lineTo(cx - r * 0.75f, cy + r * 0.1f); close()
@@ -384,29 +401,29 @@ object IosGlassTheme {
                         canvas.drawPath(path, paint)
                         canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.12f, paint)
                     }
-                    10, 23 -> { // SF Symbol: person.2 / coins
+                    10, 23 -> {
                         canvas.drawCircle(cx - r * 0.25f, cy - r * 0.1f, r * 0.55f, paint)
                         canvas.drawCircle(cx + r * 0.3f, cy + r * 0.2f, r * 0.45f, paint)
                     }
-                    11, 27, 304 -> { // SF Symbol: waveform.path.ecg
+                    11, 27, 304 -> {
                         val path = Path().apply {
                             moveTo(cx - r * 0.85f, cy); lineTo(cx - r * 0.35f, cy); lineTo(cx - r * 0.15f, cy - r * 0.65f)
                             lineTo(cx + r * 0.15f, cy + r * 0.65f); lineTo(cx + r * 0.35f, cy); lineTo(cx + r * 0.85f, cy)
                         }
                         canvas.drawPath(path, paint)
                     }
-                    12, 30 -> { // SF Symbol: calendar
+                    12, 30 -> {
                         canvas.drawRoundRect(cx - r * 0.75f, cy - r * 0.65f, cx + r * 0.75f, cy + r * 0.75f, r * 0.2f, r * 0.2f, paint)
                         canvas.drawLine(cx - r * 0.75f, cy - r * 0.2f, cx + r * 0.75f, cy - r * 0.2f, paint)
                         canvas.drawLine(cx - r * 0.35f, cy - r * 0.85f, cx - r * 0.35f, cy - r * 0.45f, paint)
                         canvas.drawLine(cx + r * 0.35f, cy - r * 0.85f, cx + r * 0.35f, cy - r * 0.45f, paint)
                     }
-                    13, 26 -> { // SF Symbol: arrow.triangle.2.circlepath
+                    13, 26 -> {
                         canvas.drawArc(cx - r * 0.7f, cy - r * 0.7f, cx + r * 0.7f, cy + r * 0.7f, -150f, 120f, false, paint)
                         canvas.drawArc(cx - r * 0.7f, cy - r * 0.7f, cx + r * 0.7f, cy + r * 0.7f, 30f, 120f, false, paint)
                         canvas.drawLine(cx, cy - r * 0.4f, cx, cy + r * 0.4f, paint)
                     }
-                    14 -> { // SF Symbol: flame
+                    14 -> {
                         val path = Path().apply {
                             moveTo(cx, cy - r * 0.85f)
                             cubicTo(cx + r * 0.8f, cy - r * 0.1f, cx + r * 0.65f, cy + r * 0.75f, cx, cy + r * 0.85f)
@@ -414,18 +431,18 @@ object IosGlassTheme {
                         }
                         canvas.drawPath(path, paint)
                     }
-                    15 -> { // SF Symbol: parabola curve
+                    15 -> {
                         canvas.drawLine(cx - r * 0.8f, cy + r * 0.5f, cx + r * 0.8f, cy + r * 0.5f, paint)
                         val path = Path().apply { moveTo(cx - r * 0.65f, cy - r * 0.65f); quadTo(cx, cy + r * 1.1f, cx + r * 0.65f, cy - r * 0.65f) }
                         canvas.drawPath(path, paint)
                     }
-                    16 -> { // SF Symbol: fraction 1/2
+                    16 -> {
                         canvas.drawLine(cx - r * 0.65f, cy + r * 0.65f, cx + r * 0.65f, cy - r * 0.65f, paint)
                         canvas.drawLine(cx - r * 0.4f, cy - r * 0.65f, cx - r * 0.4f, cy - r * 0.15f, paint)
                         canvas.drawLine(cx + r * 0.25f, cy + r * 0.25f, cx + r * 0.6f, cy + r * 0.25f, paint)
                         canvas.drawLine(cx + r * 0.25f, cy + r * 0.6f, cx + r * 0.6f, cy + r * 0.6f, paint)
                     }
-                    17 -> { // SF Symbol: chart.line.uptrend.xyaxis
+                    17 -> {
                         val path = Path().apply {
                             moveTo(cx - r * 0.75f, cy + r * 0.65f); lineTo(cx - r * 0.2f, cy + r * 0.15f)
                             lineTo(cx + r * 0.15f, cy + r * 0.35f); lineTo(cx + r * 0.75f, cy - r * 0.55f)
@@ -434,49 +451,46 @@ object IosGlassTheme {
                         canvas.drawLine(cx + r * 0.35f, cy - r * 0.55f, cx + r * 0.75f, cy - r * 0.55f, paint)
                         canvas.drawLine(cx + r * 0.75f, cy - r * 0.55f, cx + r * 0.75f, cy - r * 0.15f, paint)
                     }
-                    18, 21 -> { // SF Symbol: gauge / speedometer
+                    18, 21 -> {
                         canvas.drawArc(cx - r * 0.8f, cy - r * 0.6f, cx + r * 0.8f, cy + r * 0.8f, 165f, 210f, false, paint)
                         canvas.drawLine(cx, cy + r * 0.2f, cx + r * 0.45f, cy - r * 0.35f, paint)
                     }
-                    19 -> { // SF Symbol: slider.horizontal.3
+                    19 -> {
                         canvas.drawLine(cx - r * 0.75f, cy - r * 0.45f, cx + r * 0.75f, cy - r * 0.45f, paint)
                         canvas.drawCircle(cx - r * 0.2f, cy - r * 0.45f, r * 0.2f, paint)
                         canvas.drawLine(cx - r * 0.75f, cy + r * 0.45f, cx + r * 0.75f, cy + r * 0.45f, paint)
                         canvas.drawCircle(cx + r * 0.25f, cy + r * 0.45f, r * 0.2f, paint)
                     }
-                    20 -> { // SF Symbol: fuelpump
+                    20 -> {
                         canvas.drawRoundRect(cx - r * 0.55f, cy - r * 0.75f, cx + r * 0.35f, cy + r * 0.75f, r * 0.15f, r * 0.15f, paint)
                         canvas.drawLine(cx + r * 0.35f, cy - r * 0.3f, cx + r * 0.7f, cy + r * 0.1f, paint)
                         canvas.drawLine(cx + r * 0.7f, cy + r * 0.1f, cx + r * 0.7f, cy + r * 0.55f, paint)
                     }
-                    22 -> { // SF Symbol: graduationcap
+                    22 -> {
                         val cap = Path().apply {
                             moveTo(cx, cy - r * 0.75f); lineTo(cx + r * 0.88f, cy - r * 0.2f); lineTo(cx, cy + r * 0.35f); lineTo(cx - r * 0.88f, cy - r * 0.2f); close()
                         }
                         canvas.drawPath(cap, paint)
                     }
-                    // =====================================================================
-                    // אייקוני ה-Pro של עיצוב הזכוכית (Apple SF Symbols 6 Style)
-                    // =====================================================================
-                    31, 305 -> { // SF Symbol: vernier caliper / סרגל קליבר הנדסי
+                    31, 305 -> {
                         canvas.drawLine(cx - r * 0.82f, cy - r * 0.35f, cx + r * 0.82f, cy - r * 0.35f, paint)
                         canvas.drawLine(cx - r * 0.82f, cy - r * 0.35f, cx - r * 0.82f, cy + r * 0.65f, paint)
                         canvas.drawLine(cx - r * 0.15f, cy - r * 0.55f, cx - r * 0.15f, cy + r * 0.55f, paint)
                         canvas.drawRect(cx - r * 0.15f, cy - r * 0.55f, cx + r * 0.35f, cy - r * 0.15f, paint)
                     }
-                    32, 58, 306 -> { // SF Symbol: spigots / ברז וצינור אינסטלציה
+                    32, 58, 306 -> {
                         canvas.drawRoundRect(cx - r * 0.8f, cy - r * 0.18f, cx + r * 0.8f, cy + r * 0.18f, r * 0.1f, r * 0.1f, paint)
                         canvas.drawLine(cx, cy - r * 0.18f, cx, cy - r * 0.65f, paint)
                         canvas.drawLine(cx - r * 0.42f, cy - r * 0.65f, cx + r * 0.42f, cy - r * 0.65f, paint)
                         canvas.drawCircle(cx, cy + r * 0.58f, r * 0.16f, paint)
                     }
-                    33, 62 -> { // SF Symbol: cross.vial / שקית עירוי עם צלב קליני
+                    33, 62 -> {
                         canvas.drawRoundRect(cx - r * 0.52f, cy - r * 0.72f, cx + r * 0.52f, cy + r * 0.42f, r * 0.18f, r * 0.18f, paint)
                         canvas.drawLine(cx - r * 0.24f, cy - r * 0.15f, cx + r * 0.24f, cy - r * 0.15f, paint)
                         canvas.drawLine(cx, cy - r * 0.38f, cx, cy + r * 0.08f, paint)
                         canvas.drawLine(cx, cy + r * 0.42f, cx, cy + r * 0.82f, paint)
                     }
-                    34 -> { // SF Symbol: cube / קוביית בנייה איזומטרית
+                    34 -> {
                         val cube = Path().apply {
                             moveTo(cx, cy - r * 0.8f); lineTo(cx + r * 0.72f, cy - r * 0.36f)
                             lineTo(cx + r * 0.72f, cy + r * 0.4f); lineTo(cx, cy + r * 0.8f)
@@ -487,7 +501,7 @@ object IosGlassTheme {
                         canvas.drawLine(cx + r * 0.72f, cy - r * 0.36f, cx, cy + r * 0.05f, paint)
                         canvas.drawLine(cx, cy + r * 0.05f, cx, cy + r * 0.8f, paint)
                     }
-                    35 -> { // SF Symbol: IEC Box Resistor עם 3 פסי צבע
+                    35 -> {
                         canvas.drawLine(cx - r * 0.9f, cy, cx - r * 0.55f, cy, paint)
                         canvas.drawLine(cx + r * 0.55f, cy, cx + r * 0.9f, cy, paint)
                         canvas.drawRoundRect(cx - r * 0.55f, cy - r * 0.34f, cx + r * 0.55f, cy + r * 0.34f, r * 0.14f, r * 0.14f, paint)
@@ -495,13 +509,13 @@ object IosGlassTheme {
                         canvas.drawLine(cx, cy - r * 0.34f, cx, cy + r * 0.34f, paint)
                         canvas.drawLine(cx + r * 0.25f, cy - r * 0.34f, cx + r * 0.25f, cy + r * 0.34f, paint)
                     }
-                    36 -> { // SF Symbol: Parallel Plate Capacitor
+                    36 -> {
                         canvas.drawLine(cx - r * 0.85f, cy, cx - r * 0.18f, cy, paint)
                         canvas.drawLine(cx + r * 0.18f, cy, cx + r * 0.85f, cy, paint)
                         canvas.drawLine(cx - r * 0.18f, cy - r * 0.62f, cx - r * 0.18f, cy + r * 0.62f, paint)
                         canvas.drawLine(cx + r * 0.18f, cy - r * 0.62f, cx + r * 0.18f, cy + r * 0.62f, paint)
                     }
-                    37 -> { // SF Symbol: 7-strand Wire Gauge Cross-Section
+                    37 -> {
                         canvas.drawCircle(cx, cy, r * 0.8f, paint)
                         canvas.drawCircle(cx, cy, r * 0.22f, dotPaint)
                         for (i in 0 until 6) {
@@ -509,18 +523,18 @@ object IosGlassTheme {
                             canvas.drawCircle((cx + cos(a) * r * 0.46f).toFloat(), (cy + sin(a) * r * 0.46f).toFloat(), r * 0.13f, dotPaint)
                         }
                     }
-                    38, 60, 307 -> { // SF Symbol: Omega (Ω)
+                    38, 60, 307 -> {
                         canvas.drawArc(cx - r * 0.65f, cy - r * 0.72f, cx + r * 0.65f, cy + r * 0.48f, 135f, 270f, false, paint)
                         canvas.drawLine(cx - r * 0.78f, cy + r * 0.55f, cx - r * 0.28f, cy + r * 0.55f, paint)
                         canvas.drawLine(cx + r * 0.28f, cy + r * 0.55f, cx + r * 0.78f, cy + r * 0.55f, paint)
                     }
-                    39 -> { // SF Symbol: level / מבחנת פלס אופקית
+                    39 -> {
                         canvas.drawRoundRect(cx - r * 0.86f, cy - r * 0.32f, cx + r * 0.86f, cy + r * 0.32f, r * 0.32f, r * 0.32f, paint)
                         canvas.drawLine(cx - r * 0.26f, cy - r * 0.32f, cx - r * 0.26f, cy + r * 0.32f, paint)
                         canvas.drawLine(cx + r * 0.26f, cy - r * 0.32f, cx + r * 0.26f, cy + r * 0.32f, paint)
                         canvas.drawCircle(cx, cy, r * 0.17f, dotPaint)
                     }
-                    40, 308 -> { // SF Symbol: safari / מצפן קלאסי של אפל
+                    40, 308 -> {
                         canvas.drawCircle(cx, cy, r * 0.8f, paint)
                         val needle = Path().apply {
                             moveTo(cx + r * 0.46f, cy - r * 0.46f)
@@ -532,12 +546,12 @@ object IosGlassTheme {
                         canvas.drawPath(needle, paint)
                         canvas.drawCircle(cx, cy, r * 0.1f, dotPaint)
                     }
-                    41 -> { // SF Symbol: protractor
+                    41 -> {
                         canvas.drawArc(cx - r * 0.8f, cy - r * 0.4f, cx + r * 0.8f, cy + r * 1.12f, 180f, 180f, true, paint)
                         canvas.drawLine(cx, cy + r * 0.35f, cx + r * 0.52f, cy - r * 0.24f, paint)
                         canvas.drawCircle(cx, cy + r * 0.35f, r * 0.11f, dotPaint)
                     }
-                    42 -> { // SF Symbol: stopwatch
+                    42 -> {
                         canvas.drawCircle(cx, cy + r * 0.1f, r * 0.7f, paint)
                         canvas.drawLine(cx - r * 0.24f, cy - r * 0.8f, cx + r * 0.24f, cy - r * 0.8f, paint)
                         canvas.drawLine(cx, cy - r * 0.8f, cx, cy - r * 0.6f, paint)
@@ -545,7 +559,7 @@ object IosGlassTheme {
                         canvas.drawLine(cx, cy + r * 0.1f, cx, cy - r * 0.3f, paint)
                         canvas.drawLine(cx, cy + r * 0.1f, cx + r * 0.34f, cy + r * 0.1f, paint)
                     }
-                    43, 61 -> { // SF Symbol: flashlight.on.fill
+                    43, 61 -> {
                         val body = Path().apply {
                             moveTo(cx - r * 0.26f, cy + r * 0.76f); lineTo(cx + r * 0.26f, cy + r * 0.76f)
                             lineTo(cx + r * 0.26f, cy + r * 0.1f); lineTo(cx + r * 0.52f, cy - r * 0.3f)
@@ -556,32 +570,32 @@ object IosGlassTheme {
                         canvas.drawLine(cx - r * 0.36f, cy - r * 0.46f, cx - r * 0.6f, cy - r * 0.75f, paint)
                         canvas.drawLine(cx + r * 0.36f, cy - r * 0.46f, cx + r * 0.6f, cy - r * 0.75f, paint)
                     }
-                    44, 309 -> { // SF Symbol: משבצת יסוד מהטבלה המחזורית [Au]
+                    44, 309 -> {
                         canvas.drawRoundRect(cx - r * 0.72f, cy - r * 0.72f, cx + r * 0.72f, cy + r * 0.72f, r * 0.16f, r * 0.16f, paint)
                         canvas.drawLine(cx - r * 0.45f, cy - r * 0.42f, cx - r * 0.15f, cy - r * 0.42f, paint)
                         canvas.drawLine(cx - r * 0.3f, cy + r * 0.35f, cx, cy - r * 0.2f, paint)
                         canvas.drawLine(cx, cy - r * 0.2f, cx + r * 0.3f, cy + r * 0.35f, paint)
                         canvas.drawLine(cx - r * 0.2f, cy + r * 0.15f, cx + r * 0.2f, cy + r * 0.15f, paint)
                     }
-                    45 -> { // SF Symbol: ellips.bubble (נקודה-קו-נקודה בתוך בועית תקשורת)
+                    45 -> {
                         canvas.drawRoundRect(cx - r * 0.82f, cy - r * 0.6f, cx + r * 0.82f, cy + r * 0.5f, r * 0.3f, r * 0.3f, paint)
                         canvas.drawCircle(cx - r * 0.48f, cy - r * 0.05f, r * 0.11f, dotPaint)
                         canvas.drawLine(cx - r * 0.18f, cy - r * 0.05f, cx + r * 0.22f, cy - r * 0.05f, paint)
                         canvas.drawCircle(cx + r * 0.52f, cy - r * 0.05f, r * 0.11f, dotPaint)
                     }
-                    46 -> { // SF Symbol: lock
+                    46 -> {
                         canvas.drawRoundRect(cx - r * 0.56f, cy - r * 0.08f, cx + r * 0.56f, cy + r * 0.76f, r * 0.16f, r * 0.16f, paint)
                         canvas.drawArc(cx - r * 0.36f, cy - r * 0.76f, cx + r * 0.36f, cy + r * 0.08f, 180f, 180f, false, paint)
                         canvas.drawCircle(cx, cy + r * 0.32f, r * 0.13f, dotPaint)
                     }
-                    47 -> { // SF Symbol: Roman Numeral Tablet (I V)
+                    47 -> {
                         canvas.drawLine(cx - r * 0.7f, cy - r * 0.62f, cx + r * 0.7f, cy - r * 0.62f, paint)
                         canvas.drawLine(cx - r * 0.7f, cy + r * 0.62f, cx + r * 0.7f, cy + r * 0.62f, paint)
                         canvas.drawLine(cx - r * 0.42f, cy - r * 0.62f, cx - r * 0.42f, cy + r * 0.62f, paint)
                         canvas.drawLine(cx, cy - r * 0.62f, cx + r * 0.3f, cy + r * 0.62f, paint)
                         canvas.drawLine(cx + r * 0.6f, cy - r * 0.62f, cx + r * 0.3f, cy + r * 0.62f, paint)
                     }
-                    48 -> { // SF Symbol: 2 Stacked Gold Bullion Ingots
+                    48 -> {
                         val ingotBot = Path().apply {
                             moveTo(cx - r * 0.52f, cy + r * 0.22f); lineTo(cx + r * 0.52f, cy + r * 0.22f)
                             lineTo(cx + r * 0.78f, cy + r * 0.72f); lineTo(cx - r * 0.78f, cy + r * 0.72f); close()
@@ -593,25 +607,25 @@ object IosGlassTheme {
                         canvas.drawPath(ingotBot, paint)
                         canvas.drawPath(ingotTop, paint)
                     }
-                    49 -> { // SF Symbol: house
+                    49 -> {
                         val roof = Path().apply {
                             moveTo(cx - r * 0.82f, cy - r * 0.05f); lineTo(cx, cy - r * 0.8f); lineTo(cx + r * 0.82f, cy - r * 0.05f)
                         }
                         canvas.drawPath(roof, paint)
                         canvas.drawRect(cx - r * 0.56f, cy - r * 0.05f, cx + r * 0.56f, cy + r * 0.76f, paint)
                     }
-                    50, 310 -> { // SF Symbol: chart.bar.xaxis (עמודות צמיחה של אפל)
+                    50, 310 -> {
                         canvas.drawLine(cx - r * 0.8f, cy + r * 0.72f, cx + r * 0.8f, cy + r * 0.72f, paint)
                         canvas.drawRect(cx - r * 0.65f, cy + r * 0.15f, cx - r * 0.35f, cy + r * 0.72f, paint)
                         canvas.drawRect(cx - r * 0.15f, cy - r * 0.2f, cx + r * 0.15f, cy + r * 0.72f, paint)
                         canvas.drawRect(cx + r * 0.35f, cy - r * 0.65f, cx + r * 0.65f, cy + r * 0.72f, paint)
                     }
-                    51 -> { // SF Symbol: briefcase (מזוודת עסקים)
+                    51 -> {
                         canvas.drawRoundRect(cx - r * 0.75f, cy - r * 0.38f, cx + r * 0.75f, cy + r * 0.72f, r * 0.16f, r * 0.16f, paint)
                         canvas.drawRect(cx - r * 0.3f, cy - r * 0.72f, cx + r * 0.3f, cy - r * 0.38f, paint)
                         canvas.drawLine(cx - r * 0.75f, cy + r * 0.12f, cx + r * 0.75f, cy + r * 0.12f, paint)
                     }
-                    52 -> { // SF Symbol: waveform.bell (עקומת פעמון גאוסיאנית קלאסית)
+                    52 -> {
                         val bell = Path().apply {
                             moveTo(cx - r * 0.82f, cy + r * 0.62f)
                             cubicTo(cx - r * 0.34f, cy + r * 0.62f, cx - r * 0.3f, cy - r * 0.72f, cx, cy - r * 0.72f)
@@ -620,7 +634,7 @@ object IosGlassTheme {
                         canvas.drawPath(bell, paint)
                         canvas.drawLine(cx, cy - r * 0.72f, cx, cy + r * 0.62f, paint)
                     }
-                    53 -> { // SF Symbol: righttriangle (משולש שרטוט עם זווית ישרה)
+                    53 -> {
                         val tri = Path().apply {
                             moveTo(cx - r * 0.7f, cy + r * 0.66f); lineTo(cx + r * 0.72f, cy + r * 0.66f)
                             lineTo(cx - r * 0.7f, cy - r * 0.7f); close()
@@ -628,7 +642,7 @@ object IosGlassTheme {
                         canvas.drawPath(tri, paint)
                         canvas.drawRect(cx - r * 0.7f, cy + r * 0.36f, cx - r * 0.4f, cy + r * 0.66f, paint)
                     }
-                    54, 311 -> { // SF Symbol: sum (סיגמא Σ קלאסית)
+                    54, 311 -> {
                         val sigma = Path().apply {
                             moveTo(cx + r * 0.6f, cy - r * 0.7f); lineTo(cx - r * 0.6f, cy - r * 0.7f)
                             lineTo(cx + r * 0.1f, cy); lineTo(cx - r * 0.6f, cy + r * 0.7f)
@@ -636,14 +650,14 @@ object IosGlassTheme {
                         }
                         canvas.drawPath(sigma, paint)
                     }
-                    55 -> { // SF Symbol: icloud.and.arrow.up
+                    55 -> {
                         canvas.drawRoundRect(cx - r * 0.75f, cy - r * 0.25f, cx + r * 0.75f, cy + r * 0.45f, r * 0.35f, r * 0.35f, paint)
                         canvas.drawArc(cx - r * 0.4f, cy - r * 0.68f, cx + r * 0.35f, cy + r * 0.05f, 180f, 180f, false, paint)
                         canvas.drawLine(cx, cy + r * 0.75f, cx, cy - r * 0.1f, paint)
                         canvas.drawLine(cx - r * 0.22f, cy + r * 0.12f, cx, cy - r * 0.1f, paint)
                         canvas.drawLine(cx + r * 0.22f, cy + r * 0.12f, cx, cy - r * 0.1f, paint)
                     }
-                    56, 102, 103, 300 -> { // SF Symbol: star / star.fill (כוכב 5 קודקודים קלאסי של אפל)
+                    56, 102, 103, 300 -> {
                         val starPath = Path()
                         for (i in 0 until 10) {
                             val rad = if (i % 2 == 0) r * 0.82f else r * 0.36f
@@ -656,7 +670,7 @@ object IosGlassTheme {
                         if (categoryIndex == 102) canvas.drawPath(starPath, dotPaint)
                         canvas.drawPath(starPath, paint)
                     }
-                    57 -> { // SF Symbol: gearshape (גלגל שיניים מכני 8 שיניים)
+                    57 -> {
                         canvas.drawCircle(cx, cy, r * 0.36f, paint)
                         for (i in 0 until 8) {
                             val a = Math.toRadians((i * 45).toDouble())
@@ -669,7 +683,7 @@ object IosGlassTheme {
                             )
                         }
                     }
-                    59 -> { // SF Symbol: thermometer.sun / גלי חום אנכיים
+                    59 -> {
                         for (offset in listOf(-0.38f, 0f, 0.38f)) {
                             val ox = cx + r * offset
                             val wPath = Path().apply {
@@ -680,17 +694,17 @@ object IosGlassTheme {
                             canvas.drawPath(wPath, paint)
                         }
                     }
-                    63 -> { // SF Symbol: planet Saturn (כוכב לכת עם טבעת)
+                    63 -> {
                         canvas.drawCircle(cx, cy, r * 0.42f, paint)
                         canvas.save(); canvas.rotate(-25f, cx, cy)
                         canvas.drawOval(cx - r * 0.88f, cy - r * 0.2f, cx + r * 0.88f, cy + r * 0.2f, paint)
                         canvas.restore()
                     }
-                    64 -> { // SF Symbol: banknote (שטר כסף אופקי עם עיגול במרכז)
+                    64 -> {
                         canvas.drawRoundRect(cx - r * 0.82f, cy - r * 0.48f, cx + r * 0.82f, cy + r * 0.48f, r * 0.14f, r * 0.14f, paint)
                         canvas.drawCircle(cx, cy, r * 0.22f, paint)
                     }
-                    65 -> { // SF Symbol: square.grid.2x2 / סוגרי מטריצה מרובעים [ :: ]
+                    65 -> {
                         canvas.drawLine(cx - r * 0.72f, cy - r * 0.7f, cx - r * 0.44f, cy - r * 0.7f, paint)
                         canvas.drawLine(cx - r * 0.72f, cy - r * 0.7f, cx - r * 0.72f, cy + r * 0.7f, paint)
                         canvas.drawLine(cx - r * 0.72f, cy + r * 0.7f, cx - r * 0.44f, cy + r * 0.7f, paint)
@@ -702,33 +716,33 @@ object IosGlassTheme {
                         canvas.drawCircle(cx - r * 0.26f, cy + r * 0.26f, r * 0.11f, dotPaint)
                         canvas.drawCircle(cx + r * 0.26f, cy + r * 0.26f, r * 0.11f, dotPaint)
                     }
-                    100 -> { // SF Symbol: pip.enter
+                    100 -> {
                         canvas.drawRoundRect(cx - r * 0.8f, cy - r * 0.65f, cx + r * 0.8f, cy + r * 0.65f, r * 0.2f, r * 0.2f, paint)
                         canvas.drawRoundRect(cx + r * 0.05f, cy - r * 0.05f, cx + r * 0.65f, cy + r * 0.5f, r * 0.1f, r * 0.1f, paint)
                     }
-                    101 -> { // SF Symbol: clock.arrow.circlepath
+                    101 -> {
                         canvas.drawArc(cx - r * 0.75f, cy - r * 0.75f, cx + r * 0.75f, cy + r * 0.75f, -60f, 300f, false, paint)
                         canvas.drawLine(cx, cy - r * 0.4f, cx, cy, paint)
                         canvas.drawLine(cx, cy, cx + r * 0.3f, cy + r * 0.2f, paint)
                     }
-                    200 -> { // SF Symbol: magnifyingglass
+                    200 -> {
                         canvas.drawCircle(cx - r * 0.12f, cy - r * 0.12f, r * 0.52f, paint)
                         canvas.drawLine(cx + r * 0.25f, cy + r * 0.25f, cx + r * 0.75f, cy + r * 0.75f, paint)
                     }
-                    201 -> { // SF Symbol: waveform
+                    201 -> {
                         canvas.drawLine(cx - r * 0.6f, cy - r * 0.22f, cx - r * 0.6f, cy + r * 0.22f, paint)
                         canvas.drawLine(cx - r * 0.2f, cy - r * 0.65f, cx - r * 0.2f, cy + r * 0.65f, paint)
                         canvas.drawLine(cx + r * 0.2f, cy - r * 0.42f, cx + r * 0.2f, cy + r * 0.42f, paint)
                         canvas.drawLine(cx + r * 0.6f, cy - r * 0.75f, cx + r * 0.6f, cy + r * 0.75f, paint)
                     }
-                    202 -> { // SF Symbol: sun.max
+                    202 -> {
                         canvas.drawCircle(cx, cy, r * 0.38f, paint)
                         for (i in 0 until 8) {
                             val a = Math.toRadians((i * 45).toDouble())
                             canvas.drawLine((cx + cos(a) * r * 0.52f).toFloat(), (cy + sin(a) * r * 0.52f).toFloat(), (cx + cos(a) * r * 0.82f).toFloat(), (cy + sin(a) * r * 0.82f).toFloat(), paint)
                         }
                     }
-                    203 -> { // SF Symbol: circle.lefthalf.filled
+                    203 -> {
                         canvas.drawCircle(cx - r * 0.22f, cy, r * 0.48f, paint)
                         canvas.drawCircle(cx + r * 0.22f, cy, r * 0.48f, paint)
                     }
