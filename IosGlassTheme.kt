@@ -367,13 +367,14 @@ object IosGlassTheme {
         val sizePx = (sizeDp * context.resources.displayMetrics.density).toInt().coerceAtLeast(24)
         return object : Drawable() {
             private val d = context.resources.displayMetrics.density
+            private val isDarkTint = MinimalistTheme.computeLuminance(tintColor) < 0.25
             private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = tintColor
                 style = Paint.Style.STROKE
                 strokeWidth = 1.9f * d
                 strokeCap = Paint.Cap.ROUND
                 strokeJoin = Paint.Join.ROUND
-                if (symbolDepthMode == 1) {
+                if (symbolDepthMode == 1 && !isDarkTint) {
                     setShadowLayer(4f * d, 0f, 1.5f, Color.argb(120, Color.red(tintColor), Color.green(tintColor), Color.blue(tintColor)))
                 }
             }
@@ -382,13 +383,21 @@ object IosGlassTheme {
                 style = Paint.Style.FILL
             }
             private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.argb(42, Color.red(tintColor), Color.green(tintColor), Color.blue(tintColor))
+                color = if (isDarkTint) {
+                    Color.argb(32, 0, 0, 0)
+                } else {
+                    Color.argb(42, Color.red(tintColor), Color.green(tintColor), Color.blue(tintColor))
+                }
                 style = Paint.Style.FILL
             }
             private val rimPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.argb(95, 255, 255, 255)
+                color = if (isDarkTint) {
+                    Color.argb(115, Color.red(tintColor), Color.green(tintColor), Color.blue(tintColor))
+                } else {
+                    Color.argb(95, 255, 255, 255)
+                }
                 style = Paint.Style.STROKE
-                strokeWidth = 0.9f * d
+                strokeWidth = 1.0f * d
             }
 
             override fun getIntrinsicWidth(): Int = sizePx
@@ -828,3 +837,4 @@ object IosGlassTheme {
         }
     }
 }
+ 
