@@ -30,7 +30,7 @@ object ProState {
 }
 
 // =========================================================================
-// תצוגות קנבס (Canvas) ייעודיות למחשבוני ה-Pro (כולל הגנת ניגודיות ו-fitText)
+// תצוגות קנבס (Canvas) ייעודיות למחשבוני ה-Pro (כולל תמיכה ב"עיצוב מינימליסטי", הגנת ניגודיות ו-fitText)
 // =========================================================================
 
 // 1. קנבס השוואת קנה-מידה ליחידות מידה
@@ -44,23 +44,25 @@ class UnitScaleComparisonCanvasView(context: Context, private val activity: Main
         super.onDraw(canvas)
         val d = resources.displayMetrics.density
         val w = width.toFloat()
-        val accent = CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
+        val isMin = activity.isMinimalistMode
+        val accent = if (isMin) MinimalistTheme.PILL_AC_PERIWINKLE
+        else CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
 
         val bar1Top = 14f * d; val bar1Bot = 34f * d
         val bar2Top = 44f * d; val bar2Bot = 64f * d
         val padX = 16f * d
 
-        p.color = Color.argb(60, 255, 255, 255)
+        p.color = if (isMin) Color.argb(32, 43, 40, 37) else Color.argb(60, 255, 255, 255)
         canvas.drawRoundRect(RectF(padX, bar1Top, w - padX, bar1Bot), 10f * d, 10f * d, p)
         canvas.drawRoundRect(RectF(padX, bar2Top, w - padX, bar2Bot), 10f * d, 10f * d, p)
 
         p.color = accent
         canvas.drawRoundRect(RectF(padX, bar1Top, padX + (w - 2 * padX) * 0.55f, bar1Bot), 10f * d, 10f * d, p)
-        p.color = Color.parseColor("#FF9F0A")
+        p.color = if (isMin) MinimalistTheme.ACTION_CORAL_PRIMARY else Color.parseColor("#FF9F0A")
         val targetW = (w - 2 * padX) * ratioLog.coerceIn(0.14f, 0.96f)
         canvas.drawRoundRect(RectF(padX, bar2Top, padX + targetW, bar2Bot), 10f * d, 10f * d, p)
 
-        p.color = Color.WHITE
+        p.color = if (isMin) MinimalistTheme.TEXT_DARK else Color.WHITE
         p.typeface = Typeface.DEFAULT_BOLD
         CanvasUiHelper.drawFittedText(canvas, "מקור: $fromLabel", padX + 10f * d, bar1Bot - 5.5f * d, w - 2 * padX - 20f * d, 12.5f * d, 8.5f * d, p)
         CanvasUiHelper.drawFittedText(canvas, "יעד: $toLabel", padX + 10f * d, bar2Bot - 5.5f * d, w - 2 * padX - 20f * d, 12.5f * d, 8.5f * d, p)
@@ -78,20 +80,23 @@ class SpitzerMortgageCanvasView(context: Context, private val activity: MainActi
         super.onDraw(canvas)
         val d = resources.displayMetrics.density
         val w = width.toFloat(); val h = height.toFloat()
+        val isMin = activity.isMinimalistMode
         val total = (principalVal + interestVal).coerceAtLeast(1.0)
         val pRatio = (principalVal / total).toFloat().coerceIn(0.08f, 0.92f)
-        val accent = CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
+        val accent = if (isMin) MinimalistTheme.PILL_MR_MINT
+        else CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
 
         val barLeft = 18f * d; val barRight = w - 18f * d; val barW = barRight - barLeft
         p.color = accent
         canvas.drawRoundRect(RectF(barLeft, 16f * d, barLeft + barW * pRatio, 42f * d), 11f * d, 11f * d, p)
-        p.color = Color.parseColor("#FF4D6D")
+        p.color = if (isMin) MinimalistTheme.ACTION_CORAL_PRIMARY else Color.parseColor("#FF4D6D")
         canvas.drawRoundRect(RectF(barLeft + barW * pRatio + 3f * d, 16f * d, barRight, 42f * d), 11f * d, 11f * d, p)
 
-        p.color = Color.WHITE; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
+        p.color = if (isMin) MinimalistTheme.TEXT_DARK else Color.WHITE
+        p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
         val splitLine = "קרן: ${(pRatio * 100).toInt()}% (₪${Utils.formatResult(principalVal, 0)})  |  ריבית: ${((1f - pRatio) * 100).toInt()}% (₪${Utils.formatResult(interestVal, 0)})"
         CanvasUiHelper.drawFittedText(canvas, splitLine, w / 2f, 62f * d, w - 24f * d, 13f * d, 8.5f * d, p)
-        p.color = accent
+        p.color = if (isMin) MinimalistTheme.ALERT_RED_TEXT else accent
         CanvasUiHelper.drawFittedText(canvas, "החזר חודשי התחלתי: ₪${Utils.formatResult(monthlyPmt, 0)}", w / 2f, h - 12f * d, w - 24f * d, 15f * d, 10f * d, p)
     }
 }
@@ -105,15 +110,20 @@ class BreakEvenChartCanvasView(context: Context, private val activity: MainActiv
 
     private val revPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = Color.parseColor("#00E676") }
     private val costPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = Color.parseColor("#FF5252") }
-    private val axisPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = Color.argb(110, 255, 255, 255) }
-    private val txtPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT_BOLD }
+    private val axisPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val txtPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT_BOLD }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val d = resources.displayMetrics.density
+        val isMin = activity.isMinimalistMode
         revPaint.strokeWidth = 2.5f * d
+        revPaint.color = if (isMin) Color.parseColor("#2E7D32") else Color.parseColor("#00E676")
         costPaint.strokeWidth = 2.5f * d
+        costPaint.color = if (isMin) MinimalistTheme.ALERT_RED_TEXT else Color.parseColor("#FF5252")
         axisPaint.strokeWidth = 1.2f * d
+        axisPaint.color = if (isMin) Color.argb(95, 43, 40, 37) else Color.argb(110, 255, 255, 255)
+        txtPaint.color = if (isMin) MinimalistTheme.TEXT_DARK else Color.WHITE
 
         val w = width.toFloat(); val h = height.toFloat()
         val padL = 24f * d; val padR = w - 24f * d
@@ -128,7 +138,8 @@ class BreakEvenChartCanvasView(context: Context, private val activity: MainActiv
 
         val beX = (padL + padR) / 2f
         val beY = (padB + padT + 10f * d) / 2f
-        val accent = CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
+        val accent = if (isMin) MinimalistTheme.ACTION_CORAL_PRIMARY
+        else CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
         canvas.drawCircle(beX, beY, 5.5f * d, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent })
 
         CanvasUiHelper.drawFittedText(canvas, "נקודת איזון: $breakEvenUnits יח׳ (ירוק = פדיון | אדום = עלויות)", w / 2f, h - 8f * d, w - 20f * d, 12.5f * d, 8.5f * d, txtPaint)
@@ -142,19 +153,23 @@ class BellCurveStatsCanvasView(context: Context, private val activity: MainActiv
 
     private val lineP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
     private val fillP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-    private val axisP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = Color.argb(110, 255, 255, 255) }
-    private val txtP = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT_BOLD }
+    private val axisP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val txtP = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT_BOLD }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val d = resources.displayMetrics.density
+        val isMin = activity.isMinimalistMode
         lineP.strokeWidth = 2.5f * d
         axisP.strokeWidth = 1.2f * d
+        axisP.color = if (isMin) Color.argb(95, 43, 40, 37) else Color.argb(110, 255, 255, 255)
+        txtP.color = if (isMin) MinimalistTheme.TEXT_DARK else Color.WHITE
 
         val w = width.toFloat(); val h = height.toFloat()
         val pad = 18f * d
         val baseLine = h - 24f * d
-        val accent = CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
+        val accent = if (isMin) MinimalistTheme.ACTION_CORAL_PRIMARY
+        else CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
 
         lineP.color = accent
         fillP.shader = LinearGradient(0f, pad, 0f, baseLine, Color.argb(120, Color.red(accent), Color.green(accent), Color.blue(accent)), Color.TRANSPARENT, Shader.TileMode.CLAMP)
@@ -194,17 +209,21 @@ class GeometryBlueprintCanvasView(context: Context, private val activity: MainAc
     var paramB: Double = 4.0
 
     private val strokeP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-    private val gridP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = Color.argb(38, 0, 245, 212) }
-    private val txtP = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT_BOLD }
+    private val gridP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val txtP = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT_BOLD }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val d = resources.displayMetrics.density
+        val isMin = activity.isMinimalistMode
         strokeP.strokeWidth = 2.2f * d
         gridP.strokeWidth = 0.8f * d
+        gridP.color = if (isMin) Color.argb(35, 43, 40, 37) else Color.argb(38, 0, 245, 212)
+        txtP.color = if (isMin) MinimalistTheme.TEXT_DARK else Color.WHITE
 
         val w = width.toFloat(); val h = height.toFloat()
-        val accent = CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
+        val accent = if (isMin) MinimalistTheme.ACTION_CORAL_PRIMARY
+        else CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
         strokeP.color = accent
 
         val step = 18f * d
@@ -250,12 +269,14 @@ class MatrixLinearCanvasView(context: Context, private val activity: MainActivit
     var detText = "det(A) = -11"
 
     private val bracketP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-    private val txtP = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; textAlign = Paint.Align.CENTER; typeface = Typeface.MONOSPACE }
+    private val txtP = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; typeface = Typeface.MONOSPACE }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val d = resources.displayMetrics.density
-        val accent = CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
+        val isMin = activity.isMinimalistMode
+        val accent = if (isMin) MinimalistTheme.ACTION_CORAL_PRIMARY
+        else CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
         bracketP.strokeWidth = 2.5f * d
         bracketP.color = accent
 
@@ -271,13 +292,13 @@ class MatrixLinearCanvasView(context: Context, private val activity: MainActivit
         canvas.drawLine(cx + bw, cy + bh, cx + bw - 12f * d, cy + bh, bracketP)
 
         txtP.textSize = 15f * d
-        txtP.color = Color.WHITE
+        txtP.color = if (isMin) MinimalistTheme.TEXT_DARK else Color.WHITE
         canvas.drawText(a11, cx - 35f * d, cy - 8f * d, txtP)
         canvas.drawText(a12, cx + 35f * d, cy - 8f * d, txtP)
         canvas.drawText(a21, cx - 35f * d, cy + 24f * d, txtP)
         canvas.drawText(a22, cx + 35f * d, cy + 24f * d, txtP)
 
-        txtP.color = accent
+        txtP.color = if (isMin) MinimalistTheme.TEXT_DARK else accent
         CanvasUiHelper.drawFittedText(canvas, detText, cx, height - 10f * d, width - 20f * d, 13.5f * d, 9f * d, txtP)
     }
 }
@@ -299,11 +320,12 @@ fun MainActivity.createProPlumbingAndFluidsScreen(): View {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
             val w = width.toFloat(); val h = height.toFloat()
-            p.color = Color.parseColor("#455A64")
+            p.color = if (isMinimalistMode) MinimalistTheme.COMPASS_DIAL_RING_BG else Color.parseColor("#455A64")
             canvas.drawRoundRect(RectF(16f * d, 16f * d, w - 16f * d, h - 16f * d), 14f * d, 14f * d, p)
-            p.color = Color.parseColor("#0288D1")
+            p.color = if (isMinimalistMode) MinimalistTheme.PILL_MC_BLUE else Color.parseColor("#0288D1")
             canvas.drawRect(24f * d, 25f * d, w - 24f * d, h - 25f * d, p)
-            p.color = Color.WHITE; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
+            p.color = if (isMinimalistMode) MinimalistTheme.TEXT_DARK else Color.WHITE
+            p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
             CanvasUiHelper.drawFittedText(canvas, "➔  מהירות זורם בצינור: $flowVelText  ➔", w / 2f, h / 2f + 5f * d, w - 56f * d, 14f * d, 9.5f * d, p)
         }
     }.apply { layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(135f)).apply { bottomMargin = dp(12f) } }
@@ -429,20 +451,22 @@ class RateHistoryChartView(context: Context) : View(context) {
 
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
     private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; typeface = Typeface.DEFAULT_BOLD }
+    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = Typeface.DEFAULT_BOLD }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         if (points.size < 2) return
         val d = resources.displayMetrics.density
+        val isMin = (context as? MainActivity)?.isMinimalistMode == true
         linePaint.strokeWidth = 2.4f * d
+        textPaint.color = if (isMin) MinimalistTheme.TEXT_DARK else Color.WHITE
 
         val w = width.toFloat(); val h = height.toFloat()
         val pad = 18f * d
         val minV = points.minOrNull() ?: 0f
         val maxV = (points.maxOrNull() ?: 1f).let { if (it == minV) minV + 1f else it }
 
-        val safeAccent = CanvasUiHelper.ensureReadableAccent(accentColor, false)
+        val safeAccent = if (isMin) MinimalistTheme.ACTION_CORAL_PRIMARY else CanvasUiHelper.ensureReadableAccent(accentColor, false)
         linePaint.color = safeAccent
         fillPaint.shader = LinearGradient(0f, pad, 0f, h - pad, Color.argb(110, Color.red(safeAccent), Color.green(safeAccent), Color.blue(safeAccent)), Color.TRANSPARENT, Shader.TileMode.CLAMP)
 
@@ -459,7 +483,9 @@ class RateHistoryChartView(context: Context) : View(context) {
                 path.lineTo(x, y)
                 fillPath.lineTo(x, y)
             }
-            canvas.drawCircle(x, y, 3f * d, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE })
+            canvas.drawCircle(x, y, 3f * d, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = if (isMin) MinimalistTheme.TEXT_DARK else Color.WHITE
+            })
         }
         fillPath.lineTo(w - pad, h - pad)
         fillPath.close()
@@ -493,8 +519,11 @@ fun MainActivity.createProCurrenciesAndMetalsHub(): View {
 
     val metalsCard = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL; setPadding(dp(16f), dp(16f), dp(16f), dp(16f))
-        background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProCurrenciesAndMetalsHub, 22f)
-        else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.08f)); cornerRadius = dp(22f).toFloat(); setStroke(dp(1f), primaryColor) }
+        background = when {
+            isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProCurrenciesAndMetalsHub, 22f, 0)
+            isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProCurrenciesAndMetalsHub, 22f)
+            else -> GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.08f)); cornerRadius = dp(22f).toFloat(); setStroke(dp(1f), primaryColor) }
+        }
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(14f) }
     }
 
@@ -505,7 +534,8 @@ fun MainActivity.createProCurrenciesAndMetalsHub(): View {
                 "• זהב 14K: ₪${Utils.formatResult(goldGramIls24 * (14.0 / 24.0), 2)} לגרם\n" +
                 "• כסף טהור (XAG): $${Utils.formatResult(silverUsdOz, 2)}/oz | ₪${Utils.formatResult(silverGramIls, 2)} לגרם (925: ₪${Utils.formatResult(silverGramIls * 0.925, 2)})\n" +
                 "• פלטינה (XPT): $${Utils.formatResult(platUsdOz, 1)}/oz | ₪${Utils.formatResult((platUsdOz * ilsRate) / gramPerOz, 2)} לגרם"
-        setTextColor(Color.WHITE); textSize = 14.5f; gravity = Gravity.RIGHT
+        setTextColor(if (isMinimalistMode) MinimalistTheme.TEXT_DARK else Color.WHITE)
+        textSize = 14.5f; gravity = Gravity.RIGHT
     }
     metalsCard.addView(metalsTv)
 
@@ -523,8 +553,11 @@ fun MainActivity.createProCurrenciesAndMetalsHub(): View {
     val chartView = RateHistoryChartView(this).apply {
         accentColor = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(185f)).apply { bottomMargin = dp(12f) }
-        background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProCurrenciesAndMetalsHub, 18f)
-        else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(18f).toFloat() }
+        background = when {
+            isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProCurrenciesAndMetalsHub, 18f, 2)
+            isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProCurrenciesAndMetalsHub, 18f)
+            else -> GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(18f).toFloat() }
+        }
     }
 
     fun updateChart(days: Int, label: String) {
@@ -581,8 +614,11 @@ fun MainActivity.createProMortgageSpitzerScreen(): View {
 
     val spitzerCanvas = SpitzerMortgageCanvasView(this, this).apply {
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(165f)).apply { bottomMargin = dp(12f) }
-        background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProMortgageSpitzerScreen, 20f)
-        else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(20f).toFloat() }
+        background = when {
+            isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProMortgageSpitzerScreen, 20f, 2)
+            isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProMortgageSpitzerScreen, 20f)
+            else -> GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(20f).toFloat() }
+        }
     }
 
     val loanIn = createInputBox("סכום המשכנתא (₪)").apply { setText("1000000") }
@@ -681,8 +717,11 @@ fun MainActivity.createProBusinessMarginScreen(): View {
 
     val beCanvas = BreakEvenChartCanvasView(this, this).apply {
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(165f)).apply { bottomMargin = dp(12f) }
-        background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProBusinessMarginScreen, 20f)
-        else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(20f).toFloat() }
+        background = when {
+            isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProBusinessMarginScreen, 20f, 2)
+            isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProBusinessMarginScreen, 20f)
+            else -> GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(20f).toFloat() }
+        }
     }
 
     val costIn = createInputBox("עלות ייצור / רכישה ליחידה (₪)").apply { setText("120") }
@@ -767,8 +806,11 @@ fun MainActivity.createProStatisticsBellScreen(): View {
 
     val bellCanvas = BellCurveStatsCanvasView(this, this).apply {
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(190f)).apply { bottomMargin = dp(12f) }
-        background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProStatisticsBellScreen, 20f)
-        else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(20f).toFloat() }
+        background = when {
+            isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProStatisticsBellScreen, 20f, 2)
+            isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProStatisticsBellScreen, 20f)
+            else -> GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(20f).toFloat() }
+        }
     }
 
     val listIn = createInputBox("הזן רשימת מספרים מופרדים בפסיק").apply {
@@ -816,8 +858,11 @@ fun MainActivity.createProGeometryBlueprintScreen(): View {
 
     val blueprintCanvas = GeometryBlueprintCanvasView(this, this).apply {
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(195f)).apply { bottomMargin = dp(12f) }
-        background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProGeometryBlueprintScreen, 20f)
-        else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(20f).toFloat() }
+        background = when {
+            isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProGeometryBlueprintScreen, 20f, 2)
+            isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProGeometryBlueprintScreen, 20f)
+            else -> GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(20f).toFloat() }
+        }
     }
 
     val shapes = listOf("משולש ישר-זווית (פיתגורס וזוויות)", "מעגל וכדור (שטח, היקף ונפח)", "גליל, חרוט ופירמידה תלת-ממד")
@@ -921,8 +966,11 @@ fun MainActivity.createProMatrixAndEquationsScreen(): View {
 
     val matCanvas = MatrixLinearCanvasView(this, this).apply {
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(165f)).apply { bottomMargin = dp(12f) }
-        background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProMatrixAndEquationsScreen, 20f)
-        else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(20f).toFloat() }
+        background = when {
+            isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProMatrixAndEquationsScreen, 20f, 2)
+            isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProMatrixAndEquationsScreen, 20f)
+            else -> GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(20f).toFloat() }
+        }
     }
 
     val a11In = createInputBox("a₁₁ (מקדם X במשוואה 1)").apply { setText("2") }
@@ -984,10 +1032,11 @@ fun MainActivity.createProPowerFeaturesCenter(): View {
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(14f), dp(20f), dp(24f)) }
     root.addView(createProCanvaHeader("☁️ ייצוא PDF/CSV, גיבוי Drive והיסטוריה", "ייצוא דוחות רשמיים, סנכרון ענן וחיפוש בהיסטוריה בלתי מוגבלת"))
 
+    val textPrimary = if (isMinimalistMode) MinimalistTheme.TEXT_DARK else Color.WHITE
     val searchInput = createInputBox("🕘 חפש בהיסטוריה בלתי מוגבלת...").apply { inputType = InputType.TYPE_CLASS_TEXT }
     val histCountTv = TextView(this).apply {
         text = "רשומות שמורות בהיסטוריה: ${historyList.size}"
-        setTextColor(Color.WHITE); textSize = 15f; gravity = Gravity.RIGHT; setPadding(0, 0, 0, dp(10f))
+        setTextColor(textPrimary); textSize = 15f; gravity = Gravity.RIGHT; setPadding(0, 0, 0, dp(10f))
     }
 
     val exportPdfBtn = createActionBtn("📄 ייצא היסטוריה ותוצאות לקובץ PDF", true) { exportHistoryToPdf() }
@@ -1001,7 +1050,7 @@ fun MainActivity.createProPowerFeaturesCenter(): View {
         histCountTv.text = "מציג ${filtered.size} מתוך ${historyList.size} חישובים שמורים:"
         for (item in filtered) {
             val tv = TextView(this).apply {
-                text = item; setTextColor(Color.WHITE); textSize = 16f; setPadding(dp(12f), dp(10f), dp(12f), dp(10f))
+                text = item; setTextColor(textPrimary); textSize = 16f; setPadding(dp(12f), dp(10f), dp(12f), dp(10f))
                 setOnClickListener { copyToClipboard(item) }
             }
             historyContainer.addView(tv)
