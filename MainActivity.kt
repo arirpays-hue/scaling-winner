@@ -392,7 +392,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         CompassHomeWidgetHelper.renderCurrentStateToWidgets(this)
     }
 
-    // מעדכן בזמן אמת את באנר הלוגו (צבע לוגו 1 וצבע לוגו 2), את הכותרת העליונה ואת תפריט הצד בעת סיבוב גלגל הצבעים!
     fun updateLiveDrawerAndHeaderColors() {
         val hasCustomLogoBg = MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_BG]
         val hasCustomLogoText = MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_TEXT]
@@ -445,9 +444,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         updateDrawerSelection()
     }
 
-    // =========================================================================
-    // חלונית היסטוריית חישובים מתוקנת ומותאמת לכל ערכות הנושא
-    // =========================================================================
     fun showHistoryDialog() {
         val dlg = Dialog(this)
         dlg.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -674,9 +670,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         dlg.window?.setLayout(widthPx, WindowManager.LayoutParams.WRAP_CONTENT)
     }
 
-    // =========================================================================
-    // בורר פריטים ויחידות (showItemPicker) המותאם לעיצוב מינימליסטי ולכל ערכות הנושא
-    // =========================================================================
     fun showItemPicker(title: String, items: List<String>, onSelected: (String) -> Unit) {
         val dlg = Dialog(this)
         dlg.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -1232,7 +1225,12 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
-    // מסיר את כל גלגלי הצבעים הישנים והכפולים שלא עובדים, ומטמיע גלגל צבעים מאוחד עם 10 אלמנטים!
+    // =========================================================================
+    // מסדר את מסך ההגדרות כך שיציג:
+    // 1. סרגל פלטות מותאם אישית לערכת הנושא הפעילה (12 פלטות ייחודיות לכל ערכת נושא!)
+    // 2. כפתור "מצב תצוגה" מאוחד עם כל 4 ערכות הנושא
+    // 3. גלגל צבעים 2D אחד ויחיד (10 אלמנטים) ללא שאריות/עיגולים שחורים של הגלגל הישן!
+    // =========================================================================
     private fun unifyThemeSelectorAndCustomizerInSettings(settingsRoot: View?) {
         if (settingsRoot == null) return
         val scrollObj = settingsRoot as? ScrollView
@@ -1247,158 +1245,62 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
         }
 
-        // פונקציית עזר הבודקת אם רכיב כלשהו בעץ התצוגה שייך לגלגל הצבעים הישן והכפול (מ-SettingsEnhancer / Calculators)
-        fun isLegacyColorWheelOrThemeNode(v: View): Boolean {
-            if (v.tag == "MINIMALIST_CUSTOMIZER_IGNORE") return false
-            val className = v.javaClass.simpleName.lowercase(Locale.US)
-            if (className.contains("wheel") || className.contains("picker") || className.contains("color") || className.contains("palette")) {
-                return true
-            }
+        // בודק אם רכיב ב-mainContainer הוא שורת הגדרה תקנית שאנחנו רוצים לשמור (רטט, צליל, דיוק, Pro, יד דומיננטית, רשימת סימון וכו')
+        fun isValidSettingItemToKeep(v: View): Boolean {
             if (v is TextView) {
-                val t = v.text?.toString()?.trim() ?: ""
-                if (t.contains("צבע נושא מותאם") ||
-                    t.contains("צבע רקע מותאם") ||
-                    t.startsWith("#FF", ignoreCase = true) ||
-                    t == "בהירות" || t == "שקיפות" ||
-                    t.contains("☀️ בהירות") || t.contains("💧 שקיפות") ||
-                    t.contains("צבע ראשי") || t.contains("צבע רקע")
-                ) {
-                    return true
-                }
-                if (isMinimalistMode && (t.contains("שקיפות זכוכית") || t.contains("טשטוש") || t.contains("הברקה") || t.contains("עוצמת זוהר"))) {
-                    return true
-                }
-            }
-            // זיהוי Custom View של גלגל הצבעים הישן לפי גובה קנבס קבוע (150dp-280dp) שאינו שייך לקנבסים שלנו
-            if (v !is ViewGroup && v !is TextView && v !is Button && v !is SeekBar && v !is CheckBox && v !is Space) {
-                val h = v.layoutParams?.height ?: 0
-                if (h >= dp(140f)) return true
+                val t = v.text?.toString() ?: ""
+                return t.contains("רטט") ||
+                        t.contains("צלילי הקשה") ||
+                        t.contains("סוג צליל") ||
+                        t.contains("צליל AC") ||
+                        t.contains("אנימציות") ||
+                        t.contains("מסך תמיד דולק") ||
+                        t.contains("צורת כפתורים") ||
+                        t.contains("דיוק עשרוני") ||
+                        t.contains("מצב מקצועי") ||
+                        t.contains("Pro Mode") ||
+                        t.contains("יד דומיננטית") ||
+                        t.contains("רשימת סימון") ||
+                        t.contains("איפוס הגדרות")
             }
             if (v is ViewGroup) {
                 for (i in 0 until v.childCount) {
-                    if (isLegacyColorWheelOrThemeNode(v.getChildAt(i))) return true
+                    val sub = v.getChildAt(i)
+                    if (sub is TextView && sub.text.toString().contains("רשימת סימון")) {
+                        return true
+                    }
+                    // שמירת סליידרי הזכוכית/אורורה רק כאשר המשתמש נמצא במצב זכוכית או אורורה!
+                    if (!isMinimalistMode && (isIosGlassMode || isAuroraMode)) {
+                        if (sub is TextView && (sub.text.contains("שקיפות זכוכית") || sub.text.contains("טשטוש") || sub.text.contains("עוצמת זוהר"))) {
+                            return true
+                        }
+                    }
                 }
             }
             return false
         }
 
-        val displayModeButtons = mutableListOf<TextView>()
-        var horizontalChipsRow: LinearLayout? = null
-
-        fun scanForDisplayButtonsAndChips(group: ViewGroup) {
-            for (i in 0 until group.childCount) {
-                val ch = group.getChildAt(i)
-                if (ch.tag == "MINIMALIST_CUSTOMIZER_IGNORE") continue
-                if (ch is HorizontalScrollView) {
-                    val inner = ch.getChildAt(0) as? LinearLayout
-                    if (inner != null && horizontalChipsRow == null) {
-                        horizontalChipsRow = inner
-                    }
-                    continue
-                }
-                if (ch is TextView) {
-                    val txt = ch.text.toString()
-                    val isDisplayModeSelector = ch.isClickable && (
-                            txt.contains("מצב תצוגה") ||
-                            txt.contains("סגנון תצוגה") ||
-                            txt.contains("סגנון עיצוב") ||
-                            txt.contains("עיצוב רגיל") ||
-                            txt.contains("עיצוב הזכוכית") ||
-                            txt.contains("הזוהר הצפוני") ||
-                            txt.contains("עיצוב מינימליסטי")
-                            ) && !txt.contains("צבע נושא מותאם") && !txt.contains("צבע רקע מותאם")
-                    if (isDisplayModeSelector) {
-                        displayModeButtons.add(ch)
-                    }
-                } else if (ch is ViewGroup) {
-                    scanForDisplayButtonsAndChips(ch)
-                }
-            }
-        }
-        scanForDisplayButtonsAndChips(mainContainer)
-
-        // הסרה מוחלטת של כל כרטיסי גלגל הצבעים הישנים והכפולים מ-mainContainer
+        // מסיר את כל רכיבי העיצוב/הפלטות/גלגלי הצבעים הישנים (כולל סרגל 18 הפלטות הישן והעיגול השחור!)
         for (i in mainContainer.childCount - 1 downTo 0) {
             val child = mainContainer.getChildAt(i)
-            if (child is HorizontalScrollView) continue
-            if (child in displayModeButtons) continue
-            if (child.tag == "MINIMALIST_CUSTOMIZER_IGNORE" || isLegacyColorWheelOrThemeNode(child)) {
+            if (!isValidSettingItemToKeep(child)) {
                 mainContainer.removeViewAt(i)
             }
         }
 
-        // הוספת שבב "🌿 מינימליסטי" לשורת הפלטות האופקית (ללא דריסת אף אחת מ-18 הפלטות)
-        horizontalChipsRow?.let { chipRow ->
-            var hasMinChip = false
-            for (i in 0 until chipRow.childCount) {
-                val c = chipRow.getChildAt(i)
-                if (c is TextView && c.tag == "MINIMALIST_PRESET_CHIP") {
-                    hasMinChip = true
-                    break
-                }
-            }
-            if (!hasMinChip) {
-                val minChip = TextView(this).apply {
-                    tag = "MINIMALIST_PRESET_CHIP"
-                    text = "🌿 מינימליסטי"
-                    setTextColor(MinimalistTheme.TEXT_CHARCOAL)
-                    textSize = 13.5f
-                    typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-                    gravity = Gravity.CENTER
-                    setPadding(dp(16f), dp(10f), dp(16f), dp(10f))
-                    background = GradientDrawable().apply {
-                        cornerRadius = dp(999f).toFloat()
-                        setColor(MinimalistTheme.ACCENT_SAGE_GREEN)
-                        setStroke(dp(1.5f), if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else Color.TRANSPARENT)
-                    }
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).apply { setMargins(dp(4f), dp(2f), dp(4f), dp(2f)) }
-                    setOnClickListener {
-                        feedback(it)
-                        isMinimalistMode = true
-                        isIosGlassMode = false
-                        isAuroraMode = false
-                        savePreferences()
-                        applyTheme()
-                    }
-                }
-                chipRow.addView(minChip, 0)
-            }
-        }
+        // 1. הוספת סרגל 12 הפלטות המותאמות אישית לערכת הנושא הפעילה בראש ההגדרות
+        val matchedPalettesBar = MinimalistTheme.createThemeMatchedPalettesBar(this)
+        mainContainer.addView(matchedPalettesBar, 0)
 
-        var primaryAnchorBtn: View? = null
-        if (displayModeButtons.isNotEmpty()) {
-            for (btn in displayModeButtons) {
-                btn.text = "מצב תצוגה: ${currentThemeDisplayName()}"
-                btn.setOnClickListener {
-                    feedback(it)
-                    MinimalistTheme.showUnifiedDisplayModeDialog(this)
-                }
-                if (primaryAnchorBtn == null) primaryAnchorBtn = btn
-            }
-        } else {
-            val newModeBtn = createActionBtn("מצב תצוגה: ${currentThemeDisplayName()}", false) {
-                MinimalistTheme.showUnifiedDisplayModeDialog(this)
-            }
-            mainContainer.addView(newModeBtn, 0)
-            primaryAnchorBtn = newModeBtn
+        // 2. הוספת כפתור בחירת מצב התצוגה המאוחד מיד מתחת לסרגל הפלטות
+        val displayModeBtn = createActionBtn("מצב תצוגה: ${currentThemeDisplayName()}", false) {
+            MinimalistTheme.showUnifiedDisplayModeDialog(this)
         }
+        mainContainer.addView(displayModeBtn, 1)
 
-        // הטמעת פאנל גלגל הצבעים הרב-אלמנטי היחיד והפעיל (לכל 10 האלמנטים באפליקציה!)
+        // 3. הוספת מנוע התאמת הצבעים הרב-אלמנטי (10 אלמנטים + גלגל צבעים 2D) מיד מתחת לכפתור מצב התצוגה
         val customizerPanel = MinimalistTheme.createColorThemeCustomizerSection(this)
-        var insertIdx = 1
-        if (primaryAnchorBtn != null) {
-            var p: View? = primaryAnchorBtn
-            while (p != null && p.parent != mainContainer) {
-                p = p.parent as? View
-            }
-            if (p != null) {
-                insertIdx = mainContainer.indexOfChild(p) + 1
-            }
-        }
-        mainContainer.addView(customizerPanel, insertIdx.coerceIn(0, mainContainer.childCount))
+        mainContainer.addView(customizerPanel, 2)
     }
 
     private fun applyButtonShapeVisibilityAndInsertAcSoundSetting(root: View?) {
@@ -1702,7 +1604,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                             ).show()
                             applyTheme()
                         }
-                        container.addView(proBtn, 3.coerceAtMost(container.childCount))
+                        container.addView(proBtn)
                     }
                 }
 
@@ -1720,7 +1622,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 container?.addView(handBtn)
                 container?.addView(createDrawerCalculatorsChecklistSection())
 
-                // מסיר את גלגל הצבעים הכפול שלא עבד ומטמיע את גלגל הצבעים של 10 האלמנטים
+                // מחליף את סרגל 18 הפלטות הישן בסרגל הפלטות התואם לערכת הנושא + גלגל הצבעים החדש
                 unifyThemeSelectorAndCustomizerInSettings(settingsView)
 
                 scrollObj?.viewTreeObserver?.addOnScrollChangedListener {
@@ -1848,7 +1750,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             background = when {
                 isMinimalistMode -> null
                 isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@MainActivity, if (isAuroraMode) 28f else IosGlassTheme.glassCornerPt)
-                else -> GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.07f)); cornerRadius = dp(28f).toFloat(); setStroke(dp(1.5f), Color.argb(70, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor))) }
+                else -> {
+                    val cardFill = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_CARDS_INPUTS]) MinimalistTheme.CARD_WHITE else Utils.lightenColor(bgColor, 0.07f)
+                    GradientDrawable().apply {
+                        setColor(cardFill)
+                        cornerRadius = dp(28f).toFloat()
+                        setStroke(dp(1.5f), Color.argb(70, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor)))
+                    }
+                }
             }
             if (isCleanGlassActive && !isMinimalistMode) IosGlassTheme.apply3DElevation(this, 10f)
         }
@@ -1892,7 +1801,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         currentView = TextView(this).apply {
             text = if(currentInput.isEmpty()) "0" else currentInput
-            setTextColor(if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE)
+            setTextColor(if (isMinimalistMode || MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_TEXT_ICONS]) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE)
             typeface = if (isMinimalistMode) Typeface.create("sans-serif-light", Typeface.NORMAL)
             else if (isCleanGlassActive) Typeface.create("sans-serif-medium", Typeface.BOLD)
             else Typeface.create("sans-serif-light", Typeface.NORMAL)
@@ -1900,7 +1809,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             gravity = Gravity.END
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 2f)
             if (isAuroraMode) {
-                setShadowLayer(12f, 0f, 0f, Color.argb(115, 0, 245, 212))
+                setShadowLayer(12f, 0f, 0f, Color.argb(115, Color.red(AuroraBorealisTheme.AURORA_PRIMARY), Color.green(AuroraBorealisTheme.AURORA_PRIMARY), Color.blue(AuroraBorealisTheme.AURORA_PRIMARY)))
             } else if (isIosGlassMode) {
                 setShadowLayer(8f, 0f, 2f, Color.argb(90, 0, 0, 0))
             }
@@ -2153,4 +2062,3 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         handleVoiceActivityResult(requestCode, resultCode, data)
     }
 }
- 
