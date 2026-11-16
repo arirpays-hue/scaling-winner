@@ -91,10 +91,20 @@ object IosGlassTheme {
         if (!activity.isIosGlassMode) return
         val isOperator = symbol in listOf("÷", "×", "−", "+", "=")
         val isCommand = symbol in listOf("AC", "⌫", "%", "MC", "MR", "M+", "M-")
-        val opBaseColor = if (useClassicOrangeOps) Color.parseColor("#FF9F0A") else activity.primaryColor
+        val opBaseColor = when {
+            MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_ACTION_1] ->
+                MinimalistTheme.getSlotEffectiveColor(MinimalistTheme.SLOT_ACTION_1, activity.primaryColor)
+            useClassicOrangeOps -> Color.parseColor("#FF9F0A")
+            else -> activity.primaryColor
+        }
+
+        val customTextCol = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_TEXT_ICONS]) {
+            MinimalistTheme.TEXT_CHARCOAL
+        } else null
 
         val textColor = when {
             isPressed -> Color.WHITE
+            customTextCol != null && !isOperator -> customTextCol
             isOperator -> Color.argb(242, 255, 255, 255)
             isCommand -> Color.parseColor("#F2F4F8")
             else -> Color.WHITE
@@ -129,10 +139,27 @@ object IosGlassTheme {
             return AuroraBorealisTheme.createAuroraButtonDrawable(activity, symbol, isMem, isPressed)
         }
         val radius = activity.dp(glassCornerPt).toFloat()
+        val isEqualsOrMul = symbol in listOf("=", "×")
         val isOperator = symbol in listOf("÷", "×", "−", "+", "=")
         val isCommand = symbol in listOf("AC", "⌫", "%") || isMem
 
-        val opColor = if (useClassicOrangeOps) Color.parseColor("#FF9F0A") else activity.primaryColor
+        val opColor = when {
+            isEqualsOrMul && MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_ACTION_2] ->
+                MinimalistTheme.getSlotEffectiveColor(MinimalistTheme.SLOT_ACTION_2, activity.primaryColor)
+            MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_ACTION_1] ->
+                MinimalistTheme.getSlotEffectiveColor(MinimalistTheme.SLOT_ACTION_1, activity.primaryColor)
+            useClassicOrangeOps -> Color.parseColor("#FF9F0A")
+            else -> activity.primaryColor
+        }
+
+        val cmdBaseCol = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_MEM_CMD_KEYS]) {
+            MinimalistTheme.getSlotEffectiveColor(MinimalistTheme.SLOT_MEM_CMD_KEYS, Color.rgb(190, 200, 215))
+        } else Color.rgb(210, 218, 230)
+
+        val numBaseCol = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_NUM_KEYS]) {
+            MinimalistTheme.getSlotEffectiveColor(MinimalistTheme.SLOT_NUM_KEYS, Color.rgb(72, 82, 102))
+        } else Color.rgb(72, 82, 102)
+
         val alphaScale = (glassOpacity / 255f).coerceIn(0.25f, 1f)
         val pressBoost = if (isPressed) 55 else 0
 
@@ -148,12 +175,14 @@ object IosGlassTheme {
             isCommand -> {
                 val aTop = ((145 * alphaScale).toInt() + pressBoost).coerceAtMost(255)
                 val aBot = ((95 * alphaScale).toInt() + pressBoost).coerceAtMost(255)
-                Color.argb(aTop, 210, 218, 230) to Color.argb(aBot, 145, 155, 170)
+                Color.argb(aTop, Color.red(cmdBaseCol), Color.green(cmdBaseCol), Color.blue(cmdBaseCol)) to
+                        Color.argb(aBot, (Color.red(cmdBaseCol) * 0.7f).toInt(), (Color.green(cmdBaseCol) * 0.7f).toInt(), (Color.blue(cmdBaseCol) * 0.7f).toInt())
             }
             else -> {
-                val aTop = ((105 * alphaScale).toInt() + pressBoost).coerceAtMost(255)
-                val aBot = ((65 * alphaScale).toInt() + pressBoost).coerceAtMost(255)
-                Color.argb(aTop, 72, 82, 102) to Color.argb(aBot, 38, 44, 58)
+                val aTop = ((125 * alphaScale).toInt() + pressBoost).coerceAtMost(255)
+                val aBot = ((80 * alphaScale).toInt() + pressBoost).coerceAtMost(255)
+                Color.argb(aTop, Color.red(numBaseCol), Color.green(numBaseCol), Color.blue(numBaseCol)) to
+                        Color.argb(aBot, (Color.red(numBaseCol) * 0.55f).toInt(), (Color.green(numBaseCol) * 0.55f).toInt(), (Color.blue(numBaseCol) * 0.55f).toInt())
             }
         }
 
@@ -212,11 +241,20 @@ object IosGlassTheme {
         val isDrawer = (cornerDp == 0f)
         val radius = activity.dp(cornerDp).toFloat()
         val alphaScale = (glassOpacity / 255f).coerceIn(0.25f, 1f)
+
+        val cardTint = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_CARDS_INPUTS]) {
+            MinimalistTheme.getSlotEffectiveColor(MinimalistTheme.SLOT_CARDS_INPUTS, Color.rgb(42, 50, 66))
+        } else Color.rgb(42, 50, 66)
+
+        val r = Color.red(cardTint)
+        val g = Color.green(cardTint)
+        val b = Color.blue(cardTint)
+
         val glass = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
             intArrayOf(
-                Color.argb((185 * alphaScale).toInt().coerceAtLeast(135), 42, 50, 66),
-                Color.argb((165 * alphaScale).toInt().coerceAtLeast(120), 24, 30, 44),
+                Color.argb((185 * alphaScale).toInt().coerceAtLeast(135), r, g, b),
+                Color.argb((165 * alphaScale).toInt().coerceAtLeast(120), (r * 0.65f).toInt(), (g * 0.65f).toInt(), (b * 0.65f).toInt()),
                 Color.argb((150 * alphaScale).toInt().coerceAtLeast(110), Color.red(activity.primaryColor) / 3, Color.green(activity.primaryColor) / 3, Color.blue(activity.primaryColor) / 3)
             )
         ).apply {
@@ -246,8 +284,16 @@ object IosGlassTheme {
         if (activity.isAuroraMode) {
             return AuroraBorealisTheme.createAuroraAtmosphericBackground()
         }
-        val opCol = if (useClassicOrangeOps) Color.parseColor("#FF9F0A") else activity.primaryColor
-        val baseBg = activity.bgColor
+        val opCol = when {
+            MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_ACTION_2] ->
+                MinimalistTheme.getSlotEffectiveColor(MinimalistTheme.SLOT_ACTION_2, activity.primaryColor)
+            useClassicOrangeOps -> Color.parseColor("#FF9F0A")
+            else -> activity.primaryColor
+        }
+        val baseBg = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_MAIN_BG]) {
+            MinimalistTheme.getSlotEffectiveColor(MinimalistTheme.SLOT_MAIN_BG, activity.bgColor)
+        } else activity.bgColor
+
         val topGlow = Color.argb(
             255,
             (Color.red(baseBg) + Color.red(activity.primaryColor) / 6).coerceAtMost(255),
@@ -766,4 +812,3 @@ object IosGlassTheme {
         }
     }
 }
- 
