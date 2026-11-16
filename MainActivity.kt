@@ -1148,9 +1148,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     fun copyToClipboard(text: String) { val cb = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager; cb.setPrimaryClip(ClipData.newPlainText("CalcResult", text)); Toast.makeText(this, if (isCleanGlassActive) "הועתק ללוח" else "הועתק ללוח 📋", Toast.LENGTH_SHORT).show() }
 
-    // =========================================================================
-    // עדכון תפריט הצד והסמלים שבו עם הגנת ניגודיות מלאה לכל פריט ולפריט הנבחר!
-    // =========================================================================
     fun updateDrawerSelection() {
         val proActive = ProState.isProEnabled(prefs)
         val sepColor = when {
@@ -1278,6 +1275,51 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 tv.setTextColor(itemTextCol)
             }
         }
+    }
+
+    // מלביש לכל שורת הגדרה במסך ההגדרות את הסמל הווקטורי הייחודי שלה (201..214) במצבי הזכוכית וזוהר הצפון!
+    private fun applyGlassAndAuroraSettingsIcons(settingsRoot: View?) {
+        if (settingsRoot == null || isMinimalistMode || (!isIosGlassMode && !isAuroraMode)) return
+        val iconTint = MinimalistTheme.resolveDrawerIconColor(this, isSelected = false, isExpandedHeader = false)
+
+        fun traverse(v: View) {
+            if (v.tag == "MINIMALIST_CUSTOMIZER_IGNORE" || v.tag == "THEME_MATCHED_PALETTES_BAR") return
+            if (v is HorizontalScrollView) return
+
+            if (v is TextView && v.isClickable && v.background != null) {
+                val txt = v.text?.toString() ?: ""
+                val settingIconCode: Int? = when {
+                    txt.contains("מצב תצוגה") -> 214
+                    txt.contains("רטט") -> 204
+                    txt.contains("צלילי הקשה") -> 201
+                    txt.contains("סוג צליל") -> 205
+                    txt.contains("צליל AC") -> 206
+                    txt.contains("אנימציות") -> 207
+                    txt.contains("מסך תמיד דולק") -> 208
+                    txt.contains("צורת כפתורים") -> 209
+                    txt.contains("דיוק עשרוני") -> 210
+                    txt.contains("מצב מקצועי") || txt.contains("Pro Mode") -> 211
+                    txt.contains("יד דומיננטית") -> 212
+                    txt.contains("רשימת סימון") -> 213
+                    txt.contains("איפוס") -> 19
+                    else -> null
+                }
+                if (settingIconCode != null) {
+                    val iconDrawable = AuroraBorealisTheme.createVectorIcon(this, settingIconCode, iconTint, 22f, isAuroraMode)
+                    v.compoundDrawablePadding = dp(12f)
+                    if (isRightHanded) {
+                        v.setCompoundDrawables(null, null, iconDrawable, null)
+                    } else {
+                        v.setCompoundDrawables(iconDrawable, null, null, null)
+                    }
+                }
+            } else if (v is ViewGroup) {
+                for (i in 0 until v.childCount) {
+                    traverse(v.getChildAt(i))
+                }
+            }
+        }
+        traverse(settingsRoot)
     }
 
     private fun unifyThemeSelectorAndCustomizerInSettings(settingsRoot: View?) {
@@ -1666,6 +1708,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 container?.addView(createDrawerCalculatorsChecklistSection())
 
                 unifyThemeSelectorAndCustomizerInSettings(settingsView)
+                applyGlassAndAuroraSettingsIcons(settingsView)
 
                 scrollObj?.viewTreeObserver?.addOnScrollChangedListener {
                     if (currentTabIndex == 19) settingsScrollY = scrollObj.scrollY
@@ -2141,4 +2184,3 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         handleVoiceActivityResult(requestCode, resultCode, data)
     }
 }
- 
