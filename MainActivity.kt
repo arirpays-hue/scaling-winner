@@ -392,8 +392,61 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         CompassHomeWidgetHelper.renderCurrentStateToWidgets(this)
     }
 
+    // מעדכן בזמן אמת את באנר הלוגו (צבע לוגו 1 וצבע לוגו 2), את הכותרת העליונה ואת תפריט הצד בעת סיבוב גלגל הצבעים!
+    fun updateLiveDrawerAndHeaderColors() {
+        val hasCustomLogoBg = MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_BG]
+        val hasCustomLogoText = MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_TEXT]
+        val hasCustomTextIcons = MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_TEXT_ICONS]
+
+        if (isMinimalistMode) {
+            val minBg = MinimalistTheme.getBackgroundColor(this)
+            mainContent?.setBackgroundColor(minBg)
+            drawerScroll.setBackgroundColor(MinimalistTheme.DRAWER_BG)
+            val inkCol = MinimalistTheme.TEXT_CHARCOAL
+            titleText.setTextColor(inkCol)
+            menuBtn.setTextColor(inkCol)
+
+            val logoBgCol = MinimalistTheme.DRAWER_HEADER_YELLOW
+            val logoTxtCol = MinimalistTheme.LOGO_TEXT_COLOR
+            appLogoView?.apply {
+                setTextColor(logoTxtCol)
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(24f).toFloat()
+                    setColor(logoBgCol)
+                }
+                val calcIcon = MinimalistTheme.createMinimalistVectorIcon(this@MainActivity, 0, logoTxtCol, 28f)
+                setCompoundDrawables(calcIcon, null, null, null)
+                compoundDrawablePadding = dp(10f)
+            }
+
+            pipBtn.text = ""
+            pipBtn.setCompoundDrawables(MinimalistTheme.createMinimalistVectorIcon(this, 100, inkCol, 22f), null, null, null)
+            historyBtn.text = ""
+            historyBtn.setCompoundDrawables(MinimalistTheme.createMinimalistVectorIcon(this, 101, inkCol, 22f), null, null, null)
+        } else {
+            val headerInk = if (hasCustomTextIcons) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
+            titleText.setTextColor(headerInk)
+            menuBtn.setTextColor(headerInk)
+
+            appLogoView?.apply {
+                val logoTxt = if (hasCustomLogoText) MinimalistTheme.LOGO_TEXT_COLOR else Color.WHITE
+                setTextColor(logoTxt)
+                if (hasCustomLogoBg) {
+                    background = GradientDrawable().apply {
+                        cornerRadius = dp(24f).toFloat()
+                        setColor(MinimalistTheme.DRAWER_HEADER_YELLOW)
+                    }
+                } else {
+                    background = null
+                }
+            }
+        }
+        refreshFavHeaderIcon()
+        updateDrawerSelection()
+    }
+
     // =========================================================================
-    // חלונית היסטוריית חישובים מתוקנת ומותאמת לכל ערכות הנושא (כולל עיצוב מינימליסטי!)
+    // חלונית היסטוריית חישובים מתוקנת ומותאמת לכל ערכות הנושא
     // =========================================================================
     fun showHistoryDialog() {
         val dlg = Dialog(this)
@@ -946,13 +999,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             titleText.setTextColor(MinimalistTheme.TEXT_CHARCOAL)
             menuBtn.setTextColor(MinimalistTheme.TEXT_CHARCOAL)
 
+            val logoTxtCol = MinimalistTheme.LOGO_TEXT_COLOR
             appLogoView?.apply {
-                setTextColor(MinimalistTheme.TEXT_CHARCOAL)
+                setTextColor(logoTxtCol)
                 background = GradientDrawable().apply {
                     cornerRadius = dp(24f).toFloat()
                     setColor(MinimalistTheme.DRAWER_HEADER_YELLOW)
                 }
-                val calcIcon = MinimalistTheme.createMinimalistVectorIcon(this@MainActivity, 0, MinimalistTheme.TEXT_CHARCOAL, 28f)
+                val calcIcon = MinimalistTheme.createMinimalistVectorIcon(this@MainActivity, 0, logoTxtCol, 28f)
                 setCompoundDrawables(calcIcon, null, null, null)
                 compoundDrawablePadding = dp(10f)
             }
@@ -969,8 +1023,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             titleText.setTextColor(Color.WHITE)
             menuBtn.setTextColor(Color.WHITE)
             appLogoView?.apply {
-                setTextColor(Color.WHITE)
-                background = null
+                setTextColor(if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_TEXT]) MinimalistTheme.LOGO_TEXT_COLOR else Color.WHITE)
+                background = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_BG]) {
+                    GradientDrawable().apply {
+                        cornerRadius = dp(24f).toFloat()
+                        setColor(MinimalistTheme.DRAWER_HEADER_YELLOW)
+                    }
+                } else null
                 setCompoundDrawables(null, null, null, null)
             }
             val iconCol = AuroraBorealisTheme.AURORA_PRIMARY
@@ -986,8 +1045,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             titleText.setTextColor(Color.WHITE)
             menuBtn.setTextColor(Color.WHITE)
             appLogoView?.apply {
-                setTextColor(Color.WHITE)
-                background = null
+                setTextColor(if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_TEXT]) MinimalistTheme.LOGO_TEXT_COLOR else Color.WHITE)
+                background = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_BG]) {
+                    GradientDrawable().apply {
+                        cornerRadius = dp(24f).toFloat()
+                        setColor(MinimalistTheme.DRAWER_HEADER_YELLOW)
+                    }
+                } else null
                 setCompoundDrawables(null, null, null, null)
             }
             pipBtn.text = ""
@@ -1001,8 +1065,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             titleText.setTextColor(Color.WHITE)
             menuBtn.setTextColor(Color.WHITE)
             appLogoView?.apply {
-                setTextColor(Color.WHITE)
-                background = null
+                setTextColor(if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_TEXT]) MinimalistTheme.LOGO_TEXT_COLOR else Color.WHITE)
+                background = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_BG]) {
+                    GradientDrawable().apply {
+                        cornerRadius = dp(24f).toFloat()
+                        setColor(MinimalistTheme.DRAWER_HEADER_YELLOW)
+                    }
+                } else null
                 setCompoundDrawables(null, null, null, null)
             }
             pipBtn.setCompoundDrawables(null, null, null, null)
@@ -1163,6 +1232,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
+    // מסיר את כל גלגלי הצבעים הישנים והכפולים שלא עובדים, ומטמיע גלגל צבעים מאוחד עם 10 אלמנטים!
     private fun unifyThemeSelectorAndCustomizerInSettings(settingsRoot: View?) {
         if (settingsRoot == null) return
         val scrollObj = settingsRoot as? ScrollView
@@ -1177,13 +1247,48 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
         }
 
+        // פונקציית עזר הבודקת אם רכיב כלשהו בעץ התצוגה שייך לגלגל הצבעים הישן והכפול (מ-SettingsEnhancer / Calculators)
+        fun isLegacyColorWheelOrThemeNode(v: View): Boolean {
+            if (v.tag == "MINIMALIST_CUSTOMIZER_IGNORE") return false
+            val className = v.javaClass.simpleName.lowercase(Locale.US)
+            if (className.contains("wheel") || className.contains("picker") || className.contains("color") || className.contains("palette")) {
+                return true
+            }
+            if (v is TextView) {
+                val t = v.text?.toString()?.trim() ?: ""
+                if (t.contains("צבע נושא מותאם") ||
+                    t.contains("צבע רקע מותאם") ||
+                    t.startsWith("#FF", ignoreCase = true) ||
+                    t == "בהירות" || t == "שקיפות" ||
+                    t.contains("☀️ בהירות") || t.contains("💧 שקיפות") ||
+                    t.contains("צבע ראשי") || t.contains("צבע רקע")
+                ) {
+                    return true
+                }
+                if (isMinimalistMode && (t.contains("שקיפות זכוכית") || t.contains("טשטוש") || t.contains("הברקה") || t.contains("עוצמת זוהר"))) {
+                    return true
+                }
+            }
+            // זיהוי Custom View של גלגל הצבעים הישן לפי גובה קנבס קבוע (150dp-280dp) שאינו שייך לקנבסים שלנו
+            if (v !is ViewGroup && v !is TextView && v !is Button && v !is SeekBar && v !is CheckBox && v !is Space) {
+                val h = v.layoutParams?.height ?: 0
+                if (h >= dp(140f)) return true
+            }
+            if (v is ViewGroup) {
+                for (i in 0 until v.childCount) {
+                    if (isLegacyColorWheelOrThemeNode(v.getChildAt(i))) return true
+                }
+            }
+            return false
+        }
+
         val displayModeButtons = mutableListOf<TextView>()
-        val conflictingPanelsToHide = mutableListOf<View>()
         var horizontalChipsRow: LinearLayout? = null
 
-        fun scanHierarchy(group: ViewGroup) {
+        fun scanForDisplayButtonsAndChips(group: ViewGroup) {
             for (i in 0 until group.childCount) {
                 val ch = group.getChildAt(i)
+                if (ch.tag == "MINIMALIST_CUSTOMIZER_IGNORE") continue
                 if (ch is HorizontalScrollView) {
                     val inner = ch.getChildAt(0) as? LinearLayout
                     if (inner != null && horizontalChipsRow == null) {
@@ -1201,37 +1306,28 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                             txt.contains("עיצוב הזכוכית") ||
                             txt.contains("הזוהר הצפוני") ||
                             txt.contains("עיצוב מינימליסטי")
-                            )
+                            ) && !txt.contains("צבע נושא מותאם") && !txt.contains("צבע רקע מותאם")
                     if (isDisplayModeSelector) {
                         displayModeButtons.add(ch)
-                    } else if (isMinimalistMode && ch.isClickable && (txt.contains("צבע ראשי") || txt.contains("צבע רקע") || txt.contains("שקיפות זכוכית") || txt.contains("טשטוש") || txt.contains("הברקה") || txt.contains("זוהר"))) {
-                        conflictingPanelsToHide.add(ch)
                     }
-                } else if (ch is ViewGroup && ch.tag != "MINIMALIST_CUSTOMIZER_IGNORE") {
-                    if (isMinimalistMode && group == mainContainer && i > 0) {
-                        var hasOldSliders = false
-                        for (k in 0 until ch.childCount) {
-                            val sub = ch.getChildAt(k)
-                            if (sub is SeekBar || (sub is TextView && (sub.text.contains("טשטוש") || sub.text.contains("שקיפות זכוכית") || sub.text.contains("זוהר")))) {
-                                hasOldSliders = true
-                                break
-                            }
-                        }
-                        if (hasOldSliders) {
-                            conflictingPanelsToHide.add(ch)
-                            continue
-                        }
-                    }
-                    scanHierarchy(ch)
+                } else if (ch is ViewGroup) {
+                    scanForDisplayButtonsAndChips(ch)
                 }
             }
         }
-        scanHierarchy(mainContainer)
+        scanForDisplayButtonsAndChips(mainContainer)
 
-        for (v in conflictingPanelsToHide) {
-            v.visibility = View.GONE
+        // הסרה מוחלטת של כל כרטיסי גלגל הצבעים הישנים והכפולים מ-mainContainer
+        for (i in mainContainer.childCount - 1 downTo 0) {
+            val child = mainContainer.getChildAt(i)
+            if (child is HorizontalScrollView) continue
+            if (child in displayModeButtons) continue
+            if (child.tag == "MINIMALIST_CUSTOMIZER_IGNORE" || isLegacyColorWheelOrThemeNode(child)) {
+                mainContainer.removeViewAt(i)
+            }
         }
 
+        // הוספת שבב "🌿 מינימליסטי" לשורת הפלטות האופקית (ללא דריסת אף אחת מ-18 הפלטות)
         horizontalChipsRow?.let { chipRow ->
             var hasMinChip = false
             for (i in 0 until chipRow.childCount) {
@@ -1290,30 +1386,21 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             primaryAnchorBtn = newModeBtn
         }
 
-        for (i in mainContainer.childCount - 1 downTo 0) {
-            val ch = mainContainer.getChildAt(i)
-            if (ch.tag == "MINIMALIST_CUSTOMIZER_IGNORE") {
-                mainContainer.removeViewAt(i)
+        // הטמעת פאנל גלגל הצבעים הרב-אלמנטי היחיד והפעיל (לכל 10 האלמנטים באפליקציה!)
+        val customizerPanel = MinimalistTheme.createColorThemeCustomizerSection(this)
+        var insertIdx = 1
+        if (primaryAnchorBtn != null) {
+            var p: View? = primaryAnchorBtn
+            while (p != null && p.parent != mainContainer) {
+                p = p.parent as? View
+            }
+            if (p != null) {
+                insertIdx = mainContainer.indexOfChild(p) + 1
             }
         }
-
-        if (isMinimalistMode) {
-            val customizerPanel = MinimalistTheme.createColorThemeCustomizerSection(this)
-            var insertIdx = 1
-            if (primaryAnchorBtn != null) {
-                var p: View? = primaryAnchorBtn
-                while (p != null && p.parent != mainContainer) {
-                    p = p.parent as? View
-                }
-                if (p != null) {
-                    insertIdx = mainContainer.indexOfChild(p) + 1
-                }
-            }
-            mainContainer.addView(customizerPanel, insertIdx.coerceIn(0, mainContainer.childCount))
-        }
+        mainContainer.addView(customizerPanel, insertIdx.coerceIn(0, mainContainer.childCount))
     }
 
-    // מתקן את חלונית בחירת הצלילים ("סוג צליל"), את "דיוק עשרוני", את "צורת כפתורים" ומוסיף את "צליל AC"
     private fun applyButtonShapeVisibilityAndInsertAcSoundSetting(root: View?) {
         if (root == null) return
         if (root is ViewGroup) {
@@ -1633,6 +1720,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 container?.addView(handBtn)
                 container?.addView(createDrawerCalculatorsChecklistSection())
 
+                // מסיר את גלגל הצבעים הכפול שלא עבד ומטמיע את גלגל הצבעים של 10 האלמנטים
                 unifyThemeSelectorAndCustomizerInSettings(settingsView)
 
                 scrollObj?.viewTreeObserver?.addOnScrollChangedListener {
@@ -1867,7 +1955,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private fun createAnimatedButton(symbol: String, isSmall: Boolean): TextView {
         val isMem = symbol in listOf("MC", "MR", "M+", "M-")
         val isOp = symbol in listOf("÷", "×", "−", "+", "sin", "cos", "tan", "log", "ln", "√", "x²", "x³", "x^y", "!", "π", "e", "(", ")")
-        val defaultBg = when { symbol == "AC" -> Utils.lightenColor(Color.RED, 0.2f); symbol == "=" -> primaryColor; isMem -> Utils.lightenColor(bgColor, 0.03f); symbol in listOf("⌫", "%", "÷", "×", "−", "+") -> Utils.lightenColor(bgColor, 0.1f); else -> Utils.lightenColor(bgColor, 0.06f) }
+        val defaultBg = when {
+            symbol == "AC" -> if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_MEM_CMD_KEYS]) MinimalistTheme.ACCENT_SKY_BLUE else Utils.lightenColor(Color.RED, 0.2f)
+            symbol == "=" -> if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_ACTION_2]) MinimalistTheme.getSecondaryActionColor(this) else primaryColor
+            isMem -> if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_MEM_CMD_KEYS]) MinimalistTheme.ACCENT_PASTEL_BLUE else Utils.lightenColor(bgColor, 0.03f)
+            symbol in listOf("⌫", "%", "÷", "×", "−", "+") -> if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_ACTION_1]) MinimalistTheme.getPrimaryActionColor(this) else Utils.lightenColor(bgColor, 0.1f)
+            else -> if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_NUM_KEYS]) MinimalistTheme.PILL_NUM_WHITE else Utils.lightenColor(bgColor, 0.06f)
+        }
         val strokeColor = if (symbol == "=" || symbol == "AC") Color.TRANSPARENT else Utils.lightenColor(bgColor, 0.15f)
         val textColor = when {
             isMinimalistMode -> MinimalistTheme.TEXT_CHARCOAL
