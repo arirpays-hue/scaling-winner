@@ -60,24 +60,27 @@ object MinimalistTheme {
     private val DEFAULT_BORDER_SUBTLE = Color.parseColor("#E3DFD9")
 
     // =========================================================================
-    // מערכת 15 ערוצי צבע מותאמים אישית לכל אלמנט, ספרה וסימון באפליקציה!
+    // מערכת 18 ערוצי צבע מותאמים אישית לכל אלמנט, ספרה, תפריט וסמל באפליקציה!
     // =========================================================================
-    const val SLOT_ACTION_1 = 0       // 0: רקע כפתורי פעולה 1 (÷ − + וכפתורים ראשיים)
-    const val SLOT_ACTION_2 = 1       // 1: רקע כפתורי פעולה 2 (= × וכפתורים משניים)
-    const val SLOT_LOGO_BG = 2        // 2: צבע לוגו 1 (רקע באנר לוגו בתפריט הצד)
-    const val SLOT_LOGO_TEXT = 3      // 3: צבע לוגו 2 (טקסט וסמל הלוגו בתפריט הצד)
-    const val SLOT_MAIN_BG = 4        // 4: צבע רקע ראשי (מסך ותפריט צד)
-    const val SLOT_CARDS_INPUTS = 5   // 5: רקע כרטיסים, צג ותיבות קלט
-    const val SLOT_MEM_CMD_KEYS = 6   // 6: רקע מקשי זיכרון ופקודות (AC, ⌫, %, MC, MR, M+, M-)
-    const val SLOT_NUM_KEYS = 7       // 7: רקע מקשי מספרים (0-9)
-    const val SLOT_ACTIVE_PILL = 8    // 8: צבע פריט פעיל בתפריט וכותרות Pro
-    const val SLOT_TEXT_ICONS = 9     // 9: צבע טקסט כותרות ואייקונים כללי
-    const val SLOT_NUM_TEXT = 10      // 10: צבע הספרות עצמן על המקשים (0-9 . ( ))
-    const val SLOT_OP_TEXT = 11       // 11: צבע סימוני הפעולות (+ − × ÷ = ופונקציות מדעיות)
-    const val SLOT_MEM_CMD_TEXT = 12  // 12: צבע כיתוב מקשי זיכרון ופקודות (AC, ⌫, %, MC..M-)
-    const val SLOT_DISPLAY_TEXT = 13  // 13: צבע ספרות הצג הראשי והתוצאות
-    const val SLOT_BORDERS = 14       // 14: צבע מסגרות כפתורים וכרטיסים
-    const val TOTAL_COLOR_SLOTS = 15
+    const val SLOT_ACTION_1 = 0          // 0: רקע כפתורי פעולה 1 (÷ − + וכפתורים ראשיים)
+    const val SLOT_ACTION_2 = 1          // 1: רקע כפתורי פעולה 2 (= × וכפתורים משניים)
+    const val SLOT_LOGO_BG = 2           // 2: צבע לוגו 1 (רקע באנר לוגו בתפריט הצד)
+    const val SLOT_LOGO_TEXT = 3         // 3: צבע לוגו 2 (טקסט וסמל הלוגו בתפריט הצד)
+    const val SLOT_MAIN_BG = 4           // 4: צבע רקע ראשי (מסך ותפריט צד)
+    const val SLOT_CARDS_INPUTS = 5      // 5: רקע כרטיסים, צג ותיבות קלט
+    const val SLOT_MEM_CMD_KEYS = 6      // 6: רקע מקשי זיכרון ופקודות (AC, ⌫, %, MC, MR, M+, M-)
+    const val SLOT_NUM_KEYS = 7          // 7: רקע מקשי מספרים (0-9)
+    const val SLOT_ACTIVE_PILL = 8       // 8: רקע קפסולת פריט נבחר בתפריט וכותרות Pro
+    const val SLOT_TEXT_ICONS = 9        // 9: צבע טקסט כותרות ואייקונים כללי
+    const val SLOT_NUM_TEXT = 10         // 10: צבע הספרות עצמן על המקשים (0-9 . ( ))
+    const val SLOT_OP_TEXT = 11          // 11: צבע סימוני הפעולות (+ − × ÷ = ופונקציות מדעיות)
+    const val SLOT_MEM_CMD_TEXT = 12     // 12: צבע כיתוב מקשי זיכרון ופקודות (AC, ⌫, %, MC..M-)
+    const val SLOT_DISPLAY_TEXT = 13     // 13: צבע ספרות הצג הראשי והתוצאות
+    const val SLOT_BORDERS = 14          // 14: צבע מסגרות כפתורים וכרטיסים
+    const val SLOT_DRAWER_TEXT = 15      // 15: צבע טקסט פריטים וקטגוריות בתפריט הצד
+    const val SLOT_DRAWER_ICONS = 16     // 16: צבע סמלים (אייקונים) בתפריט הצד ובסרגל
+    const val SLOT_ACTIVE_PILL_TEXT = 17 // 17: צבע טקסט וסמל בתוך פריט נבחר בתפריט הצד
+    const val TOTAL_COLOR_SLOTS = 18
 
     val slotCustomized = BooleanArray(TOTAL_COLOR_SLOTS) { false }
     val slotBaseColors = IntArray(TOTAL_COLOR_SLOTS)
@@ -529,19 +532,22 @@ object MinimalistTheme {
         DEFAULT_CARD_WHITE,            // 5: SLOT_CARDS_INPUTS (כרטיסים ותיבות קלט)
         DEFAULT_ACCENT_SKY_BLUE,       // 6: SLOT_MEM_CMD_KEYS (רקע מקשי זיכרון ופקודות)
         DEFAULT_CARD_WHITE,            // 7: SLOT_NUM_KEYS (רקע מקשי מספרים)
-        DEFAULT_ACCENT_SAGE_GREEN,     // 8: SLOT_ACTIVE_PILL (פריט פעיל וכותרות)
+        DEFAULT_ACCENT_SAGE_GREEN,     // 8: SLOT_ACTIVE_PILL (רקע פריט נבחר בתפריט וכותרות)
         DEFAULT_TEXT_CHARCOAL,         // 9: SLOT_TEXT_ICONS (טקסט כותרות ואייקונים כללי)
         DEFAULT_TEXT_CHARCOAL,         // 10: SLOT_NUM_TEXT (צבע הספרות עצמן 0-9)
         DEFAULT_TEXT_CHARCOAL,         // 11: SLOT_OP_TEXT (צבע סימוני הפעולות + - × ÷ =)
         DEFAULT_TEXT_CHARCOAL,         // 12: SLOT_MEM_CMD_TEXT (צבע כיתוב זיכרון ופקודות)
         DEFAULT_TEXT_CHARCOAL,         // 13: SLOT_DISPLAY_TEXT (צבע ספרות הצג והתוצאות)
-        DEFAULT_BORDER_SUBTLE          // 14: SLOT_BORDERS (צבע מסגרות כפתורים וכרטיסים)
+        DEFAULT_BORDER_SUBTLE,         // 14: SLOT_BORDERS (צבע מסגרות כפתורים וכרטיסים)
+        DEFAULT_TEXT_CHARCOAL,         // 15: SLOT_DRAWER_TEXT (צבע טקסט תפריט הצד)
+        DEFAULT_TEXT_CHARCOAL,         // 16: SLOT_DRAWER_ICONS (צבע סמלים בתפריט הצד ובסרגל)
+        DEFAULT_TEXT_CHARCOAL          // 17: SLOT_ACTIVE_PILL_TEXT (צבע טקסט וסמל בפריט נבחר בתפריט)
     )
 
     // =========================================================================
-    // מנוע הגנת ניגודיות חכם (Smart Contrast Guard) - מונע היעלמות ספרות וסימונים!
+    // מנוע הגנת ניגודיות חכם (Smart Contrast Guard) - מונע היעלמות במקשים ובתפריט הצד!
     // =========================================================================
-    private fun computeLuminance(color: Int): Double {
+    fun computeLuminance(color: Int): Double {
         fun chan(v: Int): Double {
             val s = v / 255.0
             return if (s <= 0.03928) s / 12.92 else ((s + 0.055) / 1.055).pow(2.4)
@@ -555,15 +561,135 @@ object MinimalistTheme {
         return (max(l1, l2) + 0.05) / (min(l1, l2) + 0.05)
     }
 
-    fun ensureReadableTextOnBg(desiredTextCol: Int, bgCol: Int, minContrast: Double = 2.35): Int {
+    fun ensureReadableTextOnBg(desiredTextCol: Int, bgCol: Int, minContrast: Double = 2.40): Int {
         if (Color.alpha(bgCol) < 70) return desiredTextCol
         val ratio = computeContrastRatio(desiredTextCol, bgCol)
         if (ratio >= minContrast) return desiredTextCol
         val bgLum = computeLuminance(bgCol)
-        return if (bgLum > 0.40) Color.parseColor("#14171F") else Color.WHITE
+        return if (bgLum > 0.38) Color.parseColor("#14171F") else Color.WHITE
     }
 
-    // מחשב את צבע הרקע המדויק של מקש במקלדת (לצורך בדיקת ניגודיות וציור)
+    // מחשב את צבע הרקע האמיתי של תפריט הצד
+    fun resolveDrawerBgColor(activity: MainActivity): Int {
+        return when {
+            activity.isMinimalistMode -> DRAWER_BG
+            slotCustomized[SLOT_MAIN_BG] -> getSlotEffectiveColor(SLOT_MAIN_BG, activity.bgColor)
+            activity.isAuroraMode -> AuroraBorealisTheme.ARCTIC_BLUE
+            else -> Utils.lightenColor(activity.bgColor, 0.06f)
+        }
+    }
+
+    // מחשב את צבע הרקע האמיתי של קפסולת הפריט הנבחר בתפריט הצד (כדי לבדוק ניגודיות מולו!)
+    fun resolveActivePillBgColor(activity: MainActivity): Int {
+        return when {
+            activity.isMinimalistMode -> ACCENT_SAGE_GREEN
+            slotCustomized[SLOT_ACTIVE_PILL] -> getSlotEffectiveColor(SLOT_ACTIVE_PILL, activity.primaryColor)
+            activity.isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
+            else -> activity.primaryColor
+        }
+    }
+
+    // מחשב את צבע הטקסט של פריט או קטגוריה בתפריט הצד (נבחר / פתוח / רגיל) עם הגנת ניגודיות מלאה!
+    fun resolveDrawerItemTextColor(
+        activity: MainActivity,
+        isSelected: Boolean,
+        isExpandedHeader: Boolean = false
+    ): Int {
+        val drawerBg = resolveDrawerBgColor(activity)
+        if (isSelected) {
+            val pillBg = resolveActivePillBgColor(activity)
+            if (slotCustomized[SLOT_ACTIVE_PILL_TEXT]) {
+                val chosen = getSlotEffectiveColor(SLOT_ACTIVE_PILL_TEXT, DEFAULT_TEXT_CHARCOAL)
+                return ensureReadableTextOnBg(chosen, pillBg, minContrast = 1.65)
+            }
+            val defaultActiveText = when {
+                activity.isMinimalistMode -> DEFAULT_TEXT_CHARCOAL
+                else -> ensureReadableTextOnBg(Color.WHITE, pillBg, minContrast = 2.60)
+            }
+            return ensureReadableTextOnBg(defaultActiveText, pillBg, minContrast = 2.60)
+        }
+
+        val itemBg = if (isExpandedHeader && activity.isMinimalistMode) NEUTRAL_SECONDARY_BG else drawerBg
+        if (slotCustomized[SLOT_DRAWER_TEXT]) {
+            val chosen = getSlotEffectiveColor(SLOT_DRAWER_TEXT, DEFAULT_TEXT_CHARCOAL)
+            return ensureReadableTextOnBg(chosen, itemBg, minContrast = 1.65)
+        }
+        if (slotCustomized[SLOT_TEXT_ICONS]) {
+            return ensureReadableTextOnBg(TEXT_CHARCOAL, itemBg, minContrast = 2.35)
+        }
+
+        val defaultText = when {
+            activity.isMinimalistMode -> DEFAULT_TEXT_CHARCOAL
+            isExpandedHeader && activity.isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
+            isExpandedHeader -> activity.primaryColor
+            else -> Color.WHITE
+        }
+        return ensureReadableTextOnBg(defaultText, itemBg, minContrast = 2.40)
+    }
+
+    // מחשב את צבע הסמל (האייקון) בתפריט הצד עם הגנת ניגודיות מול הקפסולה הפעילה או רקע התפריט!
+    fun resolveDrawerIconColor(
+        activity: MainActivity,
+        isSelected: Boolean,
+        isExpandedHeader: Boolean = false
+    ): Int {
+        val drawerBg = resolveDrawerBgColor(activity)
+        if (isSelected) {
+            val pillBg = resolveActivePillBgColor(activity)
+            if (slotCustomized[SLOT_ACTIVE_PILL_TEXT]) {
+                val chosen = getSlotEffectiveColor(SLOT_ACTIVE_PILL_TEXT, DEFAULT_TEXT_CHARCOAL)
+                return ensureReadableTextOnBg(chosen, pillBg, minContrast = 1.65)
+            }
+            if (slotCustomized[SLOT_DRAWER_ICONS]) {
+                val chosen = getSlotEffectiveColor(SLOT_DRAWER_ICONS, DEFAULT_TEXT_CHARCOAL)
+                return ensureReadableTextOnBg(chosen, pillBg, minContrast = 2.40)
+            }
+            val defaultActiveIcon = when {
+                activity.isMinimalistMode -> DEFAULT_TEXT_CHARCOAL
+                else -> ensureReadableTextOnBg(Color.WHITE, pillBg, minContrast = 2.60)
+            }
+            return ensureReadableTextOnBg(defaultActiveIcon, pillBg, minContrast = 2.60)
+        }
+
+        val itemBg = if (isExpandedHeader && activity.isMinimalistMode) NEUTRAL_SECONDARY_BG else drawerBg
+        if (slotCustomized[SLOT_DRAWER_ICONS]) {
+            val chosen = getSlotEffectiveColor(SLOT_DRAWER_ICONS, DEFAULT_TEXT_CHARCOAL)
+            return ensureReadableTextOnBg(chosen, itemBg, minContrast = 1.65)
+        }
+        if (slotCustomized[SLOT_DRAWER_TEXT]) {
+            val chosen = getSlotEffectiveColor(SLOT_DRAWER_TEXT, DEFAULT_TEXT_CHARCOAL)
+            return ensureReadableTextOnBg(chosen, itemBg, minContrast = 2.20)
+        }
+        if (slotCustomized[SLOT_TEXT_ICONS]) {
+            return ensureReadableTextOnBg(TEXT_CHARCOAL, itemBg, minContrast = 2.35)
+        }
+
+        val defaultIcon = when {
+            activity.isMinimalistMode -> DEFAULT_TEXT_CHARCOAL
+            activity.isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
+            isExpandedHeader -> activity.primaryColor
+            else -> Color.WHITE
+        }
+        return ensureReadableTextOnBg(defaultIcon, itemBg, minContrast = 2.35)
+    }
+
+    fun resolveTopHeaderIconColor(activity: MainActivity): Int {
+        val headerBg = if (activity.isMinimalistMode) getBackgroundColor(activity) else activity.bgColor
+        if (slotCustomized[SLOT_DRAWER_ICONS]) {
+            val chosen = getSlotEffectiveColor(SLOT_DRAWER_ICONS, DEFAULT_TEXT_CHARCOAL)
+            return ensureReadableTextOnBg(chosen, headerBg, minContrast = 1.85)
+        }
+        if (activity.isMinimalistMode || slotCustomized[SLOT_TEXT_ICONS]) {
+            return ensureReadableTextOnBg(TEXT_CHARCOAL, headerBg, minContrast = 2.30)
+        }
+        return when {
+            activity.isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
+            activity.isIosGlassMode -> activity.primaryColor
+            else -> Color.WHITE
+        }
+    }
+
+    // מחשב את צבע הרקע המדויק של מקש במקלדת
     fun resolveKeypadButtonBgColor(activity: MainActivity, symbol: String): Int {
         val isMem = symbol in listOf("MC", "MR", "M+", "M-")
         val isCmd = symbol in listOf("AC", "⌫", "%") || isMem
@@ -589,7 +715,6 @@ object MinimalistTheme {
             }
         }
 
-        // במצב קלאסי / זכוכית / זוהר הצפון:
         return when {
             symbol == "AC" -> if (slotCustomized[SLOT_MEM_CMD_KEYS]) ACCENT_SKY_BLUE else Utils.lightenColor(Color.RED, 0.2f)
             isOp2 -> if (slotCustomized[SLOT_ACTION_2]) getSecondaryActionColor(activity) else activity.primaryColor
@@ -599,7 +724,6 @@ object MinimalistTheme {
         }
     }
 
-    // מחשב את צבע הספרה או הסימון שעל המקש לפי ערוצי ההתאמה האישית (10, 11, 12) + הגנת ניגודיות אוטומטית!
     fun resolveKeypadSymbolTextColor(activity: MainActivity, symbol: String, buttonBgColor: Int? = null): Int {
         val bgCol = buttonBgColor ?: resolveKeypadButtonBgColor(activity, symbol)
         val isMem = symbol in listOf("MC", "MR", "M+", "M-")
@@ -609,7 +733,6 @@ object MinimalistTheme {
             "sin", "cos", "tan", "log", "ln", "√", "x²", "x³", "x^y", "!", "π", "e"
         )
 
-        // 1. אם המשתמש התאים אישית בגלגל הצבעים את צבע הסימון/הספרה הספציפי:
         if (isCmd && slotCustomized[SLOT_MEM_CMD_TEXT]) {
             val chosen = getSlotEffectiveColor(SLOT_MEM_CMD_TEXT, DEFAULT_TEXT_CHARCOAL)
             return ensureReadableTextOnBg(chosen, bgCol, minContrast = 1.45)
@@ -623,13 +746,11 @@ object MinimalistTheme {
             return ensureReadableTextOnBg(chosen, bgCol, minContrast = 1.45)
         }
 
-        // 2. אם המשתמש שינה את צבע הטקסט הכללי (SLOT_TEXT_ICONS):
         if (slotCustomized[SLOT_TEXT_ICONS]) {
             val generalText = TEXT_CHARCOAL
             return ensureReadableTextOnBg(generalText, bgCol, minContrast = 2.35)
         }
 
-        // 3. ברירת מחדל חכמה לפי ערכת הנושא עם הגנת ניגודיות מובטחת (מונע ב-100% היעלמות סימונים!)
         val candidate = when {
             activity.isMinimalistMode -> DEFAULT_TEXT_CHARCOAL
             activity.isAuroraMode -> {
@@ -641,7 +762,6 @@ object MinimalistTheme {
             }
             activity.isIosGlassMode -> Color.WHITE
             else -> {
-                // מצב קלאסי
                 when {
                     symbol == "AC" -> Color.WHITE
                     symbol == "=" -> Color.parseColor("#08090C")
@@ -679,7 +799,6 @@ object MinimalistTheme {
         }
     }
 
-    // מחיל פלטת צבעים שנבחרה מסרגל הפלטות יחד עם צבעי ספרות וסימונים בעלי ניגודיות מושלמת!
     fun applyThemePalettePreset(activity: MainActivity, preset: ThemePalettePreset) {
         activePaletteId = preset.id
 
@@ -688,6 +807,13 @@ object MinimalistTheme {
         val autoMemText = ensureReadableTextOnBg(preset.textIconsColor, preset.memKeysBg, 2.5)
         val autoDisplayText = ensureReadableTextOnBg(preset.textIconsColor, preset.mainBg, 2.5)
         val autoBorder = if (activity.isMinimalistMode) DEFAULT_BORDER_SUBTLE else preset.primaryAccent
+        val autoDrawerText = ensureReadableTextOnBg(preset.textIconsColor, preset.mainBg, 2.5)
+        val autoDrawerIcons = ensureReadableTextOnBg(
+            if (activity.isMinimalistMode) preset.textIconsColor else preset.primaryAccent,
+            preset.mainBg,
+            2.4
+        )
+        val autoActivePillText = ensureReadableTextOnBg(preset.textIconsColor, preset.activePillBg, 2.6)
 
         val colors = intArrayOf(
             preset.primaryAccent,   // 0: SLOT_ACTION_1
@@ -704,10 +830,12 @@ object MinimalistTheme {
             autoOpText,             // 11: SLOT_OP_TEXT
             autoMemText,            // 12: SLOT_MEM_CMD_TEXT
             autoDisplayText,        // 13: SLOT_DISPLAY_TEXT
-            autoBorder              // 14: SLOT_BORDERS
+            autoBorder,             // 14: SLOT_BORDERS
+            autoDrawerText,         // 15: SLOT_DRAWER_TEXT
+            autoDrawerIcons,        // 16: SLOT_DRAWER_ICONS
+            autoActivePillText      // 17: SLOT_ACTIVE_PILL_TEXT
         )
         for (i in 0 until TOTAL_COLOR_SLOTS) {
-            // ערוצי הרקע (0..9) מופעלים מהפלטה, וערוצי הטקסט והמסגרות (10..14) מקבלים ערך התחלתי חכם עם הגנת ניגודיות אוטומטית
             slotCustomized[i] = (i in 0..9)
             slotBaseColors[i] = colors[i]
             slotBrightness[i] = 1.0f
@@ -1529,7 +1657,7 @@ object MinimalistTheme {
     }
 
     // =========================================================================
-    // SCREEN 5: מנוע התאמת צבעים רב-אלמנטי (15 אלמנטים כולל צבעי ספרות וסימונים!)
+    // SCREEN 5: מנוע התאמת צבעים רב-אלמנטי (18 אלמנטים כולל צבעי תפריט, סמלים, ספרות וסימונים!)
     // =========================================================================
     fun createColorThemeCustomizerSection(activity: MainActivity): View {
         val isMin = activity.isMinimalistMode
@@ -1543,7 +1671,7 @@ object MinimalistTheme {
         }
 
         val sectionHeaderTv = TextView(activity).apply {
-            text = "🎨 התאמת צבעים ל-15 אלמנטים (כולל ספרות וסימונים על המקשים):"
+            text = "🎨 התאמת צבעים ל-18 אלמנטים (כולל תפריט הצד, סמלים, ספרות וסימונים):"
             setTextColor(if (isMin) TEXT_CHARCOAL else Color.WHITE)
             textSize = 14.5f
             typeface = if (isMin) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
@@ -1553,6 +1681,10 @@ object MinimalistTheme {
         root.addView(sectionHeaderTv)
 
         val elementSpecs = listOf(
+            SLOT_ACTIVE_PILL_TEXT to "✨ טקסט וסמל בפריט נבחר בתפריט",
+            SLOT_DRAWER_ICONS to "💠 צבע סמלים (אייקונים) בתפריט ובסרגל",
+            SLOT_DRAWER_TEXT to "📋 צבע טקסט תפריט הצד",
+            SLOT_ACTIVE_PILL to "🟢 רקע קפסולת פריט נבחר בתפריט",
             SLOT_NUM_TEXT to "🔢 צבע הספרות עצמן (0-9 .)",
             SLOT_OP_TEXT to "➕ צבע סימוני הפעולות (+ − × ÷ =)",
             SLOT_MEM_CMD_TEXT to "🔤 צבע כיתוב זיכרון ופקודות (AC ⌫ MC)",
@@ -1565,7 +1697,6 @@ object MinimalistTheme {
             SLOT_LOGO_TEXT to "✒️ צבע לוגו 2 (טקסט וסמל לוגו)",
             SLOT_MAIN_BG to "🖼️ צבע רקע ראשי (מסך ותפריט)",
             SLOT_CARDS_INPUTS to "🗂️ רקע כרטיסים ותיבות קלט",
-            SLOT_ACTIVE_PILL to "🟢 סימון פעיל בתפריט וכותרות Pro",
             SLOT_TEXT_ICONS to "🖋️ טקסט כותרות ואייקונים כללי",
             SLOT_BORDERS to "🔲 צבע מסגרות כפתורים וכרטיסים"
         )
