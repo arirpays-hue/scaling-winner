@@ -1,6 +1,7 @@
 package com.example.calculator
 
 import android.app.Activity
+import android.app.Dialog
 import android.app.PictureInPictureParams
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -13,6 +14,7 @@ import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.Icon
 import android.graphics.drawable.RippleDrawable
@@ -20,7 +22,9 @@ import android.media.SoundPool
 import android.os.Build
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
+import android.text.Editable
 import android.text.InputType
+import android.text.TextWatcher
 import android.util.Rational
 import android.util.TypedValue
 import android.view.Gravity
@@ -29,6 +33,7 @@ import android.view.MotionEvent
 import android.view.SoundEffectConstants
 import android.view.View
 import android.view.ViewGroup
+import android.view.Window
 import android.view.WindowManager
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
@@ -171,7 +176,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         "🧮 מטריצות, דטרמיננטה ומערכת משוואות"    // 65
     )
 
-    // חלוקת התפריט לקטגוריות (ללא קטגוריית מועדפים בתפריט הצד – המועדפים נגישים בלחיצה ארוכה על הכוכב בכותרת)
     val drawerSections = listOf(
         Triple(301, "📐 מתמטיקה ומדע", listOf(0, 1, 8, 15, 16, 7, 28, 22)),
         Triple(302, "💳 פיננסים וצרכנות", listOf(2, 24, 3, 17, 29, 9, 25, 10, 23, 13)),
@@ -218,7 +222,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         menuBtn = TextView(this).apply { text = "☰"; setTextColor(Color.WHITE); textSize = 26f; setPadding(dp(8f), 0, dp(8f), 0); setOnClickListener { feedback(it); if (isDrawerOpen) closeDrawer() else openDrawer() } }
         titleText = TextView(this).apply { text = "מחשבון פרימיום"; setTextColor(Color.WHITE); textSize = 20f; typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL); layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(dp(8f), 0, dp(8f), 0) } }
 
-        // כפתור הכוכב בסרגל העליון: לחיצה קצרה מוסיפה/מסירה מחשבון מהמועדפים, לחיצה ארוכה פותחת את מרכז המועדפים (56)
         favHeaderBtn = TextView(this).apply {
             text = "☆"
             textSize = 21f
@@ -361,7 +364,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             drawerMenu?.addView(sectionItemsContainer)
         }
 
-        // פתיחת קטגוריית מתמטיקה ומדע כברירת מחדל כדי שפריטי התפריט יוצגו מיד כמו ב-Screen 1
         expandedSections.add(301)
 
         val bottomSpacer = Space(this).apply {
@@ -388,6 +390,336 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     override fun onResume() {
         super.onResume()
         CompassHomeWidgetHelper.updateAllWidgets(this)
+    }
+
+    // =========================================================================
+    // חלונית היסטוריית חישובים מתוקנת ומותאמת לכל ערכות הנושא (כולל עיצוב מינימליסטי!)
+    // =========================================================================
+    fun showHistoryDialog() {
+        val dlg = Dialog(this)
+        dlg.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dlg.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        val isMin = isMinimalistMode
+        val cardBg = when {
+            isMin -> GradientDrawable().apply {
+                cornerRadius = dp(26f).toFloat()
+                setColor(MinimalistTheme.BG_CREAM)
+                setStroke(dp(1.2f), Color.parseColor("#E0DBD3"))
+            }
+            isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this, 26f)
+            else -> GradientDrawable().apply {
+                cornerRadius = dp(26f).toFloat()
+                setColor(Utils.lightenColor(bgColor, 0.08f))
+                setStroke(dp(1.2f), primaryColor)
+            }
+        }
+
+        val textPrimary = if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
+        val textSecondary = if (isMin) MinimalistTheme.TEXT_MUTED_GREY else Color.LTGRAY
+        val accentCol = when {
+            isMin -> MinimalistTheme.ACCENT_SAGE_GREEN
+            isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
+            else -> primaryColor
+        }
+
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20f), dp(20f), dp(20f), dp(18f))
+            background = cardBg
+        }
+
+        // כותרת חלונית ההיסטוריה
+        val titleTv = TextView(this).apply {
+            text = if (isMin) "היסטוריית חישובים (${historyList.size})" else "🕒 היסטוריית חישובים (${historyList.size})"
+            setTextColor(textPrimary)
+            textSize = 19.5f
+            typeface = if (isMin) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
+            gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
+            setPadding(dp(4f), 0, dp(4f), dp(12f))
+            if (isMin) {
+                val clk = MinimalistTheme.createMinimalistVectorIcon(this@MainActivity, 101, MinimalistTheme.TEXT_CHARCOAL, 20f)
+                setCompoundDrawables(null, null, clk, null)
+                compoundDrawablePadding = dp(10f)
+            }
+        }
+        root.addView(titleTv)
+
+        val searchBox = createInputBox("חפש תרגיל או תוצאה בהיסטוריה...").apply {
+            inputType = InputType.TYPE_CLASS_TEXT
+            visibility = if (historyList.size > 3) View.VISIBLE else View.GONE
+        }
+        root.addView(searchBox)
+
+        val listScroll = ScrollView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                (resources.displayMetrics.heightPixels * 0.46f).toInt()
+            )
+        }
+        val itemsContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        listScroll.addView(itemsContainer)
+        root.addView(listScroll)
+
+        fun renderHistoryItems(filterQuery: String) {
+            itemsContainer.removeAllViews()
+            val filtered = if (filterQuery.isBlank()) historyList else historyList.filter { it.contains(filterQuery, ignoreCase = true) }
+
+            if (filtered.isEmpty()) {
+                itemsContainer.addView(TextView(this).apply {
+                    text = if (historyList.isEmpty()) "אין חישובים שמורים בהיסטוריה עדיין.\nכל חישוב שתבצע יישמר כאן אוטומטית!"
+                    else "לא נמצאו חישובים התואמים לחיפוש."
+                    setTextColor(textSecondary)
+                    textSize = 15.5f
+                    gravity = Gravity.CENTER
+                    setPadding(dp(12f), dp(36f), dp(12f), dp(36f))
+                })
+                return
+            }
+
+            for (entry in filtered) {
+                val exprPart = entry.substringBefore("=").trim()
+                val resPart = entry.substringAfter("=", entry).trim()
+
+                val itemCard = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(14f), dp(12f), dp(14f), dp(12f))
+                    background = GradientDrawable().apply {
+                        cornerRadius = dp(18f).toFloat()
+                        if (isMin) {
+                            setColor(MinimalistTheme.CARD_WHITE)
+                            setStroke(dp(1f), Color.parseColor("#EAE5DE"))
+                        } else {
+                            setColor(Color.argb(40, 255, 255, 255))
+                            setStroke(dp(1f), Color.argb(35, 255, 255, 255))
+                        }
+                    }
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply { bottomMargin = dp(8f) }
+                }
+
+                // כפתור מחיקת שורה בודדת
+                val delItemBtn = TextView(this).apply {
+                    text = "✕"
+                    setTextColor(if (isMin) MinimalistTheme.ALERT_RED_TEXT else Color.parseColor("#FF5252"))
+                    textSize = 15f
+                    setPadding(dp(8f), dp(4f), dp(8f), dp(4f))
+                    setOnClickListener {
+                        feedback(it)
+                        historyList.remove(entry)
+                        savePreferences()
+                        titleTv.text = if (isMin) "היסטוריית חישובים (${historyList.size})" else "🕒 היסטוריית חישובים (${historyList.size})"
+                        renderHistoryItems(searchBox.text.toString())
+                    }
+                }
+
+                // טקסט התרגיל והתוצאה עם בידוד כיווניות מלא (\u200E) כדי שלא יתהפכו ב-RTL!
+                val calcTextCol = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.RIGHT
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                    setOnClickListener {
+                        feedback(it)
+                        currentInput = resPart
+                        currentView?.text = resPart
+                        expressionView?.text = "\u200E$exprPart ="
+                        justCalculated = true
+                        copyToClipboard(resPart)
+                        dlg.dismiss()
+                    }
+                }
+
+                val exprTv = TextView(this).apply {
+                    text = "\u200E$exprPart ="
+                    setTextColor(textSecondary)
+                    textSize = 14f
+                    gravity = Gravity.RIGHT
+                }
+                val resTv = TextView(this).apply {
+                    text = "\u200E$resPart"
+                    setTextColor(textPrimary)
+                    textSize = 18.5f
+                    typeface = if (isMin) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
+                    gravity = Gravity.RIGHT
+                }
+
+                calcTextCol.addView(exprTv)
+                calcTextCol.addView(resTv)
+                itemCard.addView(delItemBtn)
+                itemCard.addView(calcTextCol)
+                itemsContainer.addView(itemCard)
+            }
+        }
+
+        searchBox.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) { renderHistoryItems(s?.toString() ?: "") }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+        renderHistoryItems("")
+
+        val bottomRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(12f) }
+        }
+
+        val clearAllBtn = TextView(this).apply {
+            text = "נקה היסטוריה"
+            setTextColor(if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE)
+            textSize = 14.5f
+            typeface = if (isMin) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            setPadding(dp(12f), dp(12f), dp(12f), dp(12f))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(999f).toFloat()
+                setColor(if (isMin) MinimalistTheme.ACCENT_TERRACOTTA else Color.parseColor("#D32F2F"))
+            }
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                rightMargin = dp(6f)
+            }
+            setOnClickListener {
+                feedback(it)
+                historyList.clear()
+                savePreferences()
+                dlg.dismiss()
+                Toast.makeText(this@MainActivity, "ההיסטוריה נוקתה", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        val closeBtn = TextView(this).apply {
+            text = "סגור"
+            setTextColor(if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.parseColor("#08090C"))
+            textSize = 14.5f
+            typeface = if (isMin) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            setPadding(dp(12f), dp(12f), dp(12f), dp(12f))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(999f).toFloat()
+                setColor(accentCol)
+            }
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                leftMargin = dp(6f)
+            }
+            setOnClickListener {
+                feedback(it)
+                dlg.dismiss()
+            }
+        }
+
+        bottomRow.addView(clearAllBtn)
+        bottomRow.addView(closeBtn)
+        root.addView(bottomRow)
+
+        dlg.setContentView(root)
+        dlg.show()
+        val widthPx = (resources.displayMetrics.widthPixels * 0.90f).toInt()
+        dlg.window?.setLayout(widthPx, WindowManager.LayoutParams.WRAP_CONTENT)
+    }
+
+    // =========================================================================
+    // בורר פריטים ויחידות (showItemPicker) המותאם לעיצוב מינימליסטי ולכל ערכות הנושא
+    // =========================================================================
+    fun showItemPicker(title: String, items: List<String>, onSelected: (String) -> Unit) {
+        val dlg = Dialog(this)
+        dlg.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dlg.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        val isMin = isMinimalistMode
+        val textPrimary = if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
+        val cardBg = when {
+            isMin -> GradientDrawable().apply {
+                cornerRadius = dp(26f).toFloat()
+                setColor(MinimalistTheme.BG_CREAM)
+                setStroke(dp(1.2f), Color.parseColor("#E0DBD3"))
+            }
+            isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this, 26f)
+            else -> GradientDrawable().apply {
+                cornerRadius = dp(26f).toFloat()
+                setColor(Utils.lightenColor(bgColor, 0.08f))
+                setStroke(dp(1.2f), primaryColor)
+            }
+        }
+
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20f), dp(20f), dp(20f), dp(18f))
+            background = cardBg
+        }
+
+        root.addView(TextView(this).apply {
+            text = title
+            setTextColor(textPrimary)
+            textSize = 19f
+            typeface = if (isMin) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
+            gravity = Gravity.RIGHT
+            setPadding(dp(4f), 0, dp(4f), dp(12f))
+        })
+
+        val searchBox = createInputBox("חפש ברשימה...").apply {
+            inputType = InputType.TYPE_CLASS_TEXT
+            visibility = if (items.size > 6) View.VISIBLE else View.GONE
+        }
+        root.addView(searchBox)
+
+        val scroll = ScrollView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                (resources.displayMetrics.heightPixels * 0.48f).toInt().coerceAtMost(dp(380f))
+            )
+        }
+        val listContainer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        scroll.addView(listContainer)
+        root.addView(scroll)
+
+        fun populateList(q: String) {
+            listContainer.removeAllViews()
+            val filtered = if (q.isBlank()) items else items.filter { it.contains(q, ignoreCase = true) }
+            for (item in filtered) {
+                val row = TextView(this).apply {
+                    text = item
+                    setTextColor(textPrimary)
+                    textSize = 16f
+                    typeface = Typeface.create("sans-serif", Typeface.NORMAL)
+                    gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
+                    setPadding(dp(16f), dp(13f), dp(16f), dp(13f))
+                    background = GradientDrawable().apply {
+                        cornerRadius = dp(16f).toFloat()
+                        setColor(if (isMin) MinimalistTheme.CARD_WHITE else Color.argb(32, 255, 255, 255))
+                        if (isMin) setStroke(dp(1f), Color.parseColor("#EAE5DE"))
+                    }
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply { bottomMargin = dp(6f) }
+                    setOnClickListener {
+                        feedback(it)
+                        dlg.dismiss()
+                        onSelected(item)
+                    }
+                }
+                listContainer.addView(row)
+            }
+        }
+
+        searchBox.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) { populateList(s?.toString() ?: "") }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+        populateList("")
+
+        dlg.setContentView(root)
+        dlg.show()
+        val widthPx = (resources.displayMetrics.widthPixels * 0.90f).toInt()
+        dlg.window?.setLayout(widthPx, WindowManager.LayoutParams.WRAP_CONTENT)
     }
 
     fun isCalculatorVisibleInDrawer(tabIndex: Int): Boolean {
@@ -431,7 +763,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val screenW = resources.displayMetrics.widthPixels
         if (screenW <= 0) return dp(295f)
         return when {
-            isMinimalistMode -> (screenW * 0.72f).toInt() // 70%-72% מרוחב המסך לפי Screen 1
+            isMinimalistMode -> (screenW * 0.72f).toInt()
             isCleanGlassActive -> (screenW * 0.78f).toInt()
             else -> dp(295f)
         }
@@ -617,7 +949,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             titleText.setTextColor(MinimalistTheme.TEXT_CHARCOAL)
             menuBtn.setTextColor(MinimalistTheme.TEXT_CHARCOAL)
 
-            // עיצוב באנר הכותרת בראש תפריט הצד בצהוב חמאה שטוח (#FFE094) עם אייקון מחשבון קווי בדיוק כמו ב-Screen 1!
             appLogoView?.apply {
                 setTextColor(MinimalistTheme.TEXT_CHARCOAL)
                 background = GradientDrawable().apply {
@@ -821,7 +1152,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
             if (isSelected) {
                 tv.background = when {
-                    isMinimalistMode -> MinimalistTheme.createMinimalistActiveDrawerCapsule(this) // קפסולת ירוק מרווה #A3D5B5 כמו ב-Screen 1!
+                    isMinimalistMode -> MinimalistTheme.createMinimalistActiveDrawerCapsule(this)
                     isCleanGlassActive -> AuroraBorealisTheme.createActiveDrawerCapsule(this, isAuroraMode)
                     else -> GradientDrawable().apply {
                         setColor(Color.argb(50, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor)))
@@ -836,76 +1167,53 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
-    // מאחד את בחירת ערכת הנושא לתוך אותו תפריט שממנו בוחרים את שאר ערכות הנושא,
-    // ומציג אוטומטית את תפריט ההתאמה האישית וגלגל הצבעים (Screen 5) כאשר "עיצוב מינימליסטי" פעיל!
+    // מחבר את כל כפתורי "מצב תצוגה" בהגדרות לדיאלוג המאוחד של 4 מצבי התצוגה (מבלי לגעת בשבבי הפלטות האופקיות!)
     private fun unifyThemeSelectorAndCustomizerInSettings(settingsRoot: View?) {
         if (settingsRoot == null) return
         val scrollObj = settingsRoot as? ScrollView
         val mainContainer = scrollObj?.getChildAt(0) as? LinearLayout ?: (settingsRoot as? LinearLayout) ?: return
 
-        val themeOptions = listOf(
-            "עיצוב קלאסי (מותאם אישית)",
-            IosGlassTheme.LIQUID_GLASS_THEME_NAME,
-            IosGlassTheme.AURORA_THEME_NAME,
-            MinimalistTheme.MINIMALIST_THEME_NAME
-        )
-
         fun currentThemeDisplayName(): String {
             return when {
-                isMinimalistMode -> MinimalistTheme.MINIMALIST_THEME_NAME
-                isAuroraMode -> IosGlassTheme.AURORA_THEME_NAME
-                isIosGlassMode -> IosGlassTheme.LIQUID_GLASS_THEME_NAME
-                else -> "עיצוב קלאסי (מותאם אישית)"
+                isMinimalistMode -> "🌿 עיצוב מינימליסטי"
+                isAuroraMode -> "🌌 הזוהר הצפוני (Aurora Borealis)"
+                isIosGlassMode -> "💎 עיצוב הזכוכית (Liquid Glass Pro)"
+                else -> "🎨 עיצוב רגיל (קלאסי)"
             }
         }
 
-        fun openUnifiedThemePicker() {
-            showItemPicker("בחר ערכת נושא לעיצוב האפליקציה", themeOptions) { chosen ->
-                when (chosen) {
-                    MinimalistTheme.MINIMALIST_THEME_NAME -> {
-                        isMinimalistMode = true
-                        isIosGlassMode = false
-                        isAuroraMode = false
-                    }
-                    IosGlassTheme.AURORA_THEME_NAME -> {
-                        isMinimalistMode = false
-                        isAuroraMode = true
-                        isIosGlassMode = false
-                    }
-                    IosGlassTheme.LIQUID_GLASS_THEME_NAME -> {
-                        isMinimalistMode = false
-                        isIosGlassMode = true
-                        isAuroraMode = false
-                    }
-                    else -> {
-                        isMinimalistMode = false
-                        isIosGlassMode = false
-                        isAuroraMode = false
-                    }
-                }
-                savePreferences()
-                applyTheme()
-            }
-        }
-
-        // סורק את מסך ההגדרות כדי למצוא את כפתור בחירת ערכת הנושא הקיים ולחבר אליו את 4 ערכות הנושא
-        var foundThemeSelectorBtn: TextView? = null
-        val conflictingThemePanelsToHide = mutableListOf<View>()
+        val displayModeButtons = mutableListOf<TextView>()
+        val conflictingPanelsToHide = mutableListOf<View>()
+        var horizontalChipsRow: LinearLayout? = null
 
         fun scanHierarchy(group: ViewGroup) {
             for (i in 0 until group.childCount) {
                 val ch = group.getChildAt(i)
+                if (ch is HorizontalScrollView) {
+                    val inner = ch.getChildAt(0) as? LinearLayout
+                    if (inner != null && horizontalChipsRow == null) {
+                        horizontalChipsRow = inner
+                    }
+                    // מדלגים על תוכן ה-HorizontalScrollView כדי לא לדרוס את 18 שבבי הפלטות!
+                    continue
+                }
                 if (ch is TextView) {
                     val txt = ch.text.toString()
-                    if (foundThemeSelectorBtn == null && (txt.contains("ערכת נושא") || txt.contains("סגנון עיצוב") || txt.contains("Liquid Glass") || txt.contains("Aurora Borealis"))) {
-                        foundThemeSelectorBtn = ch
-                    }
-                    // אם אנו במצב מינימליסטי, נסתיר כפתורי צבע/זכוכית ישנים שאינם שייכים למצב המינימליסטי כדי שלא יהיו כפילויות או פונקציות לא פעילות
-                    if (isMinimalistMode && ch != foundThemeSelectorBtn && (txt.contains("צבע ראשי") || txt.contains("צבע רקע") || txt.contains("זכוכית") || txt.contains("טשטוש") || txt.contains("הברקה") || txt.contains("זוהר"))) {
-                        conflictingThemePanelsToHide.add(ch)
+                    val isDisplayModeSelector = ch.isClickable && (
+                            txt.contains("מצב תצוגה") ||
+                            txt.contains("סגנון תצוגה") ||
+                            txt.contains("סגנון עיצוב") ||
+                            txt.contains("עיצוב רגיל") ||
+                            txt.contains("עיצוב הזכוכית") ||
+                            txt.contains("הזוהר הצפוני") ||
+                            txt.contains("עיצוב מינימליסטי")
+                            )
+                    if (isDisplayModeSelector) {
+                        displayModeButtons.add(ch)
+                    } else if (isMinimalistMode && ch.isClickable && (txt.contains("צבע ראשי") || txt.contains("צבע רקע") || txt.contains("שקיפות זכוכית") || txt.contains("טשטוש") || txt.contains("הברקה") || txt.contains("זוהר"))) {
+                        conflictingPanelsToHide.add(ch)
                     }
                 } else if (ch is ViewGroup && ch.tag != "MINIMALIST_CUSTOMIZER_IGNORE") {
-                    // בדיקה אם זהו פאנל התאמת זכוכית/אורורה/צבעים ישן של SettingsEnhancer כשמצב מינימליסטי פעיל
                     if (isMinimalistMode && group == mainContainer && i > 0) {
                         var hasOldSliders = false
                         for (k in 0 until ch.childCount) {
@@ -916,7 +1224,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                             }
                         }
                         if (hasOldSliders) {
-                            conflictingThemePanelsToHide.add(ch)
+                            conflictingPanelsToHide.add(ch)
                             continue
                         }
                     }
@@ -926,29 +1234,90 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         scanHierarchy(mainContainer)
 
-        for (v in conflictingThemePanelsToHide) {
+        for (v in conflictingPanelsToHide) {
             v.visibility = View.GONE
         }
 
-        if (foundThemeSelectorBtn != null) {
-            foundThemeSelectorBtn!!.text = "ערכת נושא: ${currentThemeDisplayName()}"
-            foundThemeSelectorBtn!!.setOnClickListener {
-                feedback(it)
-                openUnifiedThemePicker()
+        // הוספת שבב "🌿 מינימליסטי" לשורת 18 הפלטות האופקית (מבלי למחוק אף שבב קיים)
+        horizontalChipsRow?.let { chipRow ->
+            var hasMinChip = false
+            for (i in 0 until chipRow.childCount) {
+                val c = chipRow.getChildAt(i)
+                if (c is TextView && c.tag == "MINIMALIST_PRESET_CHIP") {
+                    hasMinChip = true
+                    break
+                }
             }
-        } else {
-            val unifiedBtn = createActionBtn("ערכת נושא: ${currentThemeDisplayName()}", false) {
-                openUnifiedThemePicker()
+            if (!hasMinChip) {
+                val minChip = TextView(this).apply {
+                    tag = "MINIMALIST_PRESET_CHIP"
+                    text = "🌿 מינימליסטי"
+                    setTextColor(MinimalistTheme.TEXT_CHARCOAL)
+                    textSize = 13.5f
+                    typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                    gravity = Gravity.CENTER
+                    setPadding(dp(16f), dp(10f), dp(16f), dp(10f))
+                    background = GradientDrawable().apply {
+                        cornerRadius = dp(999f).toFloat()
+                        setColor(MinimalistTheme.ACCENT_SAGE_GREEN)
+                        setStroke(dp(1.5f), if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else Color.TRANSPARENT)
+                    }
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply { setMargins(dp(4f), dp(2f), dp(4f), dp(2f)) }
+                    setOnClickListener {
+                        feedback(it)
+                        isMinimalistMode = true
+                        isIosGlassMode = false
+                        isAuroraMode = false
+                        savePreferences()
+                        applyTheme()
+                    }
+                }
+                chipRow.addView(minChip, 0)
             }
-            mainContainer.addView(unifiedBtn, 0)
-            foundThemeSelectorBtn = unifiedBtn
         }
 
-        // כאשר "עיצוב מינימליסטי" פעיל, מציגים אוטומטית את תפריט ההתאמה האישית וגלגל הצבעים 2D (Screen 5)!
+        var primaryAnchorBtn: View? = null
+        if (displayModeButtons.isNotEmpty()) {
+            for (btn in displayModeButtons) {
+                btn.text = "מצב תצוגה: ${currentThemeDisplayName()}"
+                btn.setOnClickListener {
+                    feedback(it)
+                    MinimalistTheme.showUnifiedDisplayModeDialog(this)
+                }
+                if (primaryAnchorBtn == null) primaryAnchorBtn = btn
+            }
+        } else {
+            val newModeBtn = createActionBtn("מצב תצוגה: ${currentThemeDisplayName()}", false) {
+                MinimalistTheme.showUnifiedDisplayModeDialog(this)
+            }
+            mainContainer.addView(newModeBtn, 0)
+            primaryAnchorBtn = newModeBtn
+        }
+
+        // הסרת כל כרטיס התאמה אישית קודם אם קיים, והצגתו אך ורק כאשר "עיצוב מינימליסטי" פעיל!
+        for (i in mainContainer.childCount - 1 downTo 0) {
+            val ch = mainContainer.getChildAt(i)
+            if (ch.tag == "MINIMALIST_CUSTOMIZER_IGNORE") {
+                mainContainer.removeViewAt(i)
+            }
+        }
+
         if (isMinimalistMode) {
             val customizerPanel = MinimalistTheme.createColorThemeCustomizerSection(this)
-            val anchorIdx = mainContainer.indexOfChild(foundThemeSelectorBtn).let { if (it >= 0) it + 1 else 1 }
-            mainContainer.addView(customizerPanel, anchorIdx.coerceAtMost(mainContainer.childCount))
+            var insertIdx = 1
+            if (primaryAnchorBtn != null) {
+                var p: View? = primaryAnchorBtn
+                while (p != null && p.parent != mainContainer) {
+                    p = p.parent as? View
+                }
+                if (p != null) {
+                    insertIdx = mainContainer.indexOfChild(p) + 1
+                }
+            }
+            mainContainer.addView(customizerPanel, insertIdx.coerceIn(0, mainContainer.childCount))
         }
     }
 
@@ -961,7 +1330,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 if (ch is TextView) {
                     val txt = ch.text.toString()
                     if (txt.contains("צורת כפתורים")) {
-                        // מוצג בעיצוב רגיל ובעיצוב מינימליסטי (כמו ב-Screen 3: "צורת כפתורים: מודרניים")
                         ch.visibility = if (!isIosGlassMode && !isAuroraMode) View.VISIBLE else View.GONE
                         if (isMinimalistMode) {
                             val currentCorner = MinimalistTheme.pillCornerPt
@@ -1259,7 +1627,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 container?.addView(handBtn)
                 container?.addView(createDrawerCalculatorsChecklistSection())
 
-                // איחוד בורר ערכת הנושא והצגה אוטומטית של גלגל הצבעים המינימליסטי (Screen 5)
+                // חיבור כפתור מצב התצוגה לדיאלוג 4 המצבים והצגת גלגל הצבעים המינימליסטי רק כשעיצוב מינימליסטי נבחר
                 unifyThemeSelectorAndCustomizerInSettings(settingsView)
 
                 scrollObj?.viewTreeObserver?.addOnScrollChangedListener {
@@ -1324,7 +1692,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             MinimalistTheme.applyMinimalistStylingToHierarchy(rawView, this)
         }
 
-        // ללא כפתור הריענון הצף (הוסר לחלוטין כפי שביקשת)
         contentFrame.addView(rawView)
         if (useAnimations && !wasInSettings) {
             rawView.alpha = 0f; rawView.translationY = dp(24f).toFloat()
@@ -1386,7 +1753,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val displayCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.BOTTOM or Gravity.END; setPadding(dp(22f), dp(14f), dp(22f), dp(16f))
             background = when {
-                isMinimalistMode -> null // שטוח ופתוח לחלוטין על רקע הקרם #FCF9F5
+                isMinimalistMode -> null
                 isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@MainActivity, if (isAuroraMode) 28f else IosGlassTheme.glassCornerPt)
                 else -> GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.07f)); cornerRadius = dp(28f).toFloat(); setStroke(dp(1.5f), Color.argb(70, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor))) }
             }
