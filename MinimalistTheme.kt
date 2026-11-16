@@ -10,9 +10,6 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
 import android.os.Build
-import android.text.Editable
-import android.text.InputType
-import android.text.TextWatcher
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -135,7 +132,7 @@ object MinimalistTheme {
     }
 
     // =========================================================================
-    // דיאלוג "בחר מצב תצוגה" מאוחד עם כל 4 האפשרויות (כולל עיצוב מינימליסטי!)
+    // 1. דיאלוג "בחר מצב תצוגה" מאוחד עם כל 4 האפשרויות
     // =========================================================================
     fun showUnifiedDisplayModeDialog(activity: MainActivity) {
         val dlg = Dialog(activity)
@@ -214,38 +211,7 @@ object MinimalistTheme {
                 }
             }
 
-            val radioView = object : View(activity) {
-                private val d = resources.displayMetrics.density
-                private val outerP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    style = Paint.Style.STROKE
-                    strokeWidth = 2.2f * d
-                    color = if (isSelected) {
-                        if (isMin) TEXT_CHARCOAL else highlightCol
-                    } else {
-                        if (isMin) TEXT_MUTED_GREY else Color.WHITE
-                    }
-                }
-                private val innerP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    style = Paint.Style.FILL
-                    color = if (isMin) TEXT_CHARCOAL else highlightCol
-                }
-
-                override fun onDraw(canvas: Canvas) {
-                    super.onDraw(canvas)
-                    val cx = width / 2f
-                    val cy = height / 2f
-                    val r = min(width, height) * 0.40f
-                    canvas.drawCircle(cx, cy, r, outerP)
-                    if (isSelected) {
-                        canvas.drawCircle(cx, cy, r * 0.52f, innerP)
-                    }
-                }
-            }.apply {
-                layoutParams = LinearLayout.LayoutParams(activity.dp(26f), activity.dp(26f)).apply {
-                    rightMargin = activity.dp(12f)
-                }
-            }
-
+            val radioView = createCustomRadioCircleView(activity, isSelected, isMin, highlightCol)
             val labelTv = TextView(activity).apply {
                 text = label
                 setTextColor(
@@ -278,6 +244,165 @@ object MinimalistTheme {
         dlg.show()
         val widthPx = (activity.resources.displayMetrics.widthPixels * 0.90f).toInt()
         dlg.window?.setLayout(widthPx, WindowManager.LayoutParams.WRAP_CONTENT)
+    }
+
+    // =========================================================================
+    // 2. דיאלוג "בחר סוג צליל" מתוקן וקריא ב-100% בכל ערכות הנושא (פותר את הבאג מהתמונה!)
+    // =========================================================================
+    fun showUnifiedSoundPickerDialog(activity: MainActivity) {
+        val dlg = Dialog(activity)
+        dlg.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dlg.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        val isMin = activity.isMinimalistMode
+        val cardBgCol = if (isMin) BG_CREAM else Color.parseColor("#1E222B")
+        val titleCol = if (isMin) TEXT_CHARCOAL else Color.WHITE
+        val dividerCol = if (isMin) Color.argb(28, 44, 44, 44) else Color.argb(35, 255, 255, 255)
+        val activeAccent = when {
+            isMin -> TEXT_CHARCOAL
+            activity.isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
+            else -> activity.primaryColor
+        }
+
+        val root = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(activity.dp(20f), activity.dp(22f), activity.dp(20f), activity.dp(18f))
+            background = GradientDrawable().apply {
+                cornerRadius = activity.dp(26f).toFloat()
+                setColor(cardBgCol)
+                setStroke(activity.dp(1.2f), if (isMin) Color.parseColor("#E0DBD3") else Color.argb(60, 255, 255, 255))
+            }
+        }
+
+        val titleTv = TextView(activity).apply {
+            text = "בחר סוג צליל הקשה"
+            setTextColor(titleCol)
+            textSize = 20f
+            typeface = if (isMin) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
+            gravity = Gravity.RIGHT
+            setPadding(activity.dp(6f), 0, activity.dp(6f), activity.dp(16f))
+        }
+        root.addView(titleTv)
+
+        val soundOptions = listOf(
+            0 to "🔊 מערכת (צליל אנדרואיד תקני)",
+            1 to "🎵 צליל 1 (קליק מכני עדין)",
+            2 to "🎵 צליל 2 (הקשת מעבדה)",
+            3 to "🎵 צליל 3 (טון דיגיטלי)"
+        )
+
+        for ((sCode, sLabel) in soundOptions) {
+            val isSelected = (activity.soundType == sCode)
+            val row = LinearLayout(activity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(activity.dp(14f), activity.dp(14f), activity.dp(14f), activity.dp(14f))
+                background = GradientDrawable().apply {
+                    cornerRadius = activity.dp(999f).toFloat()
+                    if (isSelected) {
+                        val fillCol = if (isMin) ACCENT_SAGE_GREEN else Color.argb(65, Color.red(activeAccent), Color.green(activeAccent), Color.blue(activeAccent))
+                        setColor(fillCol)
+                    } else {
+                        setColor(if (isMin) CARD_WHITE else Color.TRANSPARENT)
+                        if (isMin) setStroke(activity.dp(1f), Color.parseColor("#EAE5DE"))
+                    }
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = activity.dp(6f) }
+                setOnClickListener {
+                    activity.soundType = sCode
+                    activity.useSound = true
+                    activity.savePreferences()
+                    activity.feedback(it)
+                    dlg.dismiss()
+                    activity.switchTab(19)
+                }
+            }
+
+            val radioView = createCustomRadioCircleView(activity, isSelected, isMin, activeAccent)
+            val labelTv = TextView(activity).apply {
+                text = sLabel
+                setTextColor(
+                    if (isMin) TEXT_CHARCOAL
+                    else if (isSelected) activeAccent
+                    else Color.WHITE
+                )
+                textSize = 16.5f
+                typeface = if (isSelected) Typeface.DEFAULT_BOLD else Typeface.create("sans-serif", Typeface.NORMAL)
+                gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+
+            row.addView(radioView)
+            row.addView(labelTv)
+            root.addView(row)
+
+            if (!isMin && sCode < soundOptions.lastIndex) {
+                val div = View(activity).apply {
+                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, activity.dp(1f)).apply {
+                        setMargins(activity.dp(8f), 0, activity.dp(8f), activity.dp(4f))
+                    }
+                    setBackgroundColor(dividerCol)
+                }
+                root.addView(div)
+            }
+        }
+
+        dlg.setContentView(root)
+        dlg.show()
+        val widthPx = (activity.resources.displayMetrics.widthPixels * 0.90f).toInt()
+        dlg.window?.setLayout(widthPx, WindowManager.LayoutParams.WRAP_CONTENT)
+    }
+
+    // =========================================================================
+    // 3. דיאלוג "בחר דיוק עשרוני" מתוקן וקריא בכל ערכות הנושא
+    // =========================================================================
+    fun showUnifiedPrecisionPickerDialog(activity: MainActivity) {
+        val options = listOf(2, 4, 6, 8, 10, 12)
+        val labels = options.map { "$it ספרות אחרי הנקודה" }
+        activity.showItemPicker("בחר דיוק עשרוני", labels) { chosen ->
+            val num = chosen.substringBefore(" ").toIntOrNull() ?: 8
+            activity.calcPrecision = num
+            activity.savePreferences()
+            activity.switchTab(19)
+        }
+    }
+
+    private fun createCustomRadioCircleView(
+        activity: MainActivity,
+        isSelected: Boolean,
+        isMin: Boolean,
+        highlightCol: Int
+    ): View {
+        return object : View(activity) {
+            private val d = resources.displayMetrics.density
+            private val outerP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = 2.2f * d
+                color = if (isMin) TEXT_CHARCOAL else if (isSelected) highlightCol else Color.WHITE
+            }
+            private val innerP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.FILL
+                color = if (isMin) TEXT_CHARCOAL else highlightCol
+            }
+
+            override fun onDraw(canvas: Canvas) {
+                super.onDraw(canvas)
+                val cx = width / 2f
+                val cy = height / 2f
+                val r = min(width, height) * 0.40f
+                canvas.drawCircle(cx, cy, r, outerP)
+                if (isSelected) {
+                    canvas.drawCircle(cx, cy, r * 0.52f, innerP)
+                }
+            }
+        }.apply {
+            layoutParams = LinearLayout.LayoutParams(activity.dp(26f), activity.dp(26f)).apply {
+                rightMargin = activity.dp(12f)
+            }
+        }
     }
 
     // =========================================================================
@@ -429,7 +554,6 @@ object MinimalistTheme {
                         return
                     }
 
-                    // דילוג על שבבים קטנים בתוך שורת הפלטות האופקית בהגדרות
                     if (isSettingsTab && v.parent is LinearLayout && (v.parent?.parent is HorizontalScrollView)) {
                         return
                     }
