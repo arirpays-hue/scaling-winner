@@ -49,6 +49,14 @@ object AuroraBorealisTheme {
         if (tv == null) return
         tv.post {
             if (tv.height > 0) {
+                val isMin = (tv.context as? MainActivity)?.isMinimalistMode == true
+                if (isMin) {
+                    tv.paint.shader = null
+                    tv.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
+                    tv.setTextColor(MinimalistTheme.TEXT_DARK)
+                    tv.invalidate()
+                    return@post
+                }
                 val bottomCol = when {
                     isAurora -> Color.parseColor("#70C1B3")
                     isLiquidGlass -> Color.parseColor("#A0AAB8")
@@ -119,6 +127,9 @@ object AuroraBorealisTheme {
         isMem: Boolean,
         isPressed: Boolean = false
     ): Drawable {
+        if (activity.isMinimalistMode) {
+            return MinimalistTheme.createMinimalistKeypadButtonDrawable(activity, symbol, isPressed)
+        }
         val radius = activity.dp(auroraCornerPt).toFloat()
         val isOperator = symbol in listOf("÷", "×", "−", "+", "=")
         val isCommand = symbol in listOf("AC", "⌫", "%") || isMem
@@ -183,6 +194,9 @@ object AuroraBorealisTheme {
     }
 
     fun createAuroraCardDrawable(activity: MainActivity, cornerDp: Float = 28f, isDrawer: Boolean = false): Drawable {
+        if (activity.isMinimalistMode) {
+            return MinimalistTheme.createMinimalistCardDrawable(activity, cornerDp, 0)
+        }
         val radius = if (isDrawer) 0f else activity.dp(cornerDp).toFloat()
         val glass = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
@@ -211,6 +225,9 @@ object AuroraBorealisTheme {
     }
 
     fun createActiveDrawerCapsule(activity: MainActivity, isAurora: Boolean): Drawable {
+        if (activity.isMinimalistMode) {
+            return MinimalistTheme.createMinimalistActiveDrawerCapsule(activity)
+        }
         val radius = activity.dp(if (isAurora) 14f else 12f).toFloat()
         val glowCol = if (isAurora) AURORA_PRIMARY else activity.primaryColor
         return GradientDrawable(
@@ -225,8 +242,6 @@ object AuroraBorealisTheme {
         }
     }
 
-    // חבילת האייקונים הייחודית של הזוהר הצפוני (Arctic Crystal & Holographic Neon HUD)
-    // כשמצב הזוהר הצפוני כבוי (!isGlowing), הפונקציה מעבירה לחבילת ה-SF Symbols של עיצוב הזכוכית
     fun createVectorIcon(
         context: Context,
         iconCode: Int,
@@ -234,6 +249,9 @@ object AuroraBorealisTheme {
         sizeDp: Float = 22f,
         isGlowing: Boolean = true
     ): Drawable {
+        if ((context as? MainActivity)?.isMinimalistMode == true) {
+            return MinimalistTheme.createMinimalistVectorIcon(context, iconCode, tintColor, sizeDp)
+        }
         if (!isGlowing) {
             return IosGlassTheme.createSfSymbolDrawable(context, iconCode, tintColor, sizeDp)
         }
@@ -277,7 +295,6 @@ object AuroraBorealisTheme {
             override fun getIntrinsicWidth(): Int = sizePx
             override fun getIntrinsicHeight(): Int = sizePx
 
-            // בונה מסגרת מתומנת-קריסטלית (Arctic Octagonal Crystal Badge) ייחודית לזוהר הצפוני
             private fun createCrystalBadgePath(cx: Float, cy: Float, rad: Float): Path {
                 val c = rad * 0.42f
                 return Path().apply {
@@ -315,7 +332,7 @@ object AuroraBorealisTheme {
                 canvas.drawPath(crystalBadge, borderPaint)
 
                 when (iconCode) {
-                    0, 301 -> { // מחשבון רגיל / מתמטיקה: יהלום ארקטי חצוי עם 4 נקודות אור
+                    0, 301 -> {
                         val p = Path().apply {
                             moveTo(cx, cy - r * 0.9f); lineTo(cx + r * 0.9f, cy); lineTo(cx, cy + r * 0.9f); lineTo(cx - r * 0.9f, cy); close()
                         }
@@ -325,7 +342,7 @@ object AuroraBorealisTheme {
                         canvas.drawCircle(cx, cy - r * 0.9f, r * 0.1f, dotPaint)
                         canvas.drawCircle(cx, cy + r * 0.9f, r * 0.1f, dotPaint)
                     }
-                    1, 44, 309 -> { // מדעי / טבלה מחזורית / מדע Pro: אטום קוונטי עם 3 מסלולים ואלקטרונים זוהרים
+                    1, 44, 309 -> {
                         for (ang in listOf(0f, 60f, -60f)) {
                             canvas.save(); canvas.rotate(ang, cx, cy)
                             canvas.drawOval(RectF(cx - r * 0.9f, cy - r * 0.34f, cx + r * 0.9f, cy + r * 0.34f), paint)
@@ -335,7 +352,7 @@ object AuroraBorealisTheme {
                         canvas.drawCircle(cx + r * 0.65f, cy - r * 0.35f, r * 0.1f, dotPaint)
                         canvas.drawCircle(cx - r * 0.65f, cy + r * 0.35f, r * 0.1f, dotPaint)
                     }
-                    2, 24 -> { // מע"מ / מס מכירות: מגילת הולוגרמה משוננת עם סמל אחוז אלכסוני
+                    2, 24 -> {
                         val p = Path().apply {
                             moveTo(cx - r * 0.58f, cy - r * 0.8f); lineTo(cx + r * 0.58f, cy - r * 0.8f); lineTo(cx + r * 0.58f, cy + r * 0.78f)
                             lineTo(cx + r * 0.28f, cy + r * 0.54f); lineTo(cx, cy + r * 0.78f); lineTo(cx - r * 0.28f, cy + r * 0.54f); lineTo(cx - r * 0.58f, cy + r * 0.78f); close()
@@ -345,7 +362,7 @@ object AuroraBorealisTheme {
                         canvas.drawCircle(cx - r * 0.2f, cy - r * 0.3f, r * 0.1f, dotPaint)
                         canvas.drawCircle(cx + r * 0.2f, cy + r * 0.1f, r * 0.1f, dotPaint)
                     }
-                    3, 29, 302 -> { // הלוואה / חסכונות / פיננסים: קריסטל משושה כפול (Vault Core)
+                    3, 29, 302 -> {
                         val hex = Path()
                         for (i in 0..5) {
                             val a = Math.toRadians((i * 60 - 30).toDouble())
@@ -358,7 +375,7 @@ object AuroraBorealisTheme {
                         canvas.drawCircle(cx, cy, r * 0.32f, paint)
                         canvas.drawCircle(cx, cy, r * 0.12f, dotPaint)
                     }
-                    4, 303 -> { // המרת מרחקים: כוכב מצפן ארקטי 4-קודקודי
+                    4, 303 -> {
                         val star = Path().apply {
                             moveTo(cx, cy - r * 0.92f); lineTo(cx + r * 0.24f, cy - r * 0.24f); lineTo(cx + r * 0.92f, cy); lineTo(cx + r * 0.24f, cy + r * 0.24f)
                             lineTo(cx, cy + r * 0.92f); lineTo(cx - r * 0.24f, cy + r * 0.24f); lineTo(cx - r * 0.92f, cy); lineTo(cx - r * 0.24f, cy - r * 0.24f); close()
@@ -366,7 +383,7 @@ object AuroraBorealisTheme {
                         canvas.drawPath(star, paint)
                         canvas.drawCircle(cx, cy, r * 0.12f, dotPaint)
                     }
-                    5 -> { // משקלים: פירמידת מסה הולוגרפית תלויה
+                    5 -> {
                         canvas.drawCircle(cx, cy - r * 0.62f, r * 0.2f, paint)
                         val body = Path().apply {
                             moveTo(cx - r * 0.45f, cy - r * 0.35f); lineTo(cx + r * 0.45f, cy - r * 0.35f)
@@ -375,7 +392,7 @@ object AuroraBorealisTheme {
                         canvas.drawPath(body, paint)
                         canvas.drawLine(cx - r * 0.35f, cy + r * 0.25f, cx + r * 0.35f, cy + r * 0.25f, secondaryPaint)
                     }
-                    6 -> { // טמפרטורה: פתית שלג גאומטרי 6-זרועי (Arctic Snowflake)
+                    6 -> {
                         for (i in 0..2) {
                             val a = Math.toRadians((i * 60).toDouble())
                             val dx = (cos(a) * r * 0.85f).toFloat(); val dy = (sin(a) * r * 0.85f).toFloat()
@@ -383,7 +400,7 @@ object AuroraBorealisTheme {
                         }
                         canvas.drawCircle(cx, cy, r * 0.28f, paint)
                     }
-                    7, 28 -> { // מתכנתים / הקסדצימלי: שבב מעבד קוונטי עם 8 פינים זוהרים
+                    7, 28 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.48f, cy - r * 0.48f, cx + r * 0.48f, cy + r * 0.48f), r * 0.12f, r * 0.12f, paint)
                         canvas.drawCircle(cx, cy, r * 0.18f, dotPaint)
                         for (o in listOf(-0.24f * r, 0.24f * r)) {
@@ -393,13 +410,13 @@ object AuroraBorealisTheme {
                             canvas.drawLine(cx + r * 0.48f, cy + o, cx + r * 0.88f, cy + o, paint)
                         }
                     }
-                    8 -> { // אחוזים: טבעת אנרגיה חצויה עם שני כדורי אור מנוגדים
+                    8 -> {
                         canvas.drawArc(RectF(cx - r * 0.78f, cy - r * 0.78f, cx + r * 0.78f, cy + r * 0.78f), 25f, 240f, false, paint)
                         canvas.drawLine(cx - r * 0.55f, cy + r * 0.55f, cx + r * 0.55f, cy - r * 0.55f, paint)
                         canvas.drawCircle(cx - r * 0.42f, cy - r * 0.42f, r * 0.16f, dotPaint)
                         canvas.drawCircle(cx + r * 0.42f, cy + r * 0.42f, r * 0.16f, dotPaint)
                     }
-                    9, 25 -> { // הנחות / מחיר יחידתי: יהלום מלוטש רב-פאות
+                    9, 25 -> {
                         val gem = Path().apply {
                             moveTo(cx - r * 0.48f, cy - r * 0.72f); lineTo(cx + r * 0.48f, cy - r * 0.72f); lineTo(cx + r * 0.86f, cy - r * 0.18f)
                             lineTo(cx, cy + r * 0.84f); lineTo(cx - r * 0.86f, cy - r * 0.18f); close()
@@ -409,7 +426,7 @@ object AuroraBorealisTheme {
                         canvas.drawLine(cx - r * 0.48f, cy - r * 0.72f, cx, cy + r * 0.84f, secondaryPaint)
                         canvas.drawLine(cx + r * 0.48f, cy - r * 0.72f, cx, cy + r * 0.84f, secondaryPaint)
                     }
-                    10, 23 -> { // טיפים / תשר: גביע קריסטל ארקטי עם כוכב זוהר מעליו
+                    10, 23 -> {
                         val glass = Path().apply {
                             moveTo(cx - r * 0.74f, cy - r * 0.62f); lineTo(cx + r * 0.74f, cy - r * 0.62f); lineTo(cx, cy + r * 0.15f); close()
                         }
@@ -418,7 +435,7 @@ object AuroraBorealisTheme {
                         canvas.drawLine(cx - r * 0.44f, cy + r * 0.78f, cx + r * 0.44f, cy + r * 0.78f, paint)
                         canvas.drawCircle(cx, cy - r * 0.32f, r * 0.13f, dotPaint)
                     }
-                    11, 27, 304 -> { // BMI / ביוץ / בריאות: לב קריסטל גאומטרי עם פעימת ניאון
+                    11, 27, 304 -> {
                         val heart = Path().apply {
                             moveTo(cx, cy + r * 0.8f); lineTo(cx - r * 0.84f, cy - r * 0.12f); lineTo(cx - r * 0.45f, cy - r * 0.7f)
                             lineTo(cx, cy - r * 0.28f); lineTo(cx + r * 0.45f, cy - r * 0.7f); lineTo(cx + r * 0.84f, cy - r * 0.12f); close()
@@ -426,7 +443,7 @@ object AuroraBorealisTheme {
                         canvas.drawPath(heart, paint)
                         canvas.drawCircle(cx, cy + r * 0.1f, r * 0.14f, dotPaint)
                     }
-                    12, 30 -> { // גיל / תאריך: שעון חול קוסמי עם ניצוצות זמן
+                    12, 30 -> {
                         val hg = Path().apply {
                             moveTo(cx - r * 0.65f, cy - r * 0.78f); lineTo(cx + r * 0.65f, cy - r * 0.78f)
                             lineTo(cx - r * 0.65f, cy + r * 0.78f); lineTo(cx + r * 0.65f, cy + r * 0.78f); close()
@@ -435,12 +452,12 @@ object AuroraBorealisTheme {
                         canvas.drawCircle(cx, cy, r * 0.12f, dotPaint)
                         canvas.drawCircle(cx, cy + r * 0.48f, r * 0.14f, dotPaint)
                     }
-                    13, 26 -> { // מטבעות לייב / שעון עולמי: כדור הארץ ברשת הולוגרפית עם טבעת מסלול
+                    13, 26 -> {
                         canvas.drawCircle(cx, cy, r * 0.76f, paint)
                         canvas.drawOval(RectF(cx - r * 0.36f, cy - r * 0.76f, cx + r * 0.36f, cy + r * 0.76f), paint)
                         canvas.drawLine(cx - r * 0.76f, cy, cx + r * 0.76f, cy, paint)
                     }
-                    14 -> { // BMR: להבת פלזמה כפולה
+                    14 -> {
                         val flame = Path().apply {
                             moveTo(cx, cy - r * 0.9f)
                             quadTo(cx + r * 0.85f, cy - r * 0.1f, cx, cy + r * 0.85f)
@@ -449,7 +466,7 @@ object AuroraBorealisTheme {
                         canvas.drawPath(flame, paint)
                         canvas.drawCircle(cx, cy + r * 0.25f, r * 0.2f, dotPaint)
                     }
-                    15 -> { // משוואות ריבועיות: גל סינוס כפול של זוהר הצפון (Aurora Ribbon)
+                    15 -> {
                         val w1 = Path().apply {
                             moveTo(cx - r * 0.85f, cy + r * 0.2f)
                             cubicTo(cx - r * 0.3f, cy - r * 0.9f, cx + r * 0.3f, cy + r * 0.9f, cx + r * 0.85f, cy - r * 0.2f)
@@ -461,12 +478,12 @@ object AuroraBorealisTheme {
                         canvas.drawPath(w1, paint)
                         canvas.drawPath(w2, secondaryPaint)
                     }
-                    16 -> { // שברים: קו שבר אלכסוני זוהר עם שני מעגלים חלולים
+                    16 -> {
                         canvas.drawLine(cx - r * 0.75f, cy + r * 0.55f, cx + r * 0.75f, cy - r * 0.55f, paint)
                         canvas.drawCircle(cx - r * 0.35f, cy - r * 0.42f, r * 0.24f, paint)
                         canvas.drawCircle(cx + r * 0.35f, cy + r * 0.42f, r * 0.24f, paint)
                     }
-                    17 -> { // ריבית דריבית: 3 עמודי קריסטל מחוברים בקשת אור עולה
+                    17 -> {
                         canvas.drawLine(cx - r * 0.6f, cy + r * 0.75f, cx - r * 0.6f, cy + r * 0.2f, paint)
                         canvas.drawLine(cx, cy + r * 0.75f, cx, cy - r * 0.15f, paint)
                         canvas.drawLine(cx + r * 0.6f, cy + r * 0.75f, cx + r * 0.6f, cy - r * 0.6f, paint)
@@ -476,7 +493,7 @@ object AuroraBorealisTheme {
                         canvas.drawLine(cx - r * 0.6f, cy + r * 0.2f, cx, cy - r * 0.15f, secondaryPaint)
                         canvas.drawLine(cx, cy - r * 0.15f, cx + r * 0.6f, cy - r * 0.6f, secondaryPaint)
                     }
-                    18, 21 -> { // מהירות / יעילות דלק: חללית/טיל קוונטי עם שובל להבה
+                    18, 21 -> {
                         val rocket = Path().apply {
                             moveTo(cx, cy - r * 0.9f); quadTo(cx + r * 0.65f, cy - r * 0.1f, cx + r * 0.45f, cy + r * 0.52f)
                             lineTo(cx - r * 0.45f, cy + r * 0.52f); quadTo(cx - r * 0.65f, cy - r * 0.1f, cx, cy - r * 0.9f)
@@ -484,7 +501,7 @@ object AuroraBorealisTheme {
                         canvas.drawPath(rocket, paint)
                         canvas.drawCircle(cx, cy + r * 0.78f, r * 0.15f, dotPaint)
                     }
-                    19 -> { // הגדרות: ליבת אנרגיה משושה מוקפת 6 קרניים
+                    19 -> {
                         canvas.drawCircle(cx, cy, r * 0.34f, paint)
                         canvas.drawCircle(cx, cy, r * 0.12f, dotPaint)
                         for (i in 0 until 6) {
@@ -492,23 +509,20 @@ object AuroraBorealisTheme {
                             canvas.drawLine((cx + cos(a) * r * 0.42f).toFloat(), (cy + sin(a) * r * 0.42f).toFloat(), (cx + cos(a) * r * 0.86f).toFloat(), (cy + sin(a) * r * 0.86f).toFloat(), paint)
                         }
                     }
-                    20 -> { // עלות דלק: תא אנרגיה משושה עם סמל ברק פנימי
+                    20 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.55f, cy - r * 0.78f, cx + r * 0.55f, cy + r * 0.78f), r * 0.2f, r * 0.2f, paint)
                         canvas.drawLine(cx + r * 0.15f, cy - r * 0.4f, cx - r * 0.2f, cy + r * 0.05f, paint)
                         canvas.drawLine(cx - r * 0.2f, cy + r * 0.05f, cx + r * 0.2f, cy + r * 0.05f, paint)
                         canvas.drawLine(cx + r * 0.2f, cy + r * 0.05f, cx - r * 0.15f, cy + r * 0.45f, paint)
                     }
-                    22 -> { // ממוצע ציונים: כובע אקדמי מעוין עם כוכב עליון
+                    22 -> {
                         val cap = Path().apply {
                             moveTo(cx, cy - r * 0.75f); lineTo(cx + r * 0.9f, cy - r * 0.2f); lineTo(cx, cy + r * 0.35f); lineTo(cx - r * 0.9f, cy - r * 0.2f); close()
                         }
                         canvas.drawPath(cap, paint)
                         canvas.drawCircle(cx, cy - r * 0.2f, r * 0.13f, dotPaint)
                     }
-                    // =====================================================================
-                    // אייקוני ה-Pro הייחודיים של הזוהר הצפוני (שונים ב-100% מעיצוב הזכוכית!)
-                    // =====================================================================
-                    31, 305 -> { // 87 קטגוריות יחידות: טסרקט הולוגרפי (ריבוע מסובב בתוך מעגל עם 4 קודקודים זוהרים)
+                    31, 305 -> {
                         canvas.drawCircle(cx, cy, r * 0.82f, paint)
                         val diamond = Path().apply {
                             moveTo(cx, cy - r * 0.82f); lineTo(cx + r * 0.82f, cy)
@@ -517,7 +531,7 @@ object AuroraBorealisTheme {
                         canvas.drawPath(diamond, paint)
                         canvas.drawCircle(cx, cy, r * 0.2f, dotPaint)
                     }
-                    32, 58, 306 -> { // אינסטלציה וזורמים: מערבולת הידרודינמית (3 גלי זוהר מתפתלים + טיפת ניאון)
+                    32, 58, 306 -> {
                         for (dy in listOf(-0.45f * r, 0f, 0.45f * r)) {
                             val wave = Path().apply {
                                 moveTo(cx - r * 0.8f, cy + dy)
@@ -528,7 +542,7 @@ object AuroraBorealisTheme {
                         }
                         canvas.drawCircle(cx, cy, r * 0.14f, dotPaint)
                     }
-                    33, 62 -> { // רפואה, מינון תרופות ומעבדה: סליל DNA כפול (Double Helix) עם קשרי בסיסים
+                    33, 62 -> {
                         val strand1 = Path().apply {
                             moveTo(cx - r * 0.55f, cy - r * 0.82f)
                             cubicTo(cx + r * 0.75f, cy - r * 0.25f, cx - r * 0.75f, cy + r * 0.25f, cx + r * 0.55f, cy + r * 0.82f)
@@ -543,7 +557,7 @@ object AuroraBorealisTheme {
                         canvas.drawLine(cx - r * 0.35f, cy + r * 0.5f, cx + r * 0.35f, cy + r * 0.5f, secondaryPaint)
                         canvas.drawCircle(cx, cy, r * 0.14f, dotPaint)
                     }
-                    34 -> { // בנייה ו-BTU: פירמידת לייזר תלת-ממדית (Geodesic Pyramid) עם קודקוד זוהר
+                    34 -> {
                         val pyr = Path().apply {
                             moveTo(cx, cy - r * 0.86f)
                             lineTo(cx + r * 0.82f, cy + r * 0.48f)
@@ -555,7 +569,7 @@ object AuroraBorealisTheme {
                         canvas.drawLine(cx, cy - r * 0.86f, cx, cy + r * 0.84f, paint)
                         canvas.drawCircle(cx, cy - r * 0.86f, r * 0.14f, dotPaint)
                     }
-                    35 -> { // נגד חשמלי: גל זיג-זג ניאון של נגד IEEE (/\/\/\) עם שני הדקים זוהרים
+                    35 -> {
                         val zig = Path().apply {
                             moveTo(cx - r * 0.9f, cy)
                             lineTo(cx - r * 0.55f, cy)
@@ -570,14 +584,14 @@ object AuroraBorealisTheme {
                         canvas.drawCircle(cx - r * 0.88f, cy, r * 0.11f, dotPaint)
                         canvas.drawCircle(cx + r * 0.88f, cy, r * 0.11f, dotPaint)
                     }
-                    36 -> { // מפענח קבלים: שתי קשתות פלזמה קעורות עם ניצוץ אנרגיה במרכז
+                    36 -> {
                         canvas.drawArc(RectF(cx - r * 0.85f, cy - r * 0.65f, cx - r * 0.15f, cy + r * 0.65f), -65f, 130f, false, paint)
                         canvas.drawArc(RectF(cx + r * 0.15f, cy - r * 0.65f, cx + r * 0.85f, cy + r * 0.65f), 115f, 130f, false, paint)
                         canvas.drawCircle(cx, cy, r * 0.2f, dotPaint)
                         canvas.drawLine(cx - r * 0.92f, cy, cx - r * 0.38f, cy, paint)
                         canvas.drawLine(cx + r * 0.38f, cy, cx + r * 0.92f, cy, paint)
                     }
-                    37 -> { // עוביי חוטים AWG: צמת סיבים אופטיים מתפתלת עם 3 נקודות קצה זוהרות
+                    37 -> {
                         val braid1 = Path().apply {
                             moveTo(cx - r * 0.85f, cy - r * 0.35f)
                             cubicTo(cx - r * 0.2f, cy + r * 0.7f, cx + r * 0.2f, cy - r * 0.7f, cx + r * 0.85f, cy + r * 0.35f)
@@ -591,7 +605,7 @@ object AuroraBorealisTheme {
                         canvas.drawCircle(cx + r * 0.85f, cy - r * 0.35f, r * 0.12f, dotPaint)
                         canvas.drawCircle(cx + r * 0.85f, cy + r * 0.35f, r * 0.12f, dotPaint)
                     }
-                    38, 60, 307 -> { // חוק אוהם ומעבדת חשמל: כדור פלזמה / סליל טסלה הפולט קרני ברק
+                    38, 60, 307 -> {
                         canvas.drawCircle(cx, cy, r * 0.32f, dotPaint)
                         canvas.drawCircle(cx, cy, r * 0.82f, secondaryPaint)
                         for (i in 0 until 6) {
@@ -605,13 +619,13 @@ object AuroraBorealisTheme {
                             )
                         }
                     }
-                    39 -> { // פלס בנאים: ג'ירוסקופ תלת-ממדי (2 טבעות אליפטיות חוצות + כוונת איזון מרכזית)
+                    39 -> {
                         canvas.drawCircle(cx, cy, r * 0.82f, paint)
                         canvas.drawOval(RectF(cx - r * 0.82f, cy - r * 0.32f, cx + r * 0.82f, cy + r * 0.32f), paint)
                         canvas.drawOval(RectF(cx - r * 0.32f, cy - r * 0.82f, cx + r * 0.32f, cy + r * 0.82f), secondaryPaint)
                         canvas.drawCircle(cx, cy, r * 0.18f, dotPaint)
                     }
-                    40, 308 -> { // מצפן מגנטי וחיישנים: שושנת כוכב הצפון (Polaris 8-Point Star) עם טבעת מכ"ם
+                    40, 308 -> {
                         canvas.drawCircle(cx, cy, r * 0.86f, secondaryPaint)
                         val star4 = Path().apply {
                             moveTo(cx, cy - r * 0.88f); lineTo(cx + r * 0.22f, cy - r * 0.22f)
@@ -622,20 +636,20 @@ object AuroraBorealisTheme {
                         canvas.drawPath(star4, paint)
                         canvas.drawCircle(cx, cy, r * 0.14f, dotPaint)
                     }
-                    41 -> { // מד-זווית וסרגל: קרן לייזר זוויתית עם קשת מדידה זוהרת וקודקוד מואר
+                    41 -> {
                         canvas.drawLine(cx - r * 0.75f, cy + r * 0.65f, cx + r * 0.82f, cy + r * 0.65f, paint)
                         canvas.drawLine(cx - r * 0.75f, cy + r * 0.65f, cx + r * 0.55f, cy - r * 0.68f, paint)
                         canvas.drawArc(RectF(cx - r * 1.45f, cy - r * 0.05f, cx - r * 0.05f, cy + r * 1.35f), -48f, 48f, false, secondaryPaint)
                         canvas.drawCircle(cx - r * 0.75f, cy + r * 0.65f, r * 0.16f, dotPaint)
                     }
-                    42 -> { // שעון עצר כרונוגרף: פורטל זמן דו-טבעתי עם כדור אור במסלול
+                    42 -> {
                         canvas.drawArc(RectF(cx - r * 0.84f, cy - r * 0.84f, cx + r * 0.84f, cy + r * 0.84f), -90f, 290f, false, paint)
                         canvas.drawArc(RectF(cx - r * 0.54f, cy - r * 0.54f, cx + r * 0.54f, cy + r * 0.54f), -90f, 210f, false, secondaryPaint)
                         canvas.drawLine(cx, cy, cx + r * 0.42f, cy - r * 0.42f, paint)
                         canvas.drawCircle(cx, cy - r * 0.84f, r * 0.14f, dotPaint)
                         canvas.drawCircle(cx, cy, r * 0.12f, dotPaint)
                     }
-                    43, 61 -> { // פנס ואופטיקה: מנסרת קריסטל משולשת המפצלת קרן אור ל-3 קרני זוהר
+                    43, 61 -> {
                         val prism = Path().apply {
                             moveTo(cx - r * 0.1f, cy - r * 0.72f)
                             lineTo(cx + r * 0.48f, cy + r * 0.68f)
@@ -648,14 +662,14 @@ object AuroraBorealisTheme {
                         canvas.drawLine(cx + r * 0.25f, cy + r * 0.1f, cx + r * 0.92f, cy, secondaryPaint)
                         canvas.drawLine(cx + r * 0.3f, cy + r * 0.25f, cx + r * 0.9f, cy + r * 0.55f, paint)
                     }
-                    45 -> { // קוד מורס: מגדל שידור הולוגרפי עם טבעות גלי רדיו מתפשטות
+                    45 -> {
                         canvas.drawCircle(cx, cy - r * 0.25f, r * 0.15f, dotPaint)
                         canvas.drawLine(cx, cy - r * 0.1f, cx - r * 0.42f, cy + r * 0.8f, paint)
                         canvas.drawLine(cx, cy - r * 0.1f, cx + r * 0.42f, cy + r * 0.8f, paint)
                         canvas.drawArc(RectF(cx - r * 0.55f, cy - r * 0.8f, cx + r * 0.55f, cy + r * 0.3f), -150f, 120f, false, paint)
                         canvas.drawArc(RectF(cx - r * 0.85f, cy - r * 1.05f, cx + r * 0.85f, cy + r * 0.55f), -140f, 100f, false, secondaryPaint)
                     }
-                    46 -> { // מחולל סיסמאות ואנטרופיה: מגן סייבר משושה עם ליבת מפתח מוצפנת
+                    46 -> {
                         val shield = Path().apply {
                             moveTo(cx, cy - r * 0.86f)
                             lineTo(cx + r * 0.72f, cy - r * 0.45f)
@@ -669,7 +683,7 @@ object AuroraBorealisTheme {
                         canvas.drawCircle(cx, cy - r * 0.1f, r * 0.18f, dotPaint)
                         canvas.drawLine(cx, cy + r * 0.08f, cx, cy + r * 0.45f, paint)
                     }
-                    47 -> { // גימטריה וטקסט: כוכב משושה גאומטרי (Star of David Rune)
+                    47 -> {
                         val t1 = Path().apply {
                             moveTo(cx, cy - r * 0.85f); lineTo(cx + r * 0.74f, cy + r * 0.42f); lineTo(cx - r * 0.74f, cy + r * 0.42f); close()
                         }
@@ -680,7 +694,7 @@ object AuroraBorealisTheme {
                         canvas.drawPath(t2, paint)
                         canvas.drawCircle(cx, cy, r * 0.13f, dotPaint)
                     }
-                    48 -> { // מתכות יקרות: כתר קריסטלים ארקטי עם 3 פסגות זוהרות
+                    48 -> {
                         val crown = Path().apply {
                             moveTo(cx - r * 0.78f, cy + r * 0.65f)
                             lineTo(cx - r * 0.68f, cy - r * 0.35f)
@@ -694,25 +708,25 @@ object AuroraBorealisTheme {
                         canvas.drawPath(crown, paint)
                         canvas.drawCircle(cx, cy - r * 0.68f, r * 0.12f, dotPaint)
                     }
-                    49 -> { // משכנתא שפיצר: מגדלי קריסטל עתידניים תחת קשת זוהר הצפון
+                    49 -> {
                         canvas.drawRect(cx - r * 0.68f, cy - r * 0.1f, cx - r * 0.2f, cy + r * 0.78f, paint)
                         canvas.drawRect(cx - r * 0.1f, cy - r * 0.55f, cx + r * 0.45f, cy + r * 0.78f, paint)
                         canvas.drawArc(RectF(cx - r * 0.85f, cy - r * 0.85f, cx + r * 0.85f, cy + r * 0.25f), 200f, 140f, false, secondaryPaint)
                     }
-                    50, 310 -> { // ROI ו-CAGR / השקעות Pro: חץ המראה החוצה טבעת מסלול עם כוכבים
+                    50, 310 -> {
                         canvas.drawOval(RectF(cx - r * 0.82f, cy - r * 0.32f, cx + r * 0.82f, cy + r * 0.32f), secondaryPaint)
                         canvas.drawLine(cx - r * 0.55f, cy + r * 0.7f, cx + r * 0.55f, cy - r * 0.7f, paint)
                         canvas.drawLine(cx + r * 0.1f, cy - r * 0.7f, cx + r * 0.55f, cy - r * 0.7f, paint)
                         canvas.drawLine(cx + r * 0.55f, cy - r * 0.7f, cx + r * 0.55f, cy - r * 0.25f, paint)
                         canvas.drawCircle(cx + r * 0.55f, cy - r * 0.7f, r * 0.12f, dotPaint)
                     }
-                    51 -> { // מרווח רווח ונקודת איזון: שתי קרני לייזר מצטלבות בנקודת ליבה זוהרת
+                    51 -> {
                         canvas.drawLine(cx - r * 0.8f, cy + r * 0.7f, cx + r * 0.8f, cy - r * 0.7f, paint)
                         canvas.drawLine(cx - r * 0.8f, cy - r * 0.4f, cx + r * 0.8f, cy + r * 0.5f, paint)
                         canvas.drawCircle(cx, cy, r * 0.22f, dotPaint)
                         canvas.drawCircle(cx, cy, r * 0.45f, secondaryPaint)
                     }
-                    52 -> { // סטטיסטיקה: התאבכות גלי זוהר צפוני (עקומת פעמון כפולה עם נקודת שיא מוארת)
+                    52 -> {
                         val bell1 = Path().apply {
                             moveTo(cx - r * 0.88f, cy + r * 0.62f)
                             cubicTo(cx - r * 0.35f, cy + r * 0.62f, cx - r * 0.32f, cy - r * 0.72f, cx, cy - r * 0.72f)
@@ -727,7 +741,7 @@ object AuroraBorealisTheme {
                         canvas.drawPath(bell1, paint)
                         canvas.drawCircle(cx, cy - r * 0.72f, r * 0.14f, dotPaint)
                     }
-                    53 -> { // גאומטריה 2D/3D: גאומטריה מקודשת (מעגל חסום במשולש חסום במעגל חיצוני)
+                    53 -> {
                         canvas.drawCircle(cx, cy, r * 0.84f, secondaryPaint)
                         val tri = Path().apply {
                             moveTo(cx, cy - r * 0.84f)
@@ -739,7 +753,7 @@ object AuroraBorealisTheme {
                         canvas.drawCircle(cx, cy, r * 0.38f, paint)
                         canvas.drawCircle(cx, cy, r * 0.11f, dotPaint)
                     }
-                    54, 311 -> { // תורת המספרים וקומבינטוריקה: עץ הסתעפות קוונטי עם צמתים זוהרים
+                    54, 311 -> {
                         val topY = cy - r * 0.68f
                         val midY = cy
                         val botY = cy + r * 0.68f
@@ -753,14 +767,14 @@ object AuroraBorealisTheme {
                         canvas.drawCircle(cx - r * 0.45f, midY, r * 0.13f, dotPaint)
                         canvas.drawCircle(cx + r * 0.45f, midY, r * 0.13f, dotPaint)
                     }
-                    55 -> { // ייצוא PDF/CSV וגיבוי ענן: טבעת פורטל אופקית עם קרן העלאה אנכית
+                    55 -> {
                         canvas.drawOval(RectF(cx - r * 0.85f, cy + r * 0.15f, cx + r * 0.85f, cy + r * 0.72f), paint)
                         canvas.drawLine(cx, cy + r * 0.45f, cx, cy - r * 0.78f, paint)
                         canvas.drawLine(cx - r * 0.35f, cy - r * 0.42f, cx, cy - r * 0.78f, paint)
                         canvas.drawLine(cx + r * 0.35f, cy - r * 0.42f, cx, cy - r * 0.78f, paint)
                         canvas.drawCircle(cx, cy - r * 0.78f, r * 0.12f, dotPaint)
                     }
-                    56, 102, 103, 300 -> { // כוכב מועדפים של הזוהר הצפוני: כוכב הצפון 8-קרניים (Polaris Diamond Star)
+                    56, 102, 103, 300 -> {
                         val polaris = Path()
                         for (i in 0 until 8) {
                             val rad = if (i % 2 == 0) r * 0.92f else r * 0.28f
@@ -774,7 +788,7 @@ object AuroraBorealisTheme {
                         canvas.drawPath(polaris, paint)
                         canvas.drawCircle(cx, cy, r * 0.14f, dotPaint)
                     }
-                    57 -> { // ממירי מכניקה ומומנט: רוטור טורבינה דינמי עם להבים מעוקלים
+                    57 -> {
                         canvas.drawCircle(cx, cy, r * 0.82f, paint)
                         canvas.drawCircle(cx, cy, r * 0.22f, dotPaint)
                         for (i in 0 until 3) {
@@ -782,18 +796,18 @@ object AuroraBorealisTheme {
                             canvas.drawLine(cx, cy, (cx + cos(a) * r * 0.82f).toFloat(), (cy + sin(a) * r * 0.82f).toFloat(), paint)
                         }
                     }
-                    59 -> { // תרמודינמיקה וחום: שמש פלזמה ארקטית עם טבעת קורונה גלית
+                    59 -> {
                         canvas.drawCircle(cx, cy, r * 0.38f, dotPaint)
                         canvas.drawCircle(cx, cy, r * 0.78f, paint)
                     }
-                    63 -> { // תקשורת, טיפוגרפיה ואסטרונומיה: גלקסיית ספירלה קוסמית עם שני ירחים
+                    63 -> {
                         canvas.drawCircle(cx, cy, r * 0.24f, dotPaint)
                         canvas.drawArc(RectF(cx - r * 0.82f, cy - r * 0.55f, cx + r * 0.82f, cy + r * 0.55f), -30f, 150f, false, paint)
                         canvas.drawArc(RectF(cx - r * 0.82f, cy - r * 0.55f, cx + r * 0.82f, cy + r * 0.55f), 150f, 150f, false, paint)
                         canvas.drawCircle(cx + r * 0.68f, cy - r * 0.42f, r * 0.11f, dotPaint)
                         canvas.drawCircle(cx - r * 0.68f, cy + r * 0.42f, r * 0.11f, dotPaint)
                     }
-                    64 -> { // מחשבון שכר ונטו: מטבע משושה עם חץ צמיחה כפול (Chevron Up)
+                    64 -> {
                         val hex = Path()
                         for (i in 0..5) {
                             val a = Math.toRadians((i * 60).toDouble())
@@ -806,7 +820,7 @@ object AuroraBorealisTheme {
                         canvas.drawLine(cx - r * 0.35f, cy + r * 0.15f, cx, cy - r * 0.25f, paint)
                         canvas.drawLine(cx, cy - r * 0.25f, cx + r * 0.35f, cy + r * 0.15f, paint)
                     }
-                    65 -> { // מטריצות ודטרמיננטה: רשת היפר-קובייה של 4 צמתים מחוברים באלכסון
+                    65 -> {
                         val dOff = r * 0.52f
                         val pts = listOf(
                             cx - dOff to cy - dOff,
@@ -821,36 +835,36 @@ object AuroraBorealisTheme {
                             canvas.drawCircle(px, py, r * 0.16f, dotPaint)
                         }
                     }
-                    100 -> { // PiP: חלון הולוגרפי צף בתוך מסגרת פינות
+                    100 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.82f, cy - r * 0.72f, cx + r * 0.82f, cy + r * 0.72f), r * 0.2f, r * 0.2f, secondaryPaint)
                         canvas.drawRoundRect(RectF(cx - r * 0.05f, cy - r * 0.05f, cx + r * 0.72f, cy + r * 0.62f), r * 0.15f, r * 0.15f, dotPaint)
                     }
-                    101 -> { // היסטוריה: ספירלת זמן ארקטית עם מחוגים
+                    101 -> {
                         canvas.drawArc(RectF(cx - r * 0.82f, cy - r * 0.82f, cx + r * 0.82f, cy + r * 0.82f), -60f, 290f, false, paint)
                         canvas.drawLine(cx, cy - r * 0.45f, cx, cy, paint)
                         canvas.drawLine(cx, cy, cx + r * 0.35f, cy + r * 0.2f, paint)
                         canvas.drawCircle(cx, cy, r * 0.12f, dotPaint)
                     }
-                    200 -> { // חיפוש: עדשת סורק מעוינת
+                    200 -> {
                         val lens = Path().apply {
                             moveTo(cx - r * 0.18f, cy - r * 0.78f); lineTo(cx + r * 0.42f, cy - r * 0.18f); lineTo(cx - r * 0.18f, cy + r * 0.42f); lineTo(cx - r * 0.78f, cy - r * 0.18f); close()
                         }
                         canvas.drawPath(lens, paint)
                         canvas.drawLine(cx + r * 0.18f, cy + r * 0.18f, cx + r * 0.78f, cy + r * 0.78f, paint)
                     }
-                    201 -> { // צליל: אקולייזר גלי זוהר
+                    201 -> {
                         canvas.drawLine(cx - r * 0.65f, cy - r * 0.25f, cx - r * 0.65f, cy + r * 0.25f, paint)
                         canvas.drawLine(cx - r * 0.22f, cy - r * 0.68f, cx - r * 0.22f, cy + r * 0.68f, paint)
                         canvas.drawLine(cx + r * 0.22f, cy - r * 0.45f, cx + r * 0.22f, cy + r * 0.45f, paint)
                         canvas.drawLine(cx + r * 0.65f, cy - r * 0.78f, cx + r * 0.65f, cy + r * 0.78f, paint)
                     }
-                    202 -> { // בהירות: כוכב אור ארקטי
+                    202 -> {
                         val wave = Path().apply {
                             moveTo(cx - r * 0.8f, cy + r * 0.45f); quadTo(cx - r * 0.3f, cy - r * 0.05f, cx, cy + r * 0.25f); quadTo(cx + r * 0.35f, cy + r * 0.55f, cx + r * 0.8f, cy + r * 0.05f)
                         }
                         canvas.drawPath(wave, paint)
                     }
-                    203 -> { // שקיפות: מעוין ומעגל חופפים
+                    203 -> {
                         val p1 = Path().apply {
                             moveTo(cx - r * 0.2f, cy - r * 0.78f); lineTo(cx + r * 0.38f, cy); lineTo(cx - r * 0.2f, cy + r * 0.78f); lineTo(cx - r * 0.78f, cy); close()
                         }
