@@ -209,10 +209,13 @@ fun MainActivity.createScopedProUnitConverter(
             LinearLayout.LayoutParams.MATCH_PARENT,
             dp(150f)
         ).apply { bottomMargin = dp(12f) }
-        background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createScopedProUnitConverter, 20f)
-        else GradientDrawable().apply {
-            setColor(Utils.lightenColor(bgColor, 0.06f))
-            cornerRadius = dp(20f).toFloat()
+        background = when {
+            isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createScopedProUnitConverter, 20f, 2)
+            isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createScopedProUnitConverter, 20f)
+            else -> GradientDrawable().apply {
+                setColor(Utils.lightenColor(bgColor, 0.06f))
+                cornerRadius = dp(20f).toFloat()
+            }
         }
     }
 
@@ -226,10 +229,13 @@ fun MainActivity.createScopedProUnitConverter(
     val sideBySideCard = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(16f), dp(16f), dp(16f), dp(16f))
-        background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createScopedProUnitConverter, 20f)
-        else GradientDrawable().apply {
-            setColor(Utils.lightenColor(bgColor, 0.07f))
-            cornerRadius = dp(20f).toFloat()
+        background = when {
+            isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createScopedProUnitConverter, 20f, 0)
+            isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createScopedProUnitConverter, 20f)
+            else -> GradientDrawable().apply {
+                setColor(Utils.lightenColor(bgColor, 0.07f))
+                cornerRadius = dp(20f).toFloat()
+            }
         }
         layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
@@ -276,7 +282,6 @@ fun MainActivity.createScopedProUnitConverter(
         if (selectedCatIdx == 72) {
             val mgDlVal = v * fFactor
             val mmolVal = mgDlVal / ProUnitCatalog.GLUCOSE_MGDL_PER_MMOL
-            val gPerLVal = mgDlVal / 100.0
             val a1cLine = if (mgDlVal in 40.0..500.0) {
                 val estA1c = (mgDlVal + 46.7) / 28.7
                 val status = when {
@@ -301,10 +306,17 @@ fun MainActivity.createScopedProUnitConverter(
         scaleCanvas.ratioLog = ((log10(directRes.coerceAtLeast(1e-6)) + 3.0) / 6.0).toFloat()
         scaleCanvas.invalidate()
 
+        val headerColor = when {
+            isMinimalistMode -> MinimalistTheme.TEXT_DARK
+            isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
+            else -> primaryColor
+        }
+        val rowTextColor = if (isMinimalistMode) MinimalistTheme.TEXT_DARK else Color.WHITE
+
         val header = TextView(this).apply {
             text = if (isClinicalCategory) "🩺 השוואה קלינית מדויקת בין היחידות (לחץ להעתקה):"
             else "⚡ השוואה סימולטנית לכל היחידות בקטגוריה (לחץ להעתקה):"
-            setTextColor(if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor)
+            setTextColor(headerColor)
             textSize = 14.5f
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.RIGHT
@@ -316,8 +328,8 @@ fun MainActivity.createScopedProUnitConverter(
             val converted = v * fFactor / uFactor
             val cleanStr = if (isClinicalCategory) ProUnitCatalog.formatClinicalNumber(converted) else Utils.formatResult(converted, 6)
             val row = TextView(this).apply {
-                text = "• $uName:  $cleanStr"
-                setTextColor(Color.WHITE)
+                text = "• $uName:  \u200E$cleanStr\u200E"
+                setTextColor(rowTextColor)
                 textSize = 14.5f
                 gravity = Gravity.RIGHT
                 setPadding(dp(4f), dp(5f), dp(4f), dp(5f))
@@ -427,12 +439,13 @@ private fun MainActivity.showCustomUnitCreatorDialog(categoryName: String, onAdd
     val layout = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(20f), dp(20f), dp(20f), dp(12f))
-        setBackgroundColor(Utils.lightenColor(bgColor, 0.08f))
+        setBackgroundColor(if (isMinimalistMode) MinimalistTheme.getBackgroundColor() else Utils.lightenColor(bgColor, 0.08f))
     }
     val nameIn = createInputBox("שם היחידה החדשה").apply { inputType = InputType.TYPE_CLASS_TEXT }
     val factorIn = createInputBox("יחס המרה ליחידת הבסיס (למשל 2.5)")
     layout.addView(nameIn); layout.addView(factorIn)
-    AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+    val dlgTheme = if (isMinimalistMode) android.R.style.Theme_DeviceDefault_Light_Dialog_Alert else android.R.style.Theme_DeviceDefault_Dialog_Alert
+    AlertDialog.Builder(this, dlgTheme)
         .setTitle("הוסף יחידה ל-$categoryName")
         .setView(layout)
         .setPositiveButton("שמור") { _, _ ->
