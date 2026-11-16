@@ -384,12 +384,12 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         drawerScroll.addView(drawerMenu); rootFrame.addView(mainContent); rootFrame.addView(dimView); rootFrame.addView(drawerScroll)
         updateHandednessLayout()
         setContentView(rootFrame); setupShortcuts(); handleIntent(intent)
-        CompassHomeWidgetHelper.updateAllWidgets(this)
+        CompassHomeWidgetHelper.renderCurrentStateToWidgets(this)
     }
 
     override fun onResume() {
         super.onResume()
-        CompassHomeWidgetHelper.updateAllWidgets(this)
+        CompassHomeWidgetHelper.renderCurrentStateToWidgets(this)
     }
 
     // =========================================================================
@@ -429,7 +429,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             background = cardBg
         }
 
-        // כותרת חלונית ההיסטוריה
         val titleTv = TextView(this).apply {
             text = if (isMin) "היסטוריית חישובים (${historyList.size})" else "🕒 היסטוריית חישובים (${historyList.size})"
             setTextColor(textPrimary)
@@ -503,7 +502,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     ).apply { bottomMargin = dp(8f) }
                 }
 
-                // כפתור מחיקת שורה בודדת
                 val delItemBtn = TextView(this).apply {
                     text = "✕"
                     setTextColor(if (isMin) MinimalistTheme.ALERT_RED_TEXT else Color.parseColor("#FF5252"))
@@ -518,7 +516,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     }
                 }
 
-                // טקסט התרגיל והתוצאה עם בידוד כיווניות מלא (\u200E) כדי שלא יתהפכו ב-RTL!
                 val calcTextCol = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     gravity = Gravity.RIGHT
@@ -1018,7 +1015,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         refreshFavHeaderIcon()
         AuroraBorealisTheme.applyHeaderMetallicGradient(appLogoView, isAuroraMode, isIosGlassMode)
         updateHandednessLayout(); updateDrawerSelection(); switchTab(currentTabIndex)
-        CompassHomeWidgetHelper.updateAllWidgets(this)
     }
 
     private fun openDrawer() {
@@ -1167,7 +1163,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
-    // מחבר את כל כפתורי "מצב תצוגה" בהגדרות לדיאלוג המאוחד של 4 מצבי התצוגה (מבלי לגעת בשבבי הפלטות האופקיות!)
     private fun unifyThemeSelectorAndCustomizerInSettings(settingsRoot: View?) {
         if (settingsRoot == null) return
         val scrollObj = settingsRoot as? ScrollView
@@ -1194,7 +1189,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     if (inner != null && horizontalChipsRow == null) {
                         horizontalChipsRow = inner
                     }
-                    // מדלגים על תוכן ה-HorizontalScrollView כדי לא לדרוס את 18 שבבי הפלטות!
                     continue
                 }
                 if (ch is TextView) {
@@ -1238,7 +1232,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             v.visibility = View.GONE
         }
 
-        // הוספת שבב "🌿 מינימליסטי" לשורת 18 הפלטות האופקית (מבלי למחוק אף שבב קיים)
         horizontalChipsRow?.let { chipRow ->
             var hasMinChip = false
             for (i in 0 until chipRow.childCount) {
@@ -1297,7 +1290,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             primaryAnchorBtn = newModeBtn
         }
 
-        // הסרת כל כרטיס התאמה אישית קודם אם קיים, והצגתו אך ורק כאשר "עיצוב מינימליסטי" פעיל!
         for (i in mainContainer.childCount - 1 downTo 0) {
             val ch = mainContainer.getChildAt(i)
             if (ch.tag == "MINIMALIST_CUSTOMIZER_IGNORE") {
@@ -1321,6 +1313,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
+    // מתקן את חלונית בחירת הצלילים ("סוג צליל"), את "דיוק עשרוני", את "צורת כפתורים" ומוסיף את "צליל AC"
     private fun applyButtonShapeVisibilityAndInsertAcSoundSetting(root: View?) {
         if (root == null) return
         if (root is ViewGroup) {
@@ -1351,7 +1344,20 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                                 switchTab(19)
                             }
                         }
+                    } else if (txt.contains("דיוק עשרוני")) {
+                        ch.text = "דיוק עשרוני: $calcPrecision ספרות"
+                        ch.setOnClickListener {
+                            feedback(it)
+                            MinimalistTheme.showUnifiedPrecisionPickerDialog(this)
+                        }
                     } else if (txt.contains("סוג צליל")) {
+                        val soundNames = listOf("מערכת", "צליל 1", "צליל 2", "צליל 3")
+                        ch.text = "סוג צליל: ${soundNames.getOrElse(soundType.coerceIn(0, 3)) { "מערכת" }}"
+                        ch.setOnClickListener {
+                            feedback(it)
+                            MinimalistTheme.showUnifiedSoundPickerDialog(this)
+                        }
+
                         val nextChild = if (i + 1 < root.childCount) root.getChildAt(i + 1) else null
                         val alreadyAdded = (nextChild is TextView && nextChild.tag == "AC_SOUND_MODE_BTN")
                         if (!alreadyAdded) {
@@ -1627,7 +1633,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 container?.addView(handBtn)
                 container?.addView(createDrawerCalculatorsChecklistSection())
 
-                // חיבור כפתור מצב התצוגה לדיאלוג 4 המצבים והצגת גלגל הצבעים המינימליסטי רק כשעיצוב מינימליסטי נבחר
                 unifyThemeSelectorAndCustomizerInSettings(settingsView)
 
                 scrollObj?.viewTreeObserver?.addOnScrollChangedListener {
