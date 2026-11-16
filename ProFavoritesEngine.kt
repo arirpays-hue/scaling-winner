@@ -139,17 +139,18 @@ object ProFavoritesEngine {
             Toast.makeText(activity, "אין תוצאה לשמירה כרגע", Toast.LENGTH_SHORT).show()
             return
         }
+        val isMin = activity.isMinimalistMode
         val box = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(activity.dp(20f), activity.dp(16f), activity.dp(20f), activity.dp(10f))
-            setBackgroundColor(Utils.lightenColor(activity.bgColor, 0.08f))
+            setBackgroundColor(if (isMin) MinimalistTheme.getBackgroundColor() else Utils.lightenColor(activity.bgColor, 0.08f))
         }
         val noteInput = activity.createInputBox("הוסף שם או הערה לחישוב זה (למשל: משכנתא דירה)...").apply {
             inputType = InputType.TYPE_CLASS_TEXT
         }
         val previewTv = TextView(activity).apply {
             text = resultToPin
-            setTextColor(Color.LTGRAY)
+            setTextColor(if (isMin) MinimalistTheme.TEXT_DARK else Color.LTGRAY)
             textSize = 14f
             gravity = Gravity.RIGHT
             setPadding(0, activity.dp(6f), 0, 0)
@@ -157,7 +158,8 @@ object ProFavoritesEngine {
         box.addView(noteInput)
         box.addView(previewTv)
 
-        AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        val dlgTheme = if (isMin) android.R.style.Theme_DeviceDefault_Light_Dialog_Alert else android.R.style.Theme_DeviceDefault_Dialog_Alert
+        AlertDialog.Builder(activity, dlgTheme)
             .setTitle("📌 שמירת תוצאה במועדפים")
             .setView(box)
             .setPositiveButton("שמור במועדפים") { _, _ ->
@@ -181,7 +183,11 @@ fun MainActivity.createFavoritesQuickChipsBar(): View {
     }
     if (favIndices.isEmpty()) return wrapper
 
-    val accent = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
+    val accent = when {
+        isMinimalistMode -> MinimalistTheme.ACTION_CORAL_PRIMARY
+        isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
+        else -> primaryColor
+    }
     val hScroll = HorizontalScrollView(this).apply {
         isHorizontalScrollBarEnabled = false
     }
@@ -195,15 +201,28 @@ fun MainActivity.createFavoritesQuickChipsBar(): View {
         if (idx !in categories.indices || idx == ProFavoritesEngine.FAVORITES_CENTER_TAB_INDEX) continue
         val isCurrent = (idx == currentTabIndex)
         val chip = TextView(this).apply {
-            text = "⭐ ${IosGlassTheme.cleanCategoryTitle(categories[idx], true)}"
-            setTextColor(if (isCurrent) Color.parseColor("#08090C") else Color.WHITE)
+            tag = "PRO_STAR_CHIP"
+            text = "★ ${IosGlassTheme.cleanCategoryTitle(categories[idx], true)}"
+            setTextColor(
+                when {
+                    isMinimalistMode -> MinimalistTheme.TEXT_DARK
+                    isCurrent -> Color.parseColor("#08090C")
+                    else -> Color.WHITE
+                }
+            )
             textSize = 13f
             typeface = Typeface.DEFAULT_BOLD
             setPadding(dp(14f), dp(8f), dp(14f), dp(8f))
             background = GradientDrawable().apply {
-                setColor(if (isCurrent) accent else Utils.lightenColor(bgColor, 0.10f))
+                val fill = when {
+                    isMinimalistMode && isCurrent -> MinimalistTheme.SWAP_YELLOW_PILL
+                    isMinimalistMode -> MinimalistTheme.HEADER_PISTACHIO_CARD
+                    isCurrent -> accent
+                    else -> Utils.lightenColor(bgColor, 0.10f)
+                }
+                setColor(fill)
                 cornerRadius = dp(50f).toFloat()
-                setStroke(dp(1f), accent)
+                setStroke(dp(1f), if (isMinimalistMode) Color.argb(40, 0, 0, 0) else accent)
             }
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -235,7 +254,13 @@ fun MainActivity.createProFavoritesCenterScreen(): View {
         )
     )
 
-    val accent = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
+    val textPrimary = if (isMinimalistMode) MinimalistTheme.TEXT_DARK else Color.WHITE
+    val textMuted = if (isMinimalistMode) MinimalistTheme.TEXT_MUTED else Color.LTGRAY
+    val accent = when {
+        isMinimalistMode -> MinimalistTheme.TEXT_DARK
+        isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
+        else -> primaryColor
+    }
     val favSet = ProFavoritesEngine.getFavoriteTabIndices(prefs)
 
     val favSectionTitle = TextView(this).apply {
@@ -251,7 +276,7 @@ fun MainActivity.createProFavoritesCenterScreen(): View {
     if (favSet.isEmpty()) {
         root.addView(TextView(this).apply {
             text = "טרם סימנת מחשבונים במועדפים.\nלחץ לחיצה קצרה על סמל הכוכב (☆) בסרגל העליון של כל מחשבון כדי להוסיף אותו לכאן!"
-            setTextColor(Color.LTGRAY)
+            setTextColor(textMuted)
             textSize = 14.5f
             gravity = Gravity.RIGHT
             setPadding(0, 0, 0, dp(14f))
@@ -263,11 +288,14 @@ fun MainActivity.createProFavoritesCenterScreen(): View {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(14f), dp(12f), dp(14f), dp(12f))
-                background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProFavoritesCenterScreen, 18f)
-                else GradientDrawable().apply {
-                    setColor(Utils.lightenColor(bgColor, 0.07f))
-                    cornerRadius = dp(18f).toFloat()
-                    setStroke(dp(1f), Utils.lightenColor(bgColor, 0.16f))
+                background = when {
+                    isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProFavoritesCenterScreen, 18f, 0)
+                    isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProFavoritesCenterScreen, 18f)
+                    else -> GradientDrawable().apply {
+                        setColor(Utils.lightenColor(bgColor, 0.07f))
+                        cornerRadius = dp(18f).toFloat()
+                        setStroke(dp(1f), Utils.lightenColor(bgColor, 0.16f))
+                    }
                 }
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
@@ -275,8 +303,9 @@ fun MainActivity.createProFavoritesCenterScreen(): View {
                 ).apply { bottomMargin = dp(8f) }
             }
             val removeBtn = TextView(this).apply {
+                tag = "PRO_STAR_CHIP"
                 text = "🗑️ הסר"
-                setTextColor(Color.parseColor("#FF5252"))
+                setTextColor(if (isMinimalistMode) MinimalistTheme.ALERT_RED_TEXT else Color.parseColor("#FF5252"))
                 textSize = 13.5f
                 setPadding(dp(10f), dp(6f), dp(10f), dp(6f))
                 setOnClickListener {
@@ -287,7 +316,7 @@ fun MainActivity.createProFavoritesCenterScreen(): View {
             }
             val openTv = TextView(this).apply {
                 text = categories[idx]
-                setTextColor(Color.WHITE)
+                setTextColor(textPrimary)
                 textSize = 16f
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
@@ -317,7 +346,7 @@ fun MainActivity.createProFavoritesCenterScreen(): View {
     if (pinnedList.isEmpty()) {
         root.addView(TextView(this).apply {
             text = "אין חישובים נעוצים עדיין. בכל מחשבון תוכל ללחוץ על '📌 נעץ תוצאה במועדפים' כדי לשמור חישוב חשוב להמשך."
-            setTextColor(Color.LTGRAY)
+            setTextColor(textMuted)
             textSize = 14.5f
             gravity = Gravity.RIGHT
         })
@@ -326,11 +355,14 @@ fun MainActivity.createProFavoritesCenterScreen(): View {
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(16f), dp(14f), dp(16f), dp(14f))
-                background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@createProFavoritesCenterScreen, 18f)
-                else GradientDrawable().apply {
-                    setColor(Utils.lightenColor(bgColor, 0.08f))
-                    cornerRadius = dp(18f).toFloat()
-                    setStroke(dp(1f), accent)
+                background = when {
+                    isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProFavoritesCenterScreen, 18f, 2)
+                    isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProFavoritesCenterScreen, 18f)
+                    else -> GradientDrawable().apply {
+                        setColor(Utils.lightenColor(bgColor, 0.08f))
+                        cornerRadius = dp(18f).toFloat()
+                        setStroke(dp(1f), accent)
+                    }
                 }
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
@@ -342,8 +374,9 @@ fun MainActivity.createProFavoritesCenterScreen(): View {
                 gravity = Gravity.CENTER_VERTICAL
             }
             val delBtn = TextView(this).apply {
+                tag = "PRO_STAR_CHIP"
                 text = "מחק ✕"
-                setTextColor(Color.parseColor("#FF5252"))
+                setTextColor(if (isMinimalistMode) MinimalistTheme.ALERT_RED_TEXT else Color.parseColor("#FF5252"))
                 textSize = 13f
                 setOnClickListener {
                     feedback(it)
@@ -370,7 +403,7 @@ fun MainActivity.createProFavoritesCenterScreen(): View {
 
             val bodyTv = TextView(this).apply {
                 text = "${item.resultText}\n🕒 ${item.timestamp}"
-                setTextColor(Color.WHITE)
+                setTextColor(textPrimary)
                 textSize = 14.5f
                 gravity = Gravity.RIGHT
                 setPadding(0, dp(6f), 0, 0)
