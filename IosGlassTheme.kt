@@ -79,7 +79,8 @@ object IosGlassTheme {
 
     fun styleSymbolTextView(tv: TextView, activity: MainActivity, symbol: String, isPressed: Boolean = false) {
         if (activity.isMinimalistMode) {
-            tv.setTextColor(MinimalistTheme.TEXT_CHARCOAL)
+            val resolvedCol = MinimalistTheme.resolveKeypadSymbolTextColor(activity, symbol)
+            tv.setTextColor(resolvedCol)
             tv.text = formatSymbolText(symbol, true)
             tv.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
             return
@@ -89,7 +90,8 @@ object IosGlassTheme {
             return
         }
         if (!activity.isIosGlassMode) return
-        val isOperator = symbol in listOf("÷", "×", "−", "+", "=")
+
+        val isOperator = symbol in listOf("÷", "×", "−", "-", "+", "=")
         val isCommand = symbol in listOf("AC", "⌫", "%", "MC", "MR", "M+", "M-")
         val opBaseColor = when {
             MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_ACTION_1] ->
@@ -98,16 +100,27 @@ object IosGlassTheme {
             else -> activity.primaryColor
         }
 
-        val customTextCol = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_TEXT_ICONS]) {
-            MinimalistTheme.TEXT_CHARCOAL
-        } else null
+        val hasCustomSymbolColor = MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_NUM_TEXT] ||
+                MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_OP_TEXT] ||
+                MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_MEM_CMD_TEXT] ||
+                MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_TEXT_ICONS]
+
+        val approxBtnBg = when {
+            isOperator -> opBaseColor
+            isCommand -> if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_MEM_CMD_KEYS]) {
+                MinimalistTheme.getSlotEffectiveColor(MinimalistTheme.SLOT_MEM_CMD_KEYS, Color.rgb(180, 190, 205))
+            } else Color.rgb(180, 190, 205)
+            else -> if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_NUM_KEYS]) {
+                MinimalistTheme.getSlotEffectiveColor(MinimalistTheme.SLOT_NUM_KEYS, Color.rgb(55, 64, 80))
+            } else Color.rgb(55, 64, 80)
+        }
 
         val textColor = when {
-            isPressed -> Color.WHITE
-            customTextCol != null && !isOperator -> customTextCol
-            isOperator -> Color.argb(242, 255, 255, 255)
-            isCommand -> Color.parseColor("#F2F4F8")
-            else -> Color.WHITE
+            isPressed -> MinimalistTheme.ensureReadableTextOnBg(Color.WHITE, approxBtnBg, 2.2)
+            hasCustomSymbolColor -> MinimalistTheme.resolveKeypadSymbolTextColor(activity, symbol, approxBtnBg)
+            isOperator -> MinimalistTheme.ensureReadableTextOnBg(Color.argb(245, 255, 255, 255), approxBtnBg, 2.3)
+            isCommand -> MinimalistTheme.ensureReadableTextOnBg(Color.parseColor("#F2F4F8"), approxBtnBg, 2.3)
+            else -> MinimalistTheme.ensureReadableTextOnBg(Color.WHITE, approxBtnBg, 2.3)
         }
         tv.setTextColor(textColor)
         tv.text = formatSymbolText(symbol, true)
@@ -140,7 +153,7 @@ object IosGlassTheme {
         }
         val radius = activity.dp(glassCornerPt).toFloat()
         val isEqualsOrMul = symbol in listOf("=", "×")
-        val isOperator = symbol in listOf("÷", "×", "−", "+", "=")
+        val isOperator = symbol in listOf("÷", "×", "−", "-", "+", "=")
         val isCommand = symbol in listOf("AC", "⌫", "%") || isMem
 
         val opColor = when {
@@ -192,14 +205,16 @@ object IosGlassTheme {
             setColor(Color.argb(if (isPressed) 45 else 110, 0, 0, 0))
         }
 
+        val defaultBorderCol = Color.argb((specularIntensity * 0.55f).toInt().coerceIn(0, 255), 255, 255, 255)
+        val borderStrokeCol = MinimalistTheme.resolveBorderStrokeColor(activity, defaultBorderCol)
+
         val glassBody = GradientDrawable(
             GradientDrawable.Orientation.TOP_BOTTOM,
             intArrayOf(topColor, bottomColor)
         ).apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = radius
-            val borderAlpha = (specularIntensity * 0.55f).toInt().coerceIn(0, 255)
-            setStroke(activity.dp(1f), Color.argb(borderAlpha, 255, 255, 255))
+            setStroke(activity.dp(1.2f), borderStrokeCol)
         }
 
         val specAlpha = (if (isPressed) (specularIntensity + 45) else specularIntensity).coerceIn(0, 255)
@@ -209,7 +224,7 @@ object IosGlassTheme {
         ).apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadii = floatArrayOf(radius, radius, radius, radius, radius * 0.25f, radius * 0.25f, radius * 0.25f, radius * 0.25f)
-            setStroke(activity.dp(1f), Color.argb(specAlpha, 255, 255, 255))
+            setStroke(activity.dp(1f), borderStrokeCol)
         }
 
         val innerCoreGlow = GradientDrawable().apply {
@@ -261,7 +276,8 @@ object IosGlassTheme {
             cornerRadius = radius
             if (!isDrawer) {
                 val specBorder = (specularIntensity * 0.65f).toInt().coerceIn(0, 255)
-                setStroke(activity.dp(1.2f), Color.argb(specBorder, 255, 255, 255))
+                val borderCol = MinimalistTheme.resolveBorderStrokeColor(activity, Color.argb(specBorder, 255, 255, 255))
+                setStroke(activity.dp(1.2f), borderCol)
             }
         }
 
