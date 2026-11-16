@@ -30,13 +30,14 @@ import android.view.View
 import android.view.Window
 import android.view.WindowManager
 import android.widget.*
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.*
 
 // כותרת קנבה מעוצבת לכל מסך Pro הכוללת סרגל שבבי מועדפים וכפתור כוכב להוספה/הסרה מהמועדפים
 // (ללא אפשרות להוסיף את "מרכז המועדפים" עצמו למועדפים)
 fun MainActivity.createProCanvaHeader(title: String, subtitle: String): LinearLayout {
     val accent = when {
-        isMinimalistMode -> MinimalistTheme.TEXT_MUTED
+        isMinimalistMode -> MinimalistTheme.TEXT_MUTED_GREY
         isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
         else -> primaryColor
     }
@@ -86,17 +87,17 @@ fun MainActivity.createProCanvaHeader(title: String, subtitle: String): LinearLa
         }
         setTextColor(
             when {
-                isMinimalistMode -> MinimalistTheme.TEXT_DARK
+                isMinimalistMode -> MinimalistTheme.TEXT_CHARCOAL
                 isFav -> Color.parseColor("#FFD700")
                 else -> Color.WHITE
             }
         )
         textSize = 13f
-        typeface = Typeface.DEFAULT_BOLD
+        typeface = if (isMinimalistMode) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
         setPadding(dp(12f), dp(6f), dp(12f), dp(6f))
         background = GradientDrawable().apply {
-            setColor(if (isMinimalistMode) MinimalistTheme.HEADER_STAR_PILL else Color.argb(45, 255, 255, 255))
-            cornerRadius = dp(50f).toFloat()
+            setColor(if (isMinimalistMode) MinimalistTheme.ACCENT_SAGE_GREEN else Color.argb(45, 255, 255, 255))
+            cornerRadius = dp(999f).toFloat()
         }
         setOnClickListener {
             feedback(it)
@@ -108,7 +109,7 @@ fun MainActivity.createProCanvaHeader(title: String, subtitle: String): LinearLa
             }
             setTextColor(
                 when {
-                    isMinimalistMode -> MinimalistTheme.TEXT_DARK
+                    isMinimalistMode -> MinimalistTheme.TEXT_CHARCOAL
                     nowFav -> Color.parseColor("#FFD700")
                     else -> Color.WHITE
                 }
@@ -124,9 +125,9 @@ fun MainActivity.createProCanvaHeader(title: String, subtitle: String): LinearLa
 
     val titleTv = TextView(this).apply {
         text = IosGlassTheme.cleanCategoryTitle(title, isCleanGlassActive)
-        setTextColor(if (isMinimalistMode) MinimalistTheme.TEXT_DARK else Color.WHITE)
+        setTextColor(if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE)
         textSize = 18.5f
-        typeface = Typeface.DEFAULT_BOLD
+        typeface = if (isMinimalistMode) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
         gravity = Gravity.RIGHT
         layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
             leftMargin = dp(8f)
@@ -139,8 +140,9 @@ fun MainActivity.createProCanvaHeader(title: String, subtitle: String): LinearLa
 
     card.addView(TextView(this).apply {
         text = subtitle
-        setTextColor(if (isMinimalistMode) MinimalistTheme.TEXT_MUTED else accent)
+        setTextColor(if (isMinimalistMode) MinimalistTheme.TEXT_MUTED_GREY else accent)
         textSize = 13.5f
+        typeface = Typeface.create("sans-serif", Typeface.NORMAL)
         gravity = Gravity.RIGHT
         setPadding(0, dp(4f), 0, 0)
     })
@@ -149,10 +151,16 @@ fun MainActivity.createProCanvaHeader(title: String, subtitle: String): LinearLa
     return outerWrapper
 }
 
-// כפתור לשמירת ונעיצת תוצאת החישוב הנוכחית במרכז המועדפים
+// כפתור לשמירת ונעיצת תוצאת החישוב הנוכחית במרכז המועדפים (במצב מינימליסטי: קפסולת תכלת שמיים #B1D4F9 עם כוכב קווי ✧)
 fun MainActivity.createPinResultButton(resTv: TextView): TextView {
-    return createActionBtn("📌 נעץ תוצאה זו במועדפים עם הערה", false) {
+    val label = if (isMinimalistMode) "✧ נעץ תוצאה זו במועדפים עם הערה" else "📌 נעץ תוצאה זו במועדפים עם הערה"
+    return createActionBtn(label, false) {
         ProFavoritesEngine.showPinResultDialog(this, resTv.text.toString())
+    }.apply {
+        if (isMinimalistMode) {
+            background = MinimalistTheme.createMinimalistActionButtonDrawable(this@createPinResultButton, isPrimary = false, pillTone = 3)
+            setTextColor(MinimalistTheme.TEXT_CHARCOAL)
+        }
     }
 }
 
@@ -279,13 +287,14 @@ fun MainActivity.createProCapacitorScreen(): View {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
             val cx = width / 2f; val cy = height * 0.44f
-            p.color = if (isMinimalistMode) MinimalistTheme.TEXT_MUTED else Color.LTGRAY
+            p.color = if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else Color.LTGRAY
             p.strokeWidth = 3.5f * d; p.style = Paint.Style.STROKE
             canvas.drawLine(cx - 14f * d, cy + 16f * d, cx - 14f * d, height - 8f * d, p)
             canvas.drawLine(cx + 14f * d, cy + 16f * d, cx + 14f * d, height - 8f * d, p)
-            p.color = Color.parseColor("#FFB74D"); p.style = Paint.Style.FILL
+            p.color = if (isMinimalistMode) MinimalistTheme.ACCENT_BUTTER_YELLOW else Color.parseColor("#FFB74D")
+            p.style = Paint.Style.FILL
             canvas.drawCircle(cx, cy, 32f * d, p)
-            p.color = Color.BLACK; p.textSize = 15f * d; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
+            p.color = MinimalistTheme.TEXT_CHARCOAL; p.textSize = 15f * d; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
             canvas.drawText(capCodeText, cx, cy + 5f * d, p)
         }
     }.apply {
@@ -352,11 +361,13 @@ fun MainActivity.createProAwgWireScreen(): View {
             val cx = width / 2f; val cy = height / 2f
             val rOuter = min(width, height) * 0.38f
             val rInner = (rOuter * (currentDiamMm / 8f).coerceIn(0.22f, 0.85f))
-            p.color = Color.parseColor("#37474F"); p.style = Paint.Style.FILL
+            p.color = if (isMinimalistMode) MinimalistTheme.NEUTRAL_SECONDARY_BG else Color.parseColor("#37474F")
+            p.style = Paint.Style.FILL
             canvas.drawCircle(cx, cy, rOuter, p)
-            p.color = if (isCopper) Color.parseColor("#D87A3E") else Color.parseColor("#B0BEC5")
+            p.color = if (isCopper) MinimalistTheme.ACCENT_MUTED_PEACH else MinimalistTheme.ACCENT_SKY_BLUE
             canvas.drawCircle(cx, cy, rInner, p)
-            p.color = Color.WHITE; p.textSize = 13f * d; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
+            p.color = if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
+            p.textSize = 13f * d; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
             canvas.drawText("Ø ${Utils.formatResult(currentDiamMm.toDouble(), 2)} mm (${if (isCopper) "Cu" else "Al"})", cx, cy + 5f * d, p)
         }
     }.apply {
@@ -447,25 +458,26 @@ fun MainActivity.createProOhmAndPowerScreen(): View {
 }
 
 // =========================================================================
-// 5. מסך אישי: פלס בנאים דו-צירי חי עם בועות, כיול משטח (Tare) והקפאה (Hold)
+// 5. מסך אישי: פלס בנאים דו-צירי חי (SCREEN 2: Flat Target + #FFA48E / #FFE094 / #B1D4F9 Pills)
 // =========================================================================
 fun MainActivity.createProSpiritLevelScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("🟢 פלס בנאים דו-צירי חי עם בועות וכיול", "מדידת שיפוע במעלות, באחוזים וביחס גג (x:12) עם איפוס Tare והקפאה"))
+    root.addView(createProCanvaHeader("🟢 פלס בנאים דו-צירי עם בועות וכיול", "מדידת שיפוע במעלות, באחוזים וביחס גג (x:12) עם איפוס Tare והקפאה"))
 
     var isHold = false
     val levelCanvas = SpiritLevelCanvasView(this, this).apply {
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(330f)).apply { bottomMargin = dp(12f) }
         background = when {
-            isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProSpiritLevelScreen, 24f, 2)
+            isMinimalistMode -> null // שטוח ופתוח על רקע הקרם #FCF9F5 בדיוק כמו ב-Screen 2!
             isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProSpiritLevelScreen, 24f)
             else -> GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(24f).toFloat() }
         }
     }
     val resTv = createResultTextView()
 
-    val tareBtn = createActionBtn("🎯 כייל משטח נוכחי כאפס (Tare / Reset Zero)", false) {
+    // כפתור 1: כייל משטח נוכחי כאפס בטרקוטה (#FFA48E)
+    val tareBtn = createActionBtn("כייל משטח נוכחי כאפס (Tare / Reset Zero)", true) {
         if (levelCanvas.tareRollOffset == 0f && levelCanvas.tarePitchOffset == 0f) {
             levelCanvas.tareRollOffset = levelCanvas.rollDeg
             levelCanvas.tarePitchOffset = levelCanvas.pitchDeg
@@ -476,11 +488,20 @@ fun MainActivity.createProSpiritLevelScreen(): View {
             Toast.makeText(this, "הכיול אופס לברירת המחדל", Toast.LENGTH_SHORT).show()
         }
         levelCanvas.invalidate()
+    }.apply {
+        if (isMinimalistMode) {
+            background = MinimalistTheme.createMinimalistActionButtonDrawable(this@createProSpiritLevelScreen, true, pillTone = 1)
+        }
     }
 
-    val holdBtn = createActionBtn("⏸️ הקפא / שחרר קריאת פלס (Hold)", false) {
+    // כפתור 2: הקפא / שחרר קריאת פלס בצהוב חמאה (#FFE094)
+    val holdBtn = createActionBtn("הקפא / שחרר קריאת פלס (Hold)", false) {
         isHold = !isHold
-        (it as TextView).text = if (isHold) "▶️ שחרר הקפאת קריאה (מוקפא כעת)" else "⏸️ הקפא / שחרר קריאת פלס (Hold)"
+        (it as TextView).text = if (isHold) "שחרר הקפאת קריאה (מוקפא כעת)" else "הקפא / שחרר קריאת פלס (Hold)"
+    }.apply {
+        if (isMinimalistMode) {
+            background = MinimalistTheme.createMinimalistActionButtonDrawable(this@createProSpiritLevelScreen, false, pillTone = 2)
+        }
     }
 
     val sm = getSystemService(Context.SENSOR_SERVICE) as? SensorManager
@@ -510,7 +531,10 @@ fun MainActivity.createProSpiritLevelScreen(): View {
         override fun onViewDetachedFromWindow(v: View) { sm?.unregisterListener(listener) }
     })
 
-    root.addView(levelCanvas); root.addView(tareBtn); root.addView(holdBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
+    // כפתור 3: נעץ תוצאה זו במועדפים בתכלת שמיים (#B1D4F9)
+    val pinBtn = createPinResultButton(resTv)
+
+    root.addView(levelCanvas); root.addView(tareBtn); root.addView(holdBtn); root.addView(pinBtn); root.addView(resTv)
     scroll.addView(root); return scroll
 }
 
@@ -938,10 +962,10 @@ fun MainActivity.createProFlashlightScreen(): View {
         } catch (_: Exception) {}
     }
 
-    val offLampCol = if (isMinimalistMode) MinimalistTheme.COMPASS_DIAL_RING_BG else Color.DKGRAY
+    val offLampCol = if (isMinimalistMode) MinimalistTheme.NEUTRAL_SECONDARY_BG else Color.DKGRAY
     val lampView = TextView(this).apply {
         text = "💡 לחץ כאן או על 'מסך מלא' להפיכת כל המסך לפנס"
-        setTextColor(if (isMinimalistMode) MinimalistTheme.TEXT_DARK else Color.LTGRAY)
+        setTextColor(if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else Color.LTGRAY)
         textSize = 14.5f
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER
@@ -959,7 +983,7 @@ fun MainActivity.createProFlashlightScreen(): View {
             setColor(activeCol)
             cornerRadius = dp(26f).toFloat()
         }
-        lampView.setTextColor(if (lit) Color.BLACK else if (isMinimalistMode) MinimalistTheme.TEXT_DARK else Color.LTGRAY)
+        lampView.setTextColor(if (lit) Color.BLACK else if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else Color.LTGRAY)
         lampView.text = if (lit) "🔆 פנס מסך דולק (לחץ למסך מלא)" else "💡 לחץ כאן או על 'מסך מלא' להפיכת כל המסך לפנס"
         fullScreenOverlayView?.setBackgroundColor(if (lit) colors[colorIdx].second else Color.BLACK)
     }
@@ -1414,8 +1438,8 @@ fun MainActivity.createProMorseScreen(): View {
         } catch (_: Exception) {}
     }
 
-    val idleBeaconCol = if (isMinimalistMode) MinimalistTheme.COMPASS_MINT_CARD else Color.DKGRAY
-    val idleTextCol = if (isMinimalistMode) MinimalistTheme.TEXT_DARK else Color.LTGRAY
+    val idleBeaconCol = if (isMinimalistMode) MinimalistTheme.NEUTRAL_SECONDARY_BG else Color.DKGRAY
+    val idleTextCol = if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else Color.LTGRAY
 
     val beaconView = TextView(this).apply {
         text = "📡 משדר מורס מוכן (נקודה = קצר • קו = ארוך)"
@@ -1509,7 +1533,7 @@ fun MainActivity.createProMorseScreen(): View {
         isTransmitting = true
         transmitBtn.text = "⏹️ עצור שידור מורס (משדר כעת...)"
         val accent = when {
-            isMinimalistMode -> MinimalistTheme.ACTION_CORAL_PRIMARY
+            isMinimalistMode -> MinimalistTheme.ACCENT_TERRACOTTA
             isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
             else -> primaryColor
         }
@@ -1602,12 +1626,16 @@ fun MainActivity.createProPasswordGenScreen(): View {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
             val w = width.toFloat(); val h = height.toFloat()
-            p.color = if (isMinimalistMode) Color.argb(40, 0, 0, 0) else Color.argb(80, 255, 255, 255)
+            p.color = if (isMinimalistMode) MinimalistTheme.NEUTRAL_SECONDARY_BG else Color.argb(80, 255, 255, 255)
             canvas.drawRoundRect(RectF(16f * d, 16f * d, w - 16f * d, 38f * d), 12f * d, 12f * d, p)
             val ratio = (entropyBits / 160f).coerceIn(0.1f, 1f)
-            p.color = if (entropyBits >= 80f) Color.parseColor("#00E676") else Color.parseColor("#FFB74D")
+            p.color = if (isMinimalistMode) {
+                if (entropyBits >= 80f) MinimalistTheme.ACCENT_SAGE_GREEN else MinimalistTheme.ACCENT_BUTTER_YELLOW
+            } else {
+                if (entropyBits >= 80f) Color.parseColor("#00E676") else Color.parseColor("#FFB74D")
+            }
             canvas.drawRoundRect(RectF(16f * d, 16f * d, 16f * d + (w - 32f * d) * ratio, 38f * d), 12f * d, 12f * d, p)
-            p.color = if (isMinimalistMode) MinimalistTheme.TEXT_DARK else Color.WHITE
+            p.color = if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
             p.textSize = 13.5f * d; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
             canvas.drawText("אנטרופיה: ${entropyBits.toInt()} bits (${if (entropyBits >= 90f) "הצפנה צבאית חזקה" else "חוזק בינוני"})", w / 2f, h - 10f * d, p)
         }
@@ -1698,9 +1726,17 @@ fun MainActivity.createProGematriaAndTextScreen(): View {
 }
 
 // =========================================================================
-// 14. וידג'ט מצפן פעיל למסך הבית מעוצב בקנבה (Active Canva Compass Home Widget)
-//     תומך גם בערכת הנושא "עיצוב מינימליסטי" (כרטיס מנטה #DFEFE4) וגם בערכות הכהות!
+// 14. וידג'ט מצפן פעיל למסך הבית (ללא קריסות RemoteViews או חריגות goAsync ANR!)
 // =========================================================================
+private class SafePendingResultHolder(private val raw: BroadcastReceiver.PendingResult?) {
+    private val finished = AtomicBoolean(false)
+    fun finishSafely() {
+        if (raw != null && finished.compareAndSet(false, true)) {
+            try { raw.finish() } catch (_: Throwable) {}
+        }
+    }
+}
+
 object CompassHomeWidgetHelper {
     const val ACTION_REFRESH_WIDGET = "com.example.calculator.ACTION_REFRESH_COMPASS_WIDGET"
     private const val PREF_HEADING = "widget_compass_heading_deg"
@@ -1708,6 +1744,7 @@ object CompassHomeWidgetHelper {
     private const val PREF_ACCURACY = "widget_compass_accuracy"
 
     private var activeSessionListener: SensorEventListener? = null
+    private var activePendingHolder: SafePendingResultHolder? = null
     private val sessionHandler = Handler(Looper.getMainLooper())
     private var isLiveSessionRunning = false
     private var lastTapTimestampMs = 0L
@@ -1719,49 +1756,70 @@ object CompassHomeWidgetHelper {
         accuracy: Int,
         isLiveActive: Boolean = isLiveSessionRunning
     ) {
-        val appCtx = context.applicationContext ?: context
-        val prefs = appCtx.getSharedPreferences("CalcProPrefs", Context.MODE_PRIVATE)
-        prefs.edit()
-            .putFloat(PREF_HEADING, headingDeg)
-            .putFloat(PREF_MAG_UT, magUt)
-            .putInt(PREF_ACCURACY, accuracy)
-            .apply()
-        renderCurrentStateToWidgets(appCtx, isLiveActive)
+        try {
+            val appCtx = context.applicationContext ?: context
+            val prefs = appCtx.getSharedPreferences("CalcProPrefs", Context.MODE_PRIVATE)
+            prefs.edit()
+                .putFloat(PREF_HEADING, headingDeg)
+                .putFloat(PREF_MAG_UT, magUt)
+                .putInt(PREF_ACCURACY, accuracy)
+                .apply()
+            renderCurrentStateToWidgets(appCtx, isLiveActive)
+        } catch (_: Throwable) {}
     }
 
     fun updateAllWidgets(context: Context, pendingResult: BroadcastReceiver.PendingResult? = null) {
-        val appCtx = context.applicationContext ?: context
-        renderCurrentStateToWidgets(appCtx, isLiveSessionRunning)
-        startLiveSensorTrackingSession(appCtx, durationMs = 7500L, pendingResult = pendingResult)
+        val holder = SafePendingResultHolder(pendingResult)
+        try {
+            val appCtx = context.applicationContext ?: context
+            renderCurrentStateToWidgets(appCtx, isLiveSessionRunning)
+            startLiveSensorTrackingSession(appCtx, durationMs = 5500L, holder = holder)
+        } catch (_: Throwable) {
+            holder.finishSafely()
+        }
     }
 
     fun onWidgetTapped(context: Context, pendingResult: BroadcastReceiver.PendingResult? = null) {
-        val appCtx = context.applicationContext ?: context
-        val now = System.currentTimeMillis()
-        if (now - lastTapTimestampMs < 1100L) {
-            lastTapTimestampMs = 0L
-            pendingResult?.finish()
-            val openAppIntent = Intent(appCtx, MainActivity::class.java).apply {
-                action = "ACTION_OPEN_COMPASS"
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        val holder = SafePendingResultHolder(pendingResult)
+        try {
+            val appCtx = context.applicationContext ?: context
+            val now = System.currentTimeMillis()
+            if (now - lastTapTimestampMs < 1100L) {
+                lastTapTimestampMs = 0L
+                holder.finishSafely()
+                val openAppIntent = Intent(appCtx, MainActivity::class.java).apply {
+                    action = "ACTION_OPEN_COMPASS"
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+                appCtx.startActivity(openAppIntent)
+                return
             }
-            appCtx.startActivity(openAppIntent)
-            return
+            lastTapTimestampMs = now
+            startLiveSensorTrackingSession(appCtx, durationMs = 6000L, holder = holder)
+        } catch (_: Throwable) {
+            holder.finishSafely()
         }
-        lastTapTimestampMs = now
-        startLiveSensorTrackingSession(appCtx, durationMs = 8500L, pendingResult = pendingResult)
     }
 
-    fun startLiveSensorTrackingSession(
+    private fun startLiveSensorTrackingSession(
         context: Context,
-        durationMs: Long = 8000L,
-        pendingResult: BroadcastReceiver.PendingResult? = null
+        durationMs: Long = 5500L,
+        holder: SafePendingResultHolder? = null
     ) {
         val appCtx = context.applicationContext ?: context
+        // סגירה בטוחה של כל PendingResult קודם לפני פתיחת סשן חדש
+        activePendingHolder?.finishSafely()
+        activePendingHolder = holder
+
+        // שחרור ה-BroadcastReceiver תוך 1.2 שניות לכל היותר כדי למנוע ב-100% קריסת ANR של אנדרואיד!
+        sessionHandler.postDelayed({
+            holder?.finishSafely()
+        }, 1200L)
+
         val sm = appCtx.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
         if (sm == null) {
             renderCurrentStateToWidgets(appCtx, false)
-            try { pendingResult?.finish() } catch (_: Exception) {}
+            holder?.finishSafely()
             return
         }
         val rotSensor = sm.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
@@ -1769,14 +1827,13 @@ object CompassHomeWidgetHelper {
         val accelSensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         if (rotSensor == null && (magSensor == null || accelSensor == null)) {
             renderCurrentStateToWidgets(appCtx, false)
-            try { pendingResult?.finish() } catch (_: Exception) {}
+            holder?.finishSafely()
             return
         }
 
         activeSessionListener?.let {
-            try { sm.unregisterListener(it) } catch (_: Exception) {}
+            try { sm.unregisterListener(it) } catch (_: Throwable) {}
         }
-        sessionHandler.removeCallbacksAndMessages(null)
         isLiveSessionRunning = true
         renderCurrentStateToWidgets(appCtx, true)
 
@@ -1810,43 +1867,47 @@ object CompassHomeWidgetHelper {
 
             val now = System.currentTimeMillis()
             val angleDiff = abs(((deg - lastPushedDeg + 540f) % 360f) - 180f)
-            if (lastPushedDeg < 0f || (angleDiff >= 1.0f && now - lastPushTimeMs >= 90L) || now - lastPushTimeMs >= 600L) {
+            if (lastPushedDeg < 0f || (angleDiff >= 1.2f && now - lastPushTimeMs >= 110L) || now - lastPushTimeMs >= 650L) {
                 lastPushedDeg = deg
                 lastPushTimeMs = now
                 saveAndPushReading(appCtx, deg, latestUt, latestAcc, isLiveActive = true)
+                // ברגע שהתקבלה קריאה חיה ראשונה מהחיישן והווידג'ט עודכן, משחררים את ה-BroadcastReceiver בבטחה
+                holder?.finishSafely()
             }
         }
 
         val listener = object : SensorEventListener {
             override fun onSensorChanged(e: SensorEvent?) {
                 if (e == null) return
-                when (e.sensor.type) {
-                    Sensor.TYPE_ROTATION_VECTOR -> {
-                        if (e.accuracy > 0) latestAcc = e.accuracy
-                        SensorManager.getRotationMatrixFromVector(rotMatrix, e.values)
-                        SensorManager.getOrientation(rotMatrix, orientAngles)
-                        processAzimuthRad(orientAngles[0])
-                    }
-                    Sensor.TYPE_MAGNETIC_FIELD -> {
-                        System.arraycopy(e.values, 0, geomag, 0, 3)
-                        hasM = true
-                        val bx = e.values[0]; val by = e.values[1]; val bz = e.values[2]
-                        latestUt = sqrt(bx * bx + by * by + bz * bz)
-                        if (e.accuracy > 0) latestAcc = e.accuracy
-                        if (rotSensor == null && hasG && SensorManager.getRotationMatrix(rotMatrix, null, grav, geomag)) {
+                try {
+                    when (e.sensor.type) {
+                        Sensor.TYPE_ROTATION_VECTOR -> {
+                            if (e.accuracy > 0) latestAcc = e.accuracy
+                            SensorManager.getRotationMatrixFromVector(rotMatrix, e.values)
                             SensorManager.getOrientation(rotMatrix, orientAngles)
                             processAzimuthRad(orientAngles[0])
                         }
-                    }
-                    Sensor.TYPE_ACCELEROMETER -> {
-                        System.arraycopy(e.values, 0, grav, 0, 3)
-                        hasG = true
-                        if (rotSensor == null && hasM && SensorManager.getRotationMatrix(rotMatrix, null, grav, geomag)) {
-                            SensorManager.getOrientation(rotMatrix, orientAngles)
-                            processAzimuthRad(orientAngles[0])
+                        Sensor.TYPE_MAGNETIC_FIELD -> {
+                            System.arraycopy(e.values, 0, geomag, 0, 3)
+                            hasM = true
+                            val bx = e.values[0]; val by = e.values[1]; val bz = e.values[2]
+                            latestUt = sqrt(bx * bx + by * by + bz * bz)
+                            if (e.accuracy > 0) latestAcc = e.accuracy
+                            if (rotSensor == null && hasG && SensorManager.getRotationMatrix(rotMatrix, null, grav, geomag)) {
+                                SensorManager.getOrientation(rotMatrix, orientAngles)
+                                processAzimuthRad(orientAngles[0])
+                            }
+                        }
+                        Sensor.TYPE_ACCELEROMETER -> {
+                            System.arraycopy(e.values, 0, grav, 0, 3)
+                            hasG = true
+                            if (rotSensor == null && hasM && SensorManager.getRotationMatrix(rotMatrix, null, grav, geomag)) {
+                                SensorManager.getOrientation(rotMatrix, orientAngles)
+                                processAzimuthRad(orientAngles[0])
+                            }
                         }
                     }
-                }
+                } catch (_: Throwable) {}
             }
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
                 if (accuracy > 0) latestAcc = accuracy
@@ -1854,19 +1915,23 @@ object CompassHomeWidgetHelper {
         }
 
         activeSessionListener = listener
-        if (rotSensor != null) sm.registerListener(listener, rotSensor, SensorManager.SENSOR_DELAY_GAME)
-        if (magSensor != null) sm.registerListener(listener, magSensor, SensorManager.SENSOR_DELAY_UI)
-        if (rotSensor == null && accelSensor != null) sm.registerListener(listener, accelSensor, SensorManager.SENSOR_DELAY_GAME)
+        try {
+            if (rotSensor != null) sm.registerListener(listener, rotSensor, SensorManager.SENSOR_DELAY_GAME)
+            if (magSensor != null) sm.registerListener(listener, magSensor, SensorManager.SENSOR_DELAY_UI)
+            if (rotSensor == null && accelSensor != null) sm.registerListener(listener, accelSensor, SensorManager.SENSOR_DELAY_GAME)
+        } catch (_: Throwable) {
+            holder?.finishSafely()
+        }
 
         sessionHandler.postDelayed({
-            try { sm.unregisterListener(listener) } catch (_: Exception) {}
+            try { sm.unregisterListener(listener) } catch (_: Throwable) {}
             if (activeSessionListener === listener) {
                 activeSessionListener = null
                 isLiveSessionRunning = false
                 renderCurrentStateToWidgets(appCtx, false)
             }
-            try { pendingResult?.finish() } catch (_: Exception) {}
-        }, durationMs.coerceAtMost(9000L))
+            holder?.finishSafely()
+        }, durationMs.coerceIn(2000L, 6500L))
     }
 
     fun renderCurrentStateToWidgets(context: Context, isLiveActive: Boolean = isLiveSessionRunning) {
@@ -1877,6 +1942,7 @@ object CompassHomeWidgetHelper {
             if (ids == null || ids.isEmpty()) return
 
             val prefs = context.getSharedPreferences("CalcProPrefs", Context.MODE_PRIVATE)
+            MinimalistTheme.loadMinimalistPrefs(prefs)
             val heading = prefs.getFloat(PREF_HEADING, 0f)
             val magUt = prefs.getFloat(PREF_MAG_UT, 46.5f)
             val acc = prefs.getInt(PREF_ACCURACY, SensorManager.SENSOR_STATUS_ACCURACY_HIGH)
@@ -1896,6 +1962,7 @@ object CompassHomeWidgetHelper {
             }
             val refreshPending = PendingIntent.getBroadcast(context, 7071, refreshIntent, pFlags)
 
+            // שימוש אך ורק בשיטות חוקיות של RemoteViews (ללא setMinimumWidth/Height שגרמו לקריסה!)
             val views = if (customLayoutId != 0 && customImgId != 0) {
                 RemoteViews(context.packageName, customLayoutId).apply {
                     setImageViewBitmap(customImgId, bmp)
@@ -1904,18 +1971,17 @@ object CompassHomeWidgetHelper {
             } else {
                 RemoteViews(context.packageName, android.R.layout.activity_list_item).apply {
                     setViewVisibility(android.R.id.text1, View.GONE)
-                    setBoolean(android.R.id.icon, "setAdjustViewBounds", true)
-                    setInt(android.R.id.icon, "setMinimumWidth", 420)
-                    setInt(android.R.id.icon, "setMinimumHeight", 420)
                     setImageViewBitmap(android.R.id.icon, bmp)
                     setOnClickPendingIntent(android.R.id.icon, refreshPending)
                 }
             }
 
             for (id in ids) {
-                awm.updateAppWidget(id, views)
+                try {
+                    awm.updateAppWidget(id, views)
+                } catch (_: Throwable) {}
             }
-        } catch (_: Exception) {}
+        } catch (_: Throwable) {}
     }
 
     private fun drawCanvaCompassWidgetBitmap(
@@ -1927,8 +1993,8 @@ object CompassHomeWidgetHelper {
         primaryColor: Int,
         isLiveActive: Boolean
     ): Bitmap {
-        val w = 280
-        val h = 280
+        val w = 260
+        val h = 260
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
         val accent = CanvasUiHelper.ensureReadableAccent(primaryColor, isAurora, isMinimalist)
@@ -1937,7 +2003,7 @@ object CompassHomeWidgetHelper {
         val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
             if (isMinimalist) {
-                color = MinimalistTheme.COMPASS_MINT_CARD
+                color = MinimalistTheme.BG_CREAM
             } else {
                 shader = LinearGradient(
                     0f, 0f, w.toFloat(), h.toFloat(),
@@ -1955,72 +2021,69 @@ object CompassHomeWidgetHelper {
                 )
             }
         }
-        canvas.drawRoundRect(cardRect, 36f, 36f, bgPaint)
+        canvas.drawRoundRect(cardRect, 34f, 34f, bgPaint)
 
         val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
-            strokeWidth = if (isLiveActive) 2.8f else 2.0f
+            strokeWidth = if (isLiveActive) 2.6f else 1.8f
             color = when {
-                isLiveActive -> Color.parseColor("#2E7D32")
-                isMinimalist -> Color.argb(45, 43, 40, 37)
+                isMinimalist -> MinimalistTheme.TEXT_CHARCOAL
+                isLiveActive -> Color.parseColor("#00E676")
                 else -> Color.argb(185, Color.red(accent), Color.green(accent), Color.blue(accent))
             }
         }
-        canvas.drawRoundRect(cardRect, 36f, 36f, borderPaint)
+        canvas.drawRoundRect(cardRect, 34f, 34f, borderPaint)
 
         val pillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
             color = when {
-                isMinimalist -> MinimalistTheme.ALERT_PINK_PILL
+                isMinimalist -> if (isLiveActive) MinimalistTheme.ACCENT_SAGE_GREEN else MinimalistTheme.ACCENT_BUTTER_YELLOW
                 isLiveActive -> Color.argb(60, 0, 230, 118)
                 else -> Color.argb(45, Color.red(accent), Color.green(accent), Color.blue(accent))
             }
         }
-        val topPill = RectF(18f, 15f, w - 18f, 41f)
-        canvas.drawRoundRect(topPill, 13f, 13f, pillPaint)
+        val topPill = RectF(16f, 14f, w - 16f, 38f)
+        canvas.drawRoundRect(topPill, 14f, 14f, pillPaint)
 
         val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = when {
-                isMinimalist -> MinimalistTheme.ALERT_RED_TEXT
+                isMinimalist -> MinimalistTheme.TEXT_CHARCOAL
                 isLiveActive -> Color.parseColor("#00E676")
                 else -> accent
             }
-            textSize = 11.5f
+            textSize = 11f
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
         }
         val headerStatus = if (isLiveActive) {
-            "🟢 מצפן חי פעיל (הקש כפול לאפליקציה)"
+            "מצפן חי פעיל (הקש כפול לאפליקציה)"
         } else {
-            val accDot = if (accuracy >= SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM) "🟢" else "🟡"
-            "🧭 מצפן 3D Canva • הקש לסיבוב חי $accDot"
+            "מצפן 3D • הקש לסיבוב חי"
         }
-        CanvasUiHelper.drawFittedText(canvas, headerStatus, w / 2f, 32f, topPill.width() - 12f, 11.5f, 8.5f, titlePaint)
+        CanvasUiHelper.drawFittedText(canvas, headerStatus, w / 2f, 30f, topPill.width() - 12f, 11f, 8.2f, titlePaint)
 
         val cx = w / 2f
-        val cy = 132f
-        val r = 73f
+        val cy = 122f
+        val r = 68f
 
         val dialBg = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
-            color = if (isMinimalist) MinimalistTheme.COMPASS_DIAL_RING_BG else Color.argb(190, 8, 14, 22)
+            color = if (isMinimalist) Color.parseColor("#F4F0E8") else Color.argb(190, 8, 14, 22)
         }
         canvas.drawCircle(cx, cy, r, dialBg)
 
-        if (!isMinimalist) {
-            val ringStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                style = Paint.Style.STROKE
-                strokeWidth = 2.4f
-                color = accent
-            }
-            canvas.drawCircle(cx, cy, r, ringStroke)
+        val ringStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = 2.0f
+            color = if (isMinimalist) MinimalistTheme.TEXT_CHARCOAL else accent
         }
+        canvas.drawCircle(cx, cy, r, ringStroke)
 
         canvas.save()
         canvas.rotate(-headingDeg, cx, cy)
 
         val tickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = if (isMinimalist) MinimalistTheme.TEXT_DARK else Color.WHITE
+            color = if (isMinimalist) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
             style = Paint.Style.STROKE
         }
         for (deg in 0 until 360 step 15) {
@@ -2039,40 +2102,38 @@ object CompassHomeWidgetHelper {
         }
 
         val dirPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            textSize = 13.5f
+            textSize = 13f
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
         }
-        dirPaint.color = if (isMinimalist) MinimalistTheme.TEXT_DARK else Color.parseColor("#FF3B30")
+        dirPaint.color = if (isMinimalist) MinimalistTheme.TEXT_CHARCOAL else Color.parseColor("#FF3B30")
         canvas.drawText("N", cx, cy - r * 0.53f, dirPaint)
-        dirPaint.color = if (isMinimalist) MinimalistTheme.TEXT_DARK else Color.WHITE
+        dirPaint.color = if (isMinimalist) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
         canvas.drawText("S", cx, cy + r * 0.68f, dirPaint)
         canvas.drawText("E", cx + r * 0.62f, cy + 4.5f, dirPaint)
         canvas.drawText("W", cx - r * 0.62f, cy + 4.5f, dirPaint)
 
         val northNeedle = Path().apply {
-            moveTo(cx, cy - r * 0.46f)
+            moveTo(cx, cy - r * 0.45f)
             lineTo(cx - r * 0.11f, cy)
             lineTo(cx + r * 0.11f, cy)
             close()
         }
         val southNeedle = Path().apply {
-            moveTo(cx, cy + r * 0.46f)
+            moveTo(cx, cy + r * 0.45f)
             lineTo(cx - r * 0.11f, cy)
             lineTo(cx + r * 0.11f, cy)
             close()
         }
-        if (isMinimalist) {
-            canvas.drawPath(northNeedle, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#9AA5A0"); style = Paint.Style.FILL })
-            canvas.drawPath(southNeedle, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#F0544F"); style = Paint.Style.FILL })
-        } else {
-            canvas.drawPath(southNeedle, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#B0BEC5"); style = Paint.Style.FILL })
-            canvas.drawPath(northNeedle, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#FF3B30"); style = Paint.Style.FILL })
-        }
+        canvas.drawPath(southNeedle, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#9AA5A0"); style = Paint.Style.FILL })
+        canvas.drawPath(northNeedle, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = if (isMinimalist) MinimalistTheme.ACCENT_MUTED_PEACH else Color.parseColor("#FF3B30")
+            style = Paint.Style.FILL
+        })
         canvas.restore()
 
-        canvas.drawCircle(cx, cy, 4.5f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = if (isMinimalist) MinimalistTheme.COMPASS_DIAL_RING_BG else Color.WHITE
+        canvas.drawCircle(cx, cy, 4.2f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = if (isMinimalist) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
             style = Paint.Style.FILL
         })
 
@@ -2080,8 +2141,8 @@ object CompassHomeWidgetHelper {
         val dirIdx = (((headingDeg + 22.5f) % 360f) / 45f).toInt().coerceIn(0, 7)
 
         val degPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = if (isMinimalist) MinimalistTheme.TEXT_DARK else Color.WHITE
-            textSize = 19f
+            color = if (isMinimalist) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
+            textSize = 17.5f
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
         }
@@ -2089,16 +2150,16 @@ object CompassHomeWidgetHelper {
             canvas,
             "\u200E${Utils.formatResult(headingDeg.toDouble(), 1)}°\u200E  •  ${dirsHeb[dirIdx]}",
             cx,
-            234f,
-            w - 28f,
-            19f,
-            12f,
+            218f,
+            w - 26f,
+            17.5f,
+            11.5f,
             degPaint
         )
 
         val subPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = if (isMinimalist) MinimalistTheme.TEXT_MUTED else accent
-            textSize = 11f
+            color = if (isMinimalist) MinimalistTheme.TEXT_MUTED_GREY else accent
+            textSize = 10.5f
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
         }
@@ -2106,10 +2167,10 @@ object CompassHomeWidgetHelper {
             canvas,
             "שדה: \u200E${Utils.formatResult(magUt.toDouble(), 1)} µT\u200E  |  צפון אמיתי (+5.2°)",
             cx,
-            256f,
-            w - 28f,
-            11f,
-            8.5f,
+            238f,
+            w - 26f,
+            10.5f,
+            8.0f,
             subPaint
         )
 
@@ -2119,8 +2180,7 @@ object CompassHomeWidgetHelper {
 
 class CompassHomeWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        super.onUpdate(context, appWidgetManager, appWidgetIds)
-        val pendingResult = goAsync()
+        val pendingResult = try { goAsync() } catch (_: Throwable) { null }
         CompassHomeWidgetHelper.updateAllWidgets(context, pendingResult)
     }
 
@@ -2135,16 +2195,16 @@ class CompassHomeWidgetProvider : AppWidgetProvider() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        super.onReceive(context, intent)
         when (intent.action) {
             CompassHomeWidgetHelper.ACTION_REFRESH_WIDGET -> {
-                val pendingResult = goAsync()
+                val pendingResult = try { goAsync() } catch (_: Throwable) { null }
                 CompassHomeWidgetHelper.onWidgetTapped(context, pendingResult)
             }
             Intent.ACTION_USER_PRESENT -> {
-                val pendingResult = goAsync()
+                val pendingResult = try { goAsync() } catch (_: Throwable) { null }
                 CompassHomeWidgetHelper.updateAllWidgets(context, pendingResult)
             }
+            else -> super.onReceive(context, intent)
         }
     }
 }
