@@ -143,14 +143,14 @@ object ProFavoritesEngine {
         val box = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(activity.dp(20f), activity.dp(16f), activity.dp(20f), activity.dp(10f))
-            setBackgroundColor(if (isMin) MinimalistTheme.getBackgroundColor() else Utils.lightenColor(activity.bgColor, 0.08f))
+            setBackgroundColor(if (isMin) MinimalistTheme.getBackgroundColor(activity) else Utils.lightenColor(activity.bgColor, 0.08f))
         }
         val noteInput = activity.createInputBox("הוסף שם או הערה לחישוב זה (למשל: משכנתא דירה)...").apply {
             inputType = InputType.TYPE_CLASS_TEXT
         }
         val previewTv = TextView(activity).apply {
             text = resultToPin
-            setTextColor(if (isMin) MinimalistTheme.TEXT_DARK else Color.LTGRAY)
+            setTextColor(if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.LTGRAY)
             textSize = 14f
             gravity = Gravity.RIGHT
             setPadding(0, activity.dp(6f), 0, 0)
@@ -184,7 +184,7 @@ fun MainActivity.createFavoritesQuickChipsBar(): View {
     if (favIndices.isEmpty()) return wrapper
 
     val accent = when {
-        isMinimalistMode -> MinimalistTheme.ACTION_CORAL_PRIMARY
+        isMinimalistMode -> MinimalistTheme.ACCENT_TERRACOTTA
         isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
         else -> primaryColor
     }
@@ -205,24 +205,24 @@ fun MainActivity.createFavoritesQuickChipsBar(): View {
             text = "★ ${IosGlassTheme.cleanCategoryTitle(categories[idx], true)}"
             setTextColor(
                 when {
-                    isMinimalistMode -> MinimalistTheme.TEXT_DARK
+                    isMinimalistMode -> MinimalistTheme.TEXT_CHARCOAL
                     isCurrent -> Color.parseColor("#08090C")
                     else -> Color.WHITE
                 }
             )
             textSize = 13f
-            typeface = Typeface.DEFAULT_BOLD
+            typeface = if (isMinimalistMode) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
             setPadding(dp(14f), dp(8f), dp(14f), dp(8f))
             background = GradientDrawable().apply {
                 val fill = when {
-                    isMinimalistMode && isCurrent -> MinimalistTheme.SWAP_YELLOW_PILL
-                    isMinimalistMode -> MinimalistTheme.HEADER_PISTACHIO_CARD
+                    isMinimalistMode && isCurrent -> MinimalistTheme.ACCENT_SAGE_GREEN
+                    isMinimalistMode -> MinimalistTheme.NEUTRAL_SECONDARY_BG
                     isCurrent -> accent
                     else -> Utils.lightenColor(bgColor, 0.10f)
                 }
                 setColor(fill)
-                cornerRadius = dp(50f).toFloat()
-                setStroke(dp(1f), if (isMinimalistMode) Color.argb(40, 0, 0, 0) else accent)
+                cornerRadius = dp(999f).toFloat()
+                if (!isMinimalistMode) setStroke(dp(1f), accent)
             }
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -254,10 +254,10 @@ fun MainActivity.createProFavoritesCenterScreen(): View {
         )
     )
 
-    val textPrimary = if (isMinimalistMode) MinimalistTheme.TEXT_DARK else Color.WHITE
-    val textMuted = if (isMinimalistMode) MinimalistTheme.TEXT_MUTED else Color.LTGRAY
+    val textPrimary = if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
+    val textMuted = if (isMinimalistMode) MinimalistTheme.TEXT_MUTED_GREY else Color.LTGRAY
     val accent = when {
-        isMinimalistMode -> MinimalistTheme.TEXT_DARK
+        isMinimalistMode -> MinimalistTheme.TEXT_CHARCOAL
         isAuroraMode -> AuroraBorealisTheme.AURORA_PRIMARY
         else -> primaryColor
     }
@@ -267,7 +267,7 @@ fun MainActivity.createProFavoritesCenterScreen(): View {
         text = "⭐ מחשבונים מועדפים (${favSet.size}):"
         setTextColor(accent)
         textSize = 16f
-        typeface = Typeface.DEFAULT_BOLD
+        typeface = if (isMinimalistMode) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
         gravity = Gravity.RIGHT
         setPadding(0, dp(6f), 0, dp(8f))
     }
@@ -318,7 +318,7 @@ fun MainActivity.createProFavoritesCenterScreen(): View {
                 text = categories[idx]
                 setTextColor(textPrimary)
                 textSize = 16f
-                typeface = Typeface.DEFAULT_BOLD
+                typeface = if (isMinimalistMode) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
                 gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 setOnClickListener {
@@ -337,7 +337,7 @@ fun MainActivity.createProFavoritesCenterScreen(): View {
         text = "📌 תוצאות וחישובים נעוצים (${pinnedList.size}):"
         setTextColor(accent)
         textSize = 16f
-        typeface = Typeface.DEFAULT_BOLD
+        typeface = if (isMinimalistMode) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
         gravity = Gravity.RIGHT
         setPadding(0, dp(16f), 0, dp(8f))
     }
@@ -356,7 +356,7 @@ fun MainActivity.createProFavoritesCenterScreen(): View {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(16f), dp(14f), dp(16f), dp(14f))
                 background = when {
-                    isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProFavoritesCenterScreen, 18f, 2)
+                    isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProFavoritesCenterScreen, 18f, 1)
                     isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProFavoritesCenterScreen, 18f)
                     else -> GradientDrawable().apply {
                         setColor(Utils.lightenColor(bgColor, 0.08f))
@@ -388,7 +388,7 @@ fun MainActivity.createProFavoritesCenterScreen(): View {
                 text = "📌 ${item.note} (${item.calculatorTitle})"
                 setTextColor(accent)
                 textSize = 15f
-                typeface = Typeface.DEFAULT_BOLD
+                typeface = if (isMinimalistMode) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
                 gravity = Gravity.RIGHT
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 setOnClickListener {
