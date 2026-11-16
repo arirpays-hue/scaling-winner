@@ -55,7 +55,7 @@ object CanvasUiHelper {
 }
 
 // =========================================================================
-// 1. קנבס פלס בנאים דו-צירי חי (SCREEN 2: Flat #2C2C2C Outlines + Flat #FF9E80 Peach Bubbles)
+// 1. קנבס פלס בנאים דו-צירי חי (הופך לירוק כשהוא מאוזן גם בעיצוב מינימליסטי!)
 // =========================================================================
 class SpiritLevelCanvasView(context: Context, private val activity: MainActivity) : View(context) {
     var rollDeg: Float = 0f
@@ -70,15 +70,15 @@ class SpiritLevelCanvasView(context: Context, private val activity: MainActivity
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         textAlign = Paint.Align.CENTER
-        typeface = Typeface.create("sans-serif", Typeface.NORMAL)
+        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val d = resources.displayMetrics.density
         val isMin = activity.isMinimalistMode
-        framePaint.strokeWidth = if (isMin) 2.0f * d else 2.2f * d
-        gridPaint.strokeWidth = 1.0f * d
+        framePaint.strokeWidth = if (isMin) 2.2f * d else 2.2f * d
+        gridPaint.strokeWidth = 1.1f * d
 
         val w = width.toFloat()
         val h = height.toFloat()
@@ -89,16 +89,29 @@ class SpiritLevelCanvasView(context: Context, private val activity: MainActivity
         val cy = h * 0.40f
         val radius = min(w, h) * 0.28f
 
+        // בדיקת איזון: סטייה של פחות מ-1.2 מעלות הופכת את הפלס לירוק בכל מצבי התצוגה!
         val isLevel = hypot(adjRoll.toDouble(), adjPitch.toDouble()) < 1.2
+        val minLevelGreen = Color.parseColor("#2ECC71")
+        val minLevelDarkGreen = Color.parseColor("#1B5E20")
+
         val accent = when {
+            isMin && isLevel -> minLevelDarkGreen
             isMin -> MinimalistTheme.TEXT_CHARCOAL
             isLevel -> Color.parseColor("#00E676")
             else -> CanvasUiHelper.ensureReadableAccent(activity.primaryColor, activity.isAuroraMode)
         }
 
-        bgPaint.color = if (isMin) Color.parseColor("#F4F0E8") else Color.argb(155, 12, 22, 32)
+        bgPaint.color = when {
+            isMin && isLevel -> MinimalistTheme.ACCENT_MUTED_GREEN
+            isMin -> Color.parseColor("#F4F0E8")
+            else -> Color.argb(155, 12, 22, 32)
+        }
         framePaint.color = accent
-        gridPaint.color = if (isMin) Color.argb(110, 44, 44, 44) else Color.argb(95, Color.red(accent), Color.green(accent), Color.blue(accent))
+        gridPaint.color = when {
+            isMin && isLevel -> Color.argb(135, 27, 94, 32)
+            isMin -> Color.argb(110, 44, 44, 44)
+            else -> Color.argb(95, Color.red(accent), Color.green(accent), Color.blue(accent))
+        }
 
         // 1. מטרת איזון עגולה מרכזית (Bullseye)
         canvas.drawCircle(cx, cy, radius, bgPaint)
@@ -116,9 +129,14 @@ class SpiritLevelCanvasView(context: Context, private val activity: MainActivity
         val bubbleR = radius * 0.21f
 
         if (isMin) {
-            // בעיצוב מינימליסטי: בועות שטוחות לחלוטין בגוון אפרסק (#FF9E80) ללא גרדיאנט תלת-ממדי!
             bubblePaint.shader = null
-            bubblePaint.color = if (MinimalistTheme.useCustomAccentTint) MinimalistTheme.getPrimaryActionColor(activity) else MinimalistTheme.ACCENT_MUTED_PEACH
+            bubblePaint.color = if (isLevel) {
+                minLevelGreen // ירוק איזמרגד שטוח וברור כשהפלס מאוזן!
+            } else if (MinimalistTheme.useCustomAccentTint) {
+                MinimalistTheme.getPrimaryActionColor(activity)
+            } else {
+                MinimalistTheme.ACCENT_MUTED_PEACH
+            }
         } else {
             bubblePaint.shader = RadialGradient(
                 bx - bubbleR * 0.3f, by - bubbleR * 0.3f, bubbleR,
@@ -157,14 +175,17 @@ class SpiritLevelCanvasView(context: Context, private val activity: MainActivity
         val hBubbleX = barMidX + normX * ((barRight - barLeft) * 0.36f)
         canvas.drawCircle(hBubbleX, (barTop + barBottom) / 2f, (hTubeH / 2f) - 2.5f * d, bubblePaint)
 
-        textPaint.color = if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
+        textPaint.color = when {
+            isMin && isLevel -> minLevelDarkGreen
+            isMin -> MinimalistTheme.TEXT_CHARCOAL
+            isLevel -> Color.parseColor("#00E676")
+            else -> Color.WHITE
+        }
         val slopePct = tan(Math.toRadians(hypot(adjRoll.toDouble(), adjPitch.toDouble()))).coerceAtMost(9.99) * 100.0
-        val statusTxt = if (isMin) {
-            "X: \u200E${Utils.formatResult(adjRoll.toDouble(), 1)}°\u200E | Y: \u200E${Utils.formatResult(adjPitch.toDouble(), 1)}°\u200E | שיפוע: \u200E${Utils.formatResult(slopePct, 1)}%\u200E"
-        } else if (isLevel) {
-            "🟢 המשטח מאוזן לחלוטין (0.0° | שיפוע 0%)"
+        val statusTxt = if (isLevel) {
+            "🟢 מאוזן! | X: \u200E${Utils.formatResult(adjRoll.toDouble(), 1)}°\u200E | Y: \u200E${Utils.formatResult(adjPitch.toDouble(), 1)}°\u200E | שיפוע: \u200E${Utils.formatResult(slopePct, 1)}%\u200E"
         } else {
-            "X: ${Utils.formatResult(adjRoll.toDouble(), 1)}° | Y: ${Utils.formatResult(adjPitch.toDouble(), 1)}° | שיפוע: ${Utils.formatResult(slopePct, 1)}%"
+            "X: \u200E${Utils.formatResult(adjRoll.toDouble(), 1)}°\u200E | Y: \u200E${Utils.formatResult(adjPitch.toDouble(), 1)}°\u200E | שיפוע: \u200E${Utils.formatResult(slopePct, 1)}%\u200E"
         }
         CanvasUiHelper.drawFittedText(canvas, statusTxt, w / 2f, h - 10f * d, w - 24f * d, 13.5f * d, 9.5f * d, textPaint)
     }
