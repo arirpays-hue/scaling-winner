@@ -16,12 +16,12 @@ import kotlin.math.sin
 
 object AuroraBorealisTheme {
 
-    val EMERALD_NIGHT = Color.parseColor("#0A1C1A")
-    val ARCTIC_BLUE = Color.parseColor("#07111E")
-    val COSMIC_PURPLE = Color.parseColor("#1B0F2E")
-    val AURORA_PRIMARY = Color.parseColor("#00F5D4")
-    val AURORA_SECONDARY = Color.parseColor("#10B981")
-    val EXPRESSION_CYAN_GREY = Color.parseColor("#A0B2C6")
+    var EMERALD_NIGHT = Color.parseColor("#0A1C1A")
+    var ARCTIC_BLUE = Color.parseColor("#07111E")
+    var COSMIC_PURPLE = Color.parseColor("#1B0F2E")
+    var AURORA_PRIMARY = Color.parseColor("#00F5D4")
+    var AURORA_SECONDARY = Color.parseColor("#10B981")
+    var EXPRESSION_CYAN_GREY = Color.parseColor("#A0B2C6")
 
     var auroraOpacity: Int = 195
     var auroraBlurRadius: Float = 40f
@@ -34,6 +34,11 @@ object AuroraBorealisTheme {
         auroraBlurRadius = prefs.getFloat("aurora_blur", 40f)
         auroraGlowIntensity = prefs.getInt("aurora_glow", 230)
         auroraCornerPt = prefs.getFloat("aurora_corner", 24f)
+        EMERALD_NIGHT = prefs.getInt("aurora_col_bg1", Color.parseColor("#0A1C1A"))
+        ARCTIC_BLUE = prefs.getInt("aurora_col_bg2", Color.parseColor("#07111E"))
+        COSMIC_PURPLE = prefs.getInt("aurora_col_bg3", Color.parseColor("#1B0F2E"))
+        AURORA_PRIMARY = prefs.getInt("aurora_col_primary", Color.parseColor("#00F5D4"))
+        AURORA_SECONDARY = prefs.getInt("aurora_col_secondary", Color.parseColor("#10B981"))
     }
 
     fun saveAuroraPrefs(prefs: SharedPreferences?) {
@@ -42,6 +47,11 @@ object AuroraBorealisTheme {
             ?.putFloat("aurora_blur", auroraBlurRadius)
             ?.putInt("aurora_glow", auroraGlowIntensity)
             ?.putFloat("aurora_corner", auroraCornerPt)
+            ?.putInt("aurora_col_bg1", EMERALD_NIGHT)
+            ?.putInt("aurora_col_bg2", ARCTIC_BLUE)
+            ?.putInt("aurora_col_bg3", COSMIC_PURPLE)
+            ?.putInt("aurora_col_primary", AURORA_PRIMARY)
+            ?.putInt("aurora_col_secondary", AURORA_SECONDARY)
             ?.apply()
     }
 
@@ -53,12 +63,19 @@ object AuroraBorealisTheme {
                 if (isMin) {
                     tv.paint.shader = null
                     tv.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
-                    tv.setTextColor(MinimalistTheme.TEXT_CHARCOAL)
+                    tv.setTextColor(MinimalistTheme.LOGO_TEXT_COLOR)
+                    tv.invalidate()
+                    return@post
+                }
+                if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_LOGO_TEXT]) {
+                    tv.paint.shader = null
+                    tv.setTextColor(MinimalistTheme.LOGO_TEXT_COLOR)
+                    tv.setShadowLayer(8f, 0f, 2f, Color.argb(90, 0, 0, 0))
                     tv.invalidate()
                     return@post
                 }
                 val bottomCol = when {
-                    isAurora -> Color.parseColor("#70C1B3")
+                    isAurora -> AURORA_PRIMARY
                     isLiquidGlass -> Color.parseColor("#A0AAB8")
                     else -> Color.WHITE
                 }
@@ -68,7 +85,10 @@ object AuroraBorealisTheme {
                         Color.WHITE, bottomCol, Shader.TileMode.CLAMP
                     )
                     if (isAurora) {
-                        tv.setShadowLayer(14f, 0f, 0f, Color.argb(120, 0, 245, 212))
+                        tv.setShadowLayer(
+                            14f, 0f, 0f,
+                            Color.argb(120, Color.red(AURORA_PRIMARY), Color.green(AURORA_PRIMARY), Color.blue(AURORA_PRIMARY))
+                        )
                     } else {
                         tv.setShadowLayer(8f, 0f, 2f, Color.argb(90, 0, 0, 0))
                     }
@@ -83,9 +103,12 @@ object AuroraBorealisTheme {
     }
 
     fun createAuroraAtmosphericBackground(): Drawable {
+        val bg1 = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_MAIN_BG]) {
+            MinimalistTheme.getSlotEffectiveColor(MinimalistTheme.SLOT_MAIN_BG, EMERALD_NIGHT)
+        } else EMERALD_NIGHT
         return GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
-            intArrayOf(EMERALD_NIGHT, ARCTIC_BLUE, COSMIC_PURPLE)
+            intArrayOf(bg1, ARCTIC_BLUE, COSMIC_PURPLE)
         )
     }
 
@@ -93,8 +116,13 @@ object AuroraBorealisTheme {
         val isOperator = symbol in listOf("÷", "×", "−", "+", "=")
         val isCommand = symbol in listOf("AC", "⌫", "%", "MC", "MR", "M+", "M-")
 
+        val customInk = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_TEXT_ICONS]) {
+            MinimalistTheme.TEXT_CHARCOAL
+        } else null
+
         val textColor = when {
             isPressed -> Color.WHITE
+            customInk != null && !isOperator -> customInk
             isOperator -> EMERALD_NIGHT
             isCommand -> AURORA_PRIMARY
             else -> Color.WHITE
@@ -110,13 +138,14 @@ object AuroraBorealisTheme {
             tv.text = displaySym
         }
 
+        val glowCol = AURORA_PRIMARY
         if (isPressed) {
-            tv.setShadowLayer(20f, 0f, 0f, Color.argb(235, 0, 245, 212))
+            tv.setShadowLayer(20f, 0f, 0f, Color.argb(235, Color.red(glowCol), Color.green(glowCol), Color.blue(glowCol)))
         } else {
             if (isOperator) {
                 tv.setShadowLayer(4f, 0f, 1f, Color.argb(120, 255, 255, 255))
             } else {
-                tv.setShadowLayer(8f, 0f, -1.2f, Color.argb(150, 0, 245, 212))
+                tv.setShadowLayer(8f, 0f, -1.2f, Color.argb(150, Color.red(glowCol), Color.green(glowCol), Color.blue(glowCol)))
             }
         }
     }
@@ -131,22 +160,42 @@ object AuroraBorealisTheme {
             return MinimalistTheme.createMinimalistKeypadButtonDrawable(activity, symbol, isPressed)
         }
         val radius = activity.dp(auroraCornerPt).toFloat()
+        val isEqualsOrMul = symbol in listOf("=", "×")
         val isOperator = symbol in listOf("÷", "×", "−", "+", "=")
         val isCommand = symbol in listOf("AC", "⌫", "%") || isMem
         val boost = if (isPressed) 50 else 0
 
+        val opPrimary = when {
+            isEqualsOrMul && MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_ACTION_2] ->
+                MinimalistTheme.getSlotEffectiveColor(MinimalistTheme.SLOT_ACTION_2, AURORA_SECONDARY)
+            MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_ACTION_1] ->
+                MinimalistTheme.getSlotEffectiveColor(MinimalistTheme.SLOT_ACTION_1, AURORA_PRIMARY)
+            else -> AURORA_PRIMARY
+        }
+        val opSecondary = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_ACTION_2]) {
+            MinimalistTheme.getSlotEffectiveColor(MinimalistTheme.SLOT_ACTION_2, AURORA_SECONDARY)
+        } else AURORA_SECONDARY
+
+        val cmdCol = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_MEM_CMD_KEYS]) {
+            MinimalistTheme.getSlotEffectiveColor(MinimalistTheme.SLOT_MEM_CMD_KEYS, Color.rgb(180, 210, 225))
+        } else Color.rgb(200, 220, 230)
+
+        val numCol = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_NUM_KEYS]) {
+            MinimalistTheme.getSlotEffectiveColor(MinimalistTheme.SLOT_NUM_KEYS, Color.rgb(24, 42, 54))
+        } else Color.rgb(24, 42, 54)
+
         val (topColor, bottomColor) = when {
             isOperator -> {
-                Color.argb((205 + boost).coerceAtMost(255), 0, 245, 212) to
-                        Color.argb((160 + boost).coerceAtMost(255), 16, 185, 129)
+                Color.argb((205 + boost).coerceAtMost(255), Color.red(opPrimary), Color.green(opPrimary), Color.blue(opPrimary)) to
+                        Color.argb((160 + boost).coerceAtMost(255), Color.red(opSecondary), Color.green(opSecondary), Color.blue(opSecondary))
             }
             isCommand -> {
-                Color.argb((85 + boost).coerceAtMost(255), 200, 220, 230) to
-                        Color.argb((55 + boost).coerceAtMost(255), 150, 180, 195)
+                Color.argb((105 + boost).coerceAtMost(255), Color.red(cmdCol), Color.green(cmdCol), Color.blue(cmdCol)) to
+                        Color.argb((65 + boost).coerceAtMost(255), (Color.red(cmdCol) * 0.75f).toInt(), (Color.green(cmdCol) * 0.75f).toInt(), (Color.blue(cmdCol) * 0.75f).toInt())
             }
             else -> {
-                Color.argb((165 + boost).coerceAtMost(255), 24, 42, 54) to
-                        Color.argb((135 + boost).coerceAtMost(255), 15, 28, 36)
+                Color.argb((175 + boost).coerceAtMost(255), Color.red(numCol), Color.green(numCol), Color.blue(numCol)) to
+                        Color.argb((140 + boost).coerceAtMost(255), (Color.red(numCol) * 0.65f).toInt(), (Color.green(numCol) * 0.65f).toInt(), (Color.blue(numCol) * 0.65f).toInt())
             }
         }
 
@@ -162,12 +211,12 @@ object AuroraBorealisTheme {
         ).apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = radius
-            setStroke(activity.dp(1f), Color.argb(if (isPressed) 220 else 110, 0, 245, 212))
+            setStroke(activity.dp(1f), Color.argb(if (isPressed) 220 else 110, Color.red(AURORA_PRIMARY), Color.green(AURORA_PRIMARY), Color.blue(AURORA_PRIMARY)))
         }
 
         val specularTopEdge = GradientDrawable(
             GradientDrawable.Orientation.TOP_BOTTOM,
-            intArrayOf(Color.argb(185, 255, 255, 255), Color.argb(45, 0, 245, 212))
+            intArrayOf(Color.argb(185, 255, 255, 255), Color.argb(45, Color.red(AURORA_PRIMARY), Color.green(AURORA_PRIMARY), Color.blue(AURORA_PRIMARY)))
         ).apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadii = floatArrayOf(radius, radius, radius, radius, radius * 0.25f, radius * 0.25f, radius * 0.25f, radius * 0.25f)
@@ -180,7 +229,7 @@ object AuroraBorealisTheme {
             gradientType = GradientDrawable.RADIAL_GRADIENT
             gradientRadius = radius * 1.5f
             val alpha = if (isPressed) 165 else 25
-            colors = intArrayOf(Color.argb(alpha, 0, 245, 212), Color.TRANSPARENT)
+            colors = intArrayOf(Color.argb(alpha, Color.red(AURORA_PRIMARY), Color.green(AURORA_PRIMARY), Color.blue(AURORA_PRIMARY)), Color.TRANSPARENT)
         }
 
         val layers = LayerDrawable(arrayOf(ambientShadow, glassBody, radialPulse, specularTopEdge)).apply {
@@ -190,7 +239,8 @@ object AuroraBorealisTheme {
             setLayerInset(3, activity.dp(1.5f), activity.dp(1f), activity.dp(1.5f), activity.dp(18f))
         }
 
-        return RippleDrawable(ColorStateList.valueOf(Color.parseColor("#6600F5D4")), layers, null)
+        val rippleCol = Color.argb(102, Color.red(AURORA_PRIMARY), Color.green(AURORA_PRIMARY), Color.blue(AURORA_PRIMARY))
+        return RippleDrawable(ColorStateList.valueOf(rippleCol), layers, null)
     }
 
     fun createAuroraCardDrawable(activity: MainActivity, cornerDp: Float = 28f, isDrawer: Boolean = false): Drawable {
@@ -198,17 +248,25 @@ object AuroraBorealisTheme {
             return MinimalistTheme.createMinimalistCardDrawable(activity, cornerDp, 0)
         }
         val radius = if (isDrawer) 0f else activity.dp(cornerDp).toFloat()
+        val baseCard = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_CARDS_INPUTS]) {
+            MinimalistTheme.getSlotEffectiveColor(MinimalistTheme.SLOT_CARDS_INPUTS, ARCTIC_BLUE)
+        } else ARCTIC_BLUE
+
+        val r = Color.red(baseCard)
+        val g = Color.green(baseCard)
+        val b = Color.blue(baseCard)
+
         val glass = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
             intArrayOf(
-                Color.argb(if (isDrawer) 215 else 190, 15, 28, 36),
-                Color.argb(if (isDrawer) 205 else 175, 10, 20, 26),
-                Color.argb(if (isDrawer) 195 else 160, 18, 32, 40)
+                Color.argb(if (isDrawer) 225 else 195, (r + 12).coerceAtMost(255), (g + 16).coerceAtMost(255), (b + 20).coerceAtMost(255)),
+                Color.argb(if (isDrawer) 215 else 180, r, g, b),
+                Color.argb(if (isDrawer) 205 else 165, (r + 18).coerceAtMost(255), (g + 22).coerceAtMost(255), (b + 28).coerceAtMost(255))
             )
         ).apply {
             cornerRadius = radius
             if (!isDrawer) {
-                setStroke(activity.dp(1.2f), Color.argb(120, 0, 245, 212))
+                setStroke(activity.dp(1.2f), Color.argb(125, Color.red(AURORA_PRIMARY), Color.green(AURORA_PRIMARY), Color.blue(AURORA_PRIMARY)))
             }
         }
 
@@ -216,7 +274,7 @@ object AuroraBorealisTheme {
 
         val specularRim = GradientDrawable(
             GradientDrawable.Orientation.TOP_BOTTOM,
-            intArrayOf(Color.argb(140, 255, 255, 255), Color.argb(30, 0, 245, 212))
+            intArrayOf(Color.argb(140, 255, 255, 255), Color.argb(30, Color.red(AURORA_PRIMARY), Color.green(AURORA_PRIMARY), Color.blue(AURORA_PRIMARY)))
         ).apply { cornerRadius = radius }
 
         return LayerDrawable(arrayOf(glass, specularRim)).apply {
@@ -229,16 +287,21 @@ object AuroraBorealisTheme {
             return MinimalistTheme.createMinimalistActiveDrawerCapsule(activity)
         }
         val radius = activity.dp(if (isAurora) 14f else 12f).toFloat()
-        val glowCol = if (isAurora) AURORA_PRIMARY else activity.primaryColor
+        val glowCol = when {
+            MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_ACTIVE_PILL] ->
+                MinimalistTheme.getSlotEffectiveColor(MinimalistTheme.SLOT_ACTIVE_PILL, AURORA_PRIMARY)
+            isAurora -> AURORA_PRIMARY
+            else -> activity.primaryColor
+        }
         return GradientDrawable(
             GradientDrawable.Orientation.LEFT_RIGHT,
             intArrayOf(
-                Color.argb(75, Color.red(glowCol), Color.green(glowCol), Color.blue(glowCol)),
-                Color.argb(35, Color.red(glowCol), Color.green(glowCol), Color.blue(glowCol))
+                Color.argb(85, Color.red(glowCol), Color.green(glowCol), Color.blue(glowCol)),
+                Color.argb(40, Color.red(glowCol), Color.green(glowCol), Color.blue(glowCol))
             )
         ).apply {
             cornerRadius = radius
-            setStroke(activity.dp(1f), Color.argb(155, Color.red(glowCol), Color.green(glowCol), Color.blue(glowCol)))
+            setStroke(activity.dp(1f), Color.argb(165, Color.red(glowCol), Color.green(glowCol), Color.blue(glowCol)))
         }
     }
 
@@ -321,8 +384,8 @@ object AuroraBorealisTheme {
                     cx - badgeR, cy - badgeR, cx + badgeR, cy + badgeR,
                     intArrayOf(
                         Color.argb(55, Color.red(tintColor), Color.green(tintColor), Color.blue(tintColor)),
-                        Color.argb(30, 16, 185, 129),
-                        Color.argb(50, 88, 28, 135)
+                        Color.argb(30, Color.red(AURORA_SECONDARY), Color.green(AURORA_SECONDARY), Color.blue(AURORA_SECONDARY)),
+                        Color.argb(50, Color.red(COSMIC_PURPLE), Color.green(COSMIC_PURPLE), Color.blue(COSMIC_PURPLE))
                     ),
                     null,
                     Shader.TileMode.CLAMP
@@ -883,4 +946,3 @@ object AuroraBorealisTheme {
         }
     }
 }
- 
