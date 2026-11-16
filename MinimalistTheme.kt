@@ -1,21 +1,25 @@
 package com.example.calculator
 
+import android.app.Dialog
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.res.ColorStateList
 import android.graphics.*
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
 import android.os.Build
+import android.text.Editable
+import android.text.InputType
+import android.text.TextWatcher
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.widget.CheckBox
-import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.TextView
+import android.view.Window
+import android.view.WindowManager
+import android.widget.*
 import java.util.Locale
 import kotlin.math.*
 
@@ -65,7 +69,7 @@ object MinimalistTheme {
 
     // משתני התאמה אישית פעילים בערכת הנושא המינימליסטית
     var pillCornerPt: Float = 24f
-    var shadowSoftness: Int = 0 // עיצוב שטוח לחלוטין (0 = ללא צל)
+    var shadowSoftness: Int = 0
     var useCustomAccentTint: Boolean = false
     var useCustomBgTint: Boolean = false
     var warmPaperTintMode: Int = 0
@@ -73,7 +77,7 @@ object MinimalistTheme {
     var customBgColor: Int = BG_CREAM
     var customBrightness: Float = 1.0f
     var customOpacity: Float = 1.0f
-    var isEditingBackgroundTab: Boolean = false // false = צבע נושא מותאם, true = צבע רקע מותאם
+    var isEditingBackgroundTab: Boolean = false
 
     fun loadMinimalistPrefs(prefs: SharedPreferences?) {
         if (prefs == null) return
@@ -131,6 +135,152 @@ object MinimalistTheme {
     }
 
     // =========================================================================
+    // דיאלוג "בחר מצב תצוגה" מאוחד עם כל 4 האפשרויות (כולל עיצוב מינימליסטי!)
+    // =========================================================================
+    fun showUnifiedDisplayModeDialog(activity: MainActivity) {
+        val dlg = Dialog(activity)
+        dlg.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dlg.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        val isMin = activity.isMinimalistMode
+        val cardBgCol = if (isMin) BG_CREAM else Color.parseColor("#1E222B")
+        val titleCol = if (isMin) TEXT_CHARCOAL else Color.WHITE
+        val dividerCol = if (isMin) Color.argb(28, 44, 44, 44) else Color.argb(35, 255, 255, 255)
+
+        val root = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(activity.dp(20f), activity.dp(22f), activity.dp(20f), activity.dp(18f))
+            background = GradientDrawable().apply {
+                cornerRadius = activity.dp(26f).toFloat()
+                setColor(cardBgCol)
+                setStroke(activity.dp(1.2f), if (isMin) Color.parseColor("#E0DBD3") else Color.argb(60, 255, 255, 255))
+            }
+        }
+
+        val titleTv = TextView(activity).apply {
+            text = "בחר מצב תצוגה"
+            setTextColor(titleCol)
+            textSize = 20f
+            typeface = if (isMin) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
+            gravity = Gravity.RIGHT
+            setPadding(activity.dp(6f), 0, activity.dp(6f), activity.dp(16f))
+        }
+        root.addView(titleTv)
+
+        val modes = listOf(
+            Triple(0, "🎨 עיצוב רגיל (קלאסי)", Color.parseColor("#FF9F0A")),
+            Triple(1, "💎 עיצוב הזכוכית (Liquid Glass Pro)", Color.parseColor("#64B5F6")),
+            Triple(2, "🌌 הזוהר הצפוני (Aurora Borealis)", AuroraBorealisTheme.AURORA_PRIMARY),
+            Triple(3, "🌿 עיצוב מינימליסטי (Pastel Light)", ACCENT_SAGE_GREEN)
+        )
+
+        val currentModeIdx = when {
+            activity.isMinimalistMode -> 3
+            activity.isAuroraMode -> 2
+            activity.isIosGlassMode -> 1
+            else -> 0
+        }
+
+        for ((idx, label, highlightCol) in modes) {
+            val isSelected = (idx == currentModeIdx)
+            val row = LinearLayout(activity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(activity.dp(14f), activity.dp(14f), activity.dp(14f), activity.dp(14f))
+                background = GradientDrawable().apply {
+                    cornerRadius = activity.dp(16f).toFloat()
+                    if (isSelected) {
+                        val fillCol = if (isMin) ACCENT_SAGE_GREEN else Color.argb(65, Color.red(highlightCol), Color.green(highlightCol), Color.blue(highlightCol))
+                        setColor(fillCol)
+                    } else {
+                        setColor(Color.TRANSPARENT)
+                    }
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                setOnClickListener {
+                    activity.feedback(it)
+                    activity.isMinimalistMode = (idx == 3)
+                    activity.isAuroraMode = (idx == 2)
+                    activity.isIosGlassMode = (idx == 1)
+                    if (activity.isMinimalistMode) {
+                        activity.buttonCornerStyle = pillCornerPt
+                    }
+                    activity.savePreferences()
+                    dlg.dismiss()
+                    activity.applyTheme()
+                }
+            }
+
+            val radioView = object : View(activity) {
+                private val d = resources.displayMetrics.density
+                private val outerP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    style = Paint.Style.STROKE
+                    strokeWidth = 2.2f * d
+                    color = if (isSelected) {
+                        if (isMin) TEXT_CHARCOAL else highlightCol
+                    } else {
+                        if (isMin) TEXT_MUTED_GREY else Color.WHITE
+                    }
+                }
+                private val innerP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    style = Paint.Style.FILL
+                    color = if (isMin) TEXT_CHARCOAL else highlightCol
+                }
+
+                override fun onDraw(canvas: Canvas) {
+                    super.onDraw(canvas)
+                    val cx = width / 2f
+                    val cy = height / 2f
+                    val r = min(width, height) * 0.40f
+                    canvas.drawCircle(cx, cy, r, outerP)
+                    if (isSelected) {
+                        canvas.drawCircle(cx, cy, r * 0.52f, innerP)
+                    }
+                }
+            }.apply {
+                layoutParams = LinearLayout.LayoutParams(activity.dp(26f), activity.dp(26f)).apply {
+                    rightMargin = activity.dp(12f)
+                }
+            }
+
+            val labelTv = TextView(activity).apply {
+                text = label
+                setTextColor(
+                    if (isSelected && !isMin) highlightCol
+                    else if (isMin) TEXT_CHARCOAL
+                    else Color.WHITE
+                )
+                textSize = 16.5f
+                typeface = if (isSelected) Typeface.DEFAULT_BOLD else Typeface.create("sans-serif", Typeface.NORMAL)
+                gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+
+            row.addView(radioView)
+            row.addView(labelTv)
+            root.addView(row)
+
+            if (idx < modes.lastIndex) {
+                val div = View(activity).apply {
+                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, activity.dp(1f)).apply {
+                        setMargins(activity.dp(8f), activity.dp(2f), activity.dp(8f), activity.dp(2f))
+                    }
+                    setBackgroundColor(dividerCol)
+                }
+                root.addView(div)
+            }
+        }
+
+        dlg.setContentView(root)
+        dlg.show()
+        val widthPx = (activity.resources.displayMetrics.widthPixels * 0.90f).toInt()
+        dlg.window?.setLayout(widthPx, WindowManager.LayoutParams.WRAP_CONTENT)
+    }
+
+    // =========================================================================
     // כפתורי מקלדת שטוחים לחלוטין (Zero 3D, Zero Shadows, Zero Gradients)
     // =========================================================================
     fun createMinimalistKeypadButtonDrawable(
@@ -138,7 +288,7 @@ object MinimalistTheme {
         symbol: String,
         isPressed: Boolean = false
     ): Drawable {
-        val radius = activity.dp(pillCornerPt.coerceIn(14f, 40f)).toFloat()
+        val radius = activity.dp(pillCornerPt.coerceIn(10f, 40f)).toFloat()
         val customAccent = getPrimaryActionColor(activity)
         val baseFill = when (symbol) {
             "MC" -> PILL_MC_BLUE
@@ -165,11 +315,10 @@ object MinimalistTheme {
         return RippleDrawable(ColorStateList.valueOf(Color.parseColor("#18000000")), pillBody, null)
     }
 
-    // כרטיסים שטוחים (Flat Cards) ללא הברקות או הצללות תלת-ממד
     fun createMinimalistCardDrawable(
         activity: MainActivity,
         cornerDp: Float = 20f,
-        cardStyle: Int = 0 // 0 = לבן שטוח, 1 = ירוק מרווה בהיר לכותרת, 2 = קרם/מנטה לקנבס, 3 = תכלת שמיים, 4 = צהוב חמאה
+        cardStyle: Int = 0
     ): Drawable {
         val radius = activity.dp(cornerDp).toFloat()
         val fillCol = when (cardStyle) {
@@ -188,7 +337,6 @@ object MinimalistTheme {
         }
     }
 
-    // תיבות קלט שטוחות ומעוגלות (16dp-22dp)
     fun createMinimalistInputDrawable(activity: MainActivity, variant: Int = 0): Drawable {
         val radius = activity.dp(20f).toFloat()
         return GradientDrawable().apply {
@@ -211,11 +359,10 @@ object MinimalistTheme {
         }
     }
 
-    // כפתורי פעולה בצורת קפסולה מלאה (999dp Pill Shape) וללא צללים
     fun createMinimalistActionButtonDrawable(
         activity: MainActivity,
         isPrimary: Boolean,
-        pillTone: Int = 0 // 0 = אוטומטי, 1 = Terracotta #FFA48E, 2 = Butter Yellow #FFE094, 3 = Sky Blue #B1D4F9, 4 = Soft Grey #F1EDE9, 5 = White Card Row
+        pillTone: Int = 0
     ): Drawable {
         val radius = activity.dp(if (pillTone == 5) 20f else 999f).toFloat()
         val bgCol = when (pillTone) {
@@ -237,7 +384,6 @@ object MinimalistTheme {
         return RippleDrawable(ColorStateList.valueOf(Color.parseColor("#18000000")), pill, null)
     }
 
-    // קפסולת פריט פעיל בתפריט הצד בגוון ירוק מרווה (#A3D5B5) בדיוק כמו ב-Screen 1
     fun createMinimalistActiveDrawerCapsule(activity: MainActivity): Drawable {
         val radius = activity.dp(999f).toFloat()
         val activeCol = if (useCustomAccentTint) getPrimaryActionColor(activity) else ACCENT_SAGE_GREEN
@@ -247,9 +393,6 @@ object MinimalistTheme {
         }
     }
 
-    // =========================================================================
-    // החלת עיצוב שטוח, טיפוגרפיה דקה ונקייה וצבעי פסטל על כל מסכי האפליקציה
-    // =========================================================================
     fun applyMinimalistStylingToHierarchy(root: View?, activity: MainActivity) {
         if (root == null || !activity.isMinimalistMode) return
         val isSettingsTab = (activity.currentTabIndex == 19)
@@ -286,20 +429,23 @@ object MinimalistTheme {
                         return
                     }
 
+                    // דילוג על שבבים קטנים בתוך שורת הפלטות האופקית בהגדרות
+                    if (isSettingsTab && v.parent is LinearLayout && (v.parent?.parent is HorizontalScrollView)) {
+                        return
+                    }
+
                     if (v.isClickable && v.background != null) {
                         v.setTextColor(TEXT_CHARCOAL)
                         v.typeface = Typeface.create("sans-serif", Typeface.NORMAL)
 
                         if (isSettingsTab) {
-                            // במסך ההגדרות (Screens 3 & 4): כרטיסים לבנים שטוחים עם אייקוני קו / חיווי ירוק מרווה (#A3D5B5)
                             styleSettingsRowView(v, txt, activity)
                         } else {
-                            // במחשבונים ובכלי ה-Pro (כמו פלס בנאים ב-Screen 2): קפסולות בצבעי טרקוטה / צהוב חמאה / תכלת שמיים
                             val tone = when {
-                                txt.contains("החלף כיוון") || txt.contains("הקפא") || txt.contains("Hold") || txt.contains("הקפה") -> 2 // Butter Yellow #FFE094
-                                txt.contains("נעץ תוצאה") || txt.contains("רשימת סימון") || txt.contains("PDF") || txt.contains("CSV") || txt.contains("Drive") -> 3 // Sky Blue #B1D4F9
-                                txt.contains("כייל") || txt.contains("Tare") || txt.startsWith("חשב") || txt.startsWith("פתור") || txt.startsWith("נתח") || txt.startsWith("פענח") || txt.startsWith("צור") || txt.startsWith("התחל") || txt.startsWith("▶️") || txt.startsWith("🆘") || txt.startsWith("🔆") -> 1 // Terracotta #FFA48E
-                                else -> 4 // Neutral #F1EDE9
+                                txt.contains("החלף כיוון") || txt.contains("הקפא") || txt.contains("Hold") || txt.contains("הקפה") -> 2
+                                txt.contains("נעץ תוצאה") || txt.contains("רשימת סימון") || txt.contains("PDF") || txt.contains("CSV") || txt.contains("Drive") -> 3
+                                txt.contains("כייל") || txt.contains("Tare") || txt.startsWith("חשב") || txt.startsWith("פתור") || txt.startsWith("נתח") || txt.startsWith("פענח") || txt.startsWith("צור") || txt.startsWith("התחל") || txt.startsWith("▶️") || txt.startsWith("🆘") || txt.startsWith("🔆") -> 1
+                                else -> 4
                             }
                             v.background = createMinimalistActionButtonDrawable(activity, tone == 1, tone)
                             if (txt.contains("החלף כיוון")) {
@@ -314,7 +460,6 @@ object MinimalistTheme {
                             }
                         }
                     } else {
-                        // כותרות וטקסטים רגילים
                         v.setTextColor(TEXT_CHARCOAL)
                         v.typeface = Typeface.create("sans-serif", Typeface.NORMAL)
                     }
@@ -329,7 +474,6 @@ object MinimalistTheme {
         traverse(root)
     }
 
-    // מעצב שורת הגדרה במסך ההגדרות בדיוק לפי Screen 3 ו-Screen 4 בתמונה!
     private fun styleSettingsRowView(tv: TextView, rawText: String, activity: MainActivity) {
         val clean = IosGlassTheme.cleanCategoryTitle(rawText, true)
         tv.text = clean
@@ -341,12 +485,13 @@ object MinimalistTheme {
         tv.background = createMinimalistActionButtonDrawable(
             activity,
             isPrimary = false,
-            pillTone = if (isChecklistBtn) 3 else 5 // תכלת שמיים #B1D4F9 לרשימת הסימון, לבן שטוח #FFFFFF לשאר השורות
+            pillTone = if (isChecklistBtn) 3 else 5
         )
 
         val rightDrawable: Drawable? = when {
-            isChecklistBtn -> createSettingsBadgeDrawable(activity, 7) // וי כחול
-            clean.contains("רטט") -> createSettingsBadgeDrawable(activity, if (clean.contains("מופעל")) 1 else 2)
+            isChecklistBtn -> createSettingsBadgeDrawable(activity, 7)
+            clean.contains("רטט") || clean.contains("אנימציות") || clean.contains("מצב מקצועי") || clean.contains("מצב תצוגה") ->
+                createSettingsBadgeDrawable(activity, if (clean.contains("כבוי")) 2 else 1)
             clean.contains("צלילי הקשה") -> createSettingsBadgeDrawable(activity, 3)
             clean.contains("סוג צליל") -> createSettingsBadgeDrawable(activity, 4)
             clean.contains("צליל AC") -> createSettingsBadgeDrawable(activity, 8)
@@ -359,7 +504,6 @@ object MinimalistTheme {
         tv.setCompoundDrawables(null, null, rightDrawable, null)
     }
 
-    // יוצר את הסמלים המינימליסטיים בצד ימין של שורות ההגדרות (נקודת מרווה #A3D5B5, רמקול, שפופרת, ירח, תיבת סימון, יד, AC)
     private fun createSettingsBadgeDrawable(context: Context, badgeType: Int): Drawable {
         val sizePx = (22f * context.resources.displayMetrics.density).toInt().coerceAtLeast(24)
         return object : Drawable() {
@@ -384,16 +528,16 @@ object MinimalistTheme {
                 val r = Math.min(bounds.width(), bounds.height()) * 0.38f
 
                 when (badgeType) {
-                    1 -> { // עיגול ירוק מרווה (#A3D5B5) למצב מופעל
+                    1 -> {
                         fillP.color = ACCENT_SAGE_GREEN
                         canvas.drawCircle(cx, cy, r * 0.85f, fillP)
                     }
-                    2 -> { // עיגול אפור בהיר למצב כבוי
+                    2 -> {
                         fillP.color = NEUTRAL_SECONDARY_BG
                         canvas.drawCircle(cx, cy, r * 0.85f, fillP)
                         canvas.drawCircle(cx, cy, r * 0.85f, strokeP)
                     }
-                    3 -> { // רמקול קווי (Speaker)
+                    3 -> {
                         val p = Path().apply {
                             moveTo(cx - r * 0.65f, cy - r * 0.3f)
                             lineTo(cx - r * 0.25f, cy - r * 0.3f)
@@ -406,25 +550,25 @@ object MinimalistTheme {
                         canvas.drawPath(p, strokeP)
                         canvas.drawArc(RectF(cx + r * 0.1f, cy - r * 0.45f, cx + r * 0.7f, cy + r * 0.45f), -50f, 100f, false, strokeP)
                     }
-                    4 -> { // שפופרת טלפון קווית
+                    4 -> {
                         canvas.drawArc(RectF(cx - r * 0.7f, cy - r * 0.7f, cx + r * 0.7f, cy + r * 0.7f), 20f, 115f, false, strokeP)
                         canvas.drawCircle(cx - r * 0.45f, cy - r * 0.35f, r * 0.22f, strokeP)
                         canvas.drawCircle(cx + r * 0.45f, cy + r * 0.35f, r * 0.22f, strokeP)
                     }
-                    5 -> { // ירח (Crescent Moon)
+                    5 -> {
                         val moon = Path().apply {
                             addArc(RectF(cx - r * 0.7f, cy - r * 0.7f, cx + r * 0.7f, cy + r * 0.7f), 40f, 250f)
                         }
                         canvas.drawPath(moon, strokeP)
                     }
-                    6 -> { // תיבת סימון מרובעת מעוגלת
+                    6 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.68f, cy - r * 0.68f, cx + r * 0.68f, cy + r * 0.68f), r * 0.22f, r * 0.22f, strokeP)
                     }
-                    7 -> { // סימן וי (Checkmark)
+                    7 -> {
                         canvas.drawLine(cx - r * 0.55f, cy + r * 0.05f, cx - r * 0.1f, cy + r * 0.5f, strokeP)
                         canvas.drawLine(cx - r * 0.1f, cy + r * 0.5f, cx + r * 0.65f, cy - r * 0.45f, strokeP)
                     }
-                    8 -> { // כיתוב AC נקי
+                    8 -> {
                         val tp = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                             color = TEXT_CHARCOAL
                             textSize = 11.5f * d
@@ -433,7 +577,7 @@ object MinimalistTheme {
                         }
                         canvas.drawText("AC", cx, cy + 4f * d, tp)
                     }
-                    9 -> { // כף יד קווית
+                    9 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.5f, cy - r * 0.1f, cx + r * 0.5f, cy + r * 0.75f), r * 0.25f, r * 0.25f, strokeP)
                         for (ox in listOf(-0.35f, -0.12f, 0.12f, 0.35f)) {
                             canvas.drawLine(cx + r * ox, cy - r * 0.1f, cx + r * ox, cy - r * 0.7f, strokeP)
@@ -450,8 +594,7 @@ object MinimalistTheme {
     }
 
     // =========================================================================
-    // SCREEN 5: Color Theme Customizer (התאמת צבעים אינטראקטיבית מלאה!)
-    // מופיע אוטומטית במסך ההגדרות כאשר "עיצוב מינימליסטי" נבחר
+    // SCREEN 5: Color Theme Customizer (מופיע אוטומטית רק כשעיצוב מינימליסטי נבחר!)
     // =========================================================================
     fun createColorThemeCustomizerSection(activity: MainActivity): View {
         val root = LinearLayout(activity).apply {
@@ -463,7 +606,6 @@ object MinimalistTheme {
             ).apply { topMargin = activity.dp(8f); bottomMargin = activity.dp(14f) }
         }
 
-        // 1. שורת טאבים לבחירה: "צבע נושא מותאם" (#FFA48E) מול "צבע רקע מותאם" (#F1EDE9)
         val tabRow = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -498,9 +640,10 @@ object MinimalistTheme {
                 useCustomBgTint = true
                 activity.bgColor = finalCol
                 if (pushToScreen) {
-                    activity.mainContent?.setBackgroundColor(getBackgroundColor(activity))
-                    activity.window.statusBarColor = getBackgroundColor(activity)
-                    activity.window.navigationBarColor = getBackgroundColor(activity)
+                    val newBg = getBackgroundColor(activity)
+                    activity.mainContent?.setBackgroundColor(newBg)
+                    activity.window.statusBarColor = newBg
+                    activity.window.navigationBarColor = newBg
                 }
             } else {
                 useCustomAccentTint = true
@@ -560,12 +703,10 @@ object MinimalistTheme {
             }
         }
 
-        // בסדר RTL: ימין הוא צבע נושא, שמאל הוא צבע רקע (או להפך לפי התמונה)
         tabRow.addView(tabAccentBtn)
         tabRow.addView(tabBgBtn)
         root.addView(tabRow)
 
-        // 2. הכרטיס הצהוב החם הראשי (#FFE094) שמכיל את תצוגת ה-Hex, גלגל הצבעים 2D והסליידרים
         val yellowCard = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(activity.dp(20f), activity.dp(18f), activity.dp(20f), activity.dp(20f))
@@ -579,7 +720,6 @@ object MinimalistTheme {
             )
         }
 
-        // שורת תצוגה מקדימה: עיגול צבע עם מסגרת לבנה + קוד Hex (כמו #FFFF9F0A בתמונה)
         val hexRow = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.LEFT or Gravity.CENTER_VERTICAL
@@ -606,7 +746,6 @@ object MinimalistTheme {
         hexRow.addView(hexLabelTv)
         yellowCard.addView(hexRow)
 
-        // גלגל הצבעים השטוח 2D במרכז הכרטיס
         colorWheelView = Flat2DColorWheelView(activity) { pickedColor ->
             if (isEditingBackgroundTab) {
                 customBgColor = pickedColor
@@ -622,7 +761,6 @@ object MinimalistTheme {
         }
         yellowCard.addView(colorWheelView)
 
-        // סליידר 1: בהירות (Brightness) עם ידית תכלת #B1D4F9
         val brightLabel = TextView(activity).apply {
             text = "☀️ בהירות"
             setTextColor(TEXT_CHARCOAL)
@@ -642,7 +780,6 @@ object MinimalistTheme {
         yellowCard.addView(brightLabel)
         yellowCard.addView(brightnessSlider)
 
-        // סליידר 2: שקיפות (Opacity) עם ידית תכלת #B1D4F9
         val opacityLabel = TextView(activity).apply {
             text = "💧 שקיפות"
             setTextColor(TEXT_CHARCOAL)
@@ -662,7 +799,6 @@ object MinimalistTheme {
         yellowCard.addView(opacityLabel)
         yellowCard.addView(opacitySlider)
 
-        // כפתור איפוס לפלטת הפסטל המקורית של העיצוב המינימליסטי
         val resetPastelBtn = TextView(activity).apply {
             text = "↺ איפוס לפלטת הפסטל המקורית (#FCF9F5 / #FFA48E)"
             setTextColor(TEXT_CHARCOAL)
@@ -695,7 +831,7 @@ object MinimalistTheme {
     }
 
     // =========================================================================
-    // חבילת האייקונים הקוויים המינימליסטיים (2px Stroke Outline Icons - ללא רקע קופסה!)
+    // חבילת האייקונים הקוויים המינימליסטיים (2px Stroke Outline Icons)
     // =========================================================================
     fun createMinimalistVectorIcon(
         context: Context,
@@ -728,7 +864,7 @@ object MinimalistTheme {
                 val r = Math.min(b.width(), b.height()) * 0.40f
 
                 when (iconCode) {
-                    0, 301 -> { // מחשבון קווי (כמו ב-Screen 1 בתמונה)
+                    0, 301 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.68f, cy - r * 0.82f, cx + r * 0.68f, cy + r * 0.82f), r * 0.16f, r * 0.16f, paint)
                         canvas.drawRect(cx - r * 0.42f, cy - r * 0.55f, cx + r * 0.42f, cy - r * 0.22f, paint)
                         for (gx in listOf(-0.32f, 0f, 0.32f)) {
@@ -737,17 +873,17 @@ object MinimalistTheme {
                             }
                         }
                     }
-                    1, 44, 309 -> { // מבחנה / מדעי
+                    1, 44, 309 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.28f, cy - r * 0.78f, cx + r * 0.28f, cy + r * 0.75f), r * 0.28f, r * 0.28f, paint)
                         canvas.drawLine(cx - r * 0.42f, cy - r * 0.78f, cx + r * 0.42f, cy - r * 0.78f, paint)
                         canvas.drawLine(cx - r * 0.28f, cy + r * 0.1f, cx + r * 0.28f, cy + r * 0.1f, paint)
                     }
-                    8 -> { // אחוז %
+                    8 -> {
                         canvas.drawLine(cx - r * 0.58f, cy + r * 0.58f, cx + r * 0.58f, cy - r * 0.58f, paint)
                         canvas.drawCircle(cx - r * 0.38f, cy - r * 0.38f, r * 0.2f, paint)
                         canvas.drawCircle(cx + r * 0.38f, cy + r * 0.38f, r * 0.2f, paint)
                     }
-                    15 -> { // שורש √ (משוואות ריבועיות)
+                    15 -> {
                         val p = Path().apply {
                             moveTo(cx - r * 0.8f, cy + r * 0.1f)
                             lineTo(cx - r * 0.45f, cy + r * 0.1f)
@@ -757,23 +893,23 @@ object MinimalistTheme {
                         }
                         canvas.drawPath(p, paint)
                     }
-                    16 -> { // שברים 1/2
+                    16 -> {
                         canvas.drawLine(cx - r * 0.6f, cy + r * 0.6f, cx + r * 0.6f, cy - r * 0.6f, paint)
                         canvas.drawLine(cx - r * 0.35f, cy - r * 0.65f, cx - r * 0.35f, cy - r * 0.15f, paint)
                         canvas.drawLine(cx + r * 0.25f, cy + r * 0.25f, cx + r * 0.58f, cy + r * 0.25f, paint)
                         canvas.drawLine(cx + r * 0.25f, cy + r * 0.6f, cx + r * 0.58f, cy + r * 0.6f, paint)
                     }
-                    7, 28 -> { // מתכנתים < >
+                    7, 28 -> {
                         canvas.drawLine(cx - r * 0.25f, cy - r * 0.45f, cx - r * 0.75f, cy, paint)
                         canvas.drawLine(cx - r * 0.75f, cy, cx - r * 0.25f, cy + r * 0.45f, paint)
                         canvas.drawLine(cx + r * 0.25f, cy - r * 0.45f, cx + r * 0.75f, cy, paint)
                         canvas.drawLine(cx + r * 0.75f, cy, cx + r * 0.25f, cy + r * 0.45f, paint)
                     }
-                    13, 64, 302 -> { // מטבעות / שטר כסף קווי
+                    13, 64, 302 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.82f, cy - r * 0.48f, cx + r * 0.82f, cy + r * 0.48f), r * 0.12f, r * 0.12f, paint)
                         canvas.drawCircle(cx, cy, r * 0.22f, paint)
                     }
-                    19, 57 -> { // גלגל שיניים קווי דק (Settings)
+                    19, 57 -> {
                         canvas.drawCircle(cx, cy, r * 0.34f, paint)
                         for (i in 0 until 8) {
                             val a = Math.toRadians((i * 45).toDouble())
@@ -786,7 +922,7 @@ object MinimalistTheme {
                             )
                         }
                     }
-                    56, 102, 103, 300 -> { // כוכב 4-קודקודים קווי (✧) בראש המסך
+                    56, 102, 103, 300 -> {
                         val star4 = Path().apply {
                             moveTo(cx, cy - r * 0.95f)
                             quadTo(cx + r * 0.12f, cy - r * 0.12f, cx + r * 0.95f, cy)
@@ -804,18 +940,17 @@ object MinimalistTheme {
                         canvas.drawPath(star4, paint)
                         canvas.drawCircle(cx, cy, r * 0.12f, dotPaint)
                     }
-                    100 -> { // חלון צף PiP קווי בראש המסך
+                    100 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.85f, cy - r * 0.80f, cx + r * 0.85f, cy + r * 0.80f), r * 0.22f, r * 0.22f, paint)
                         canvas.drawLine(cx - r * 0.85f, cy - r * 0.35f, cx + r * 0.85f, cy - r * 0.35f, paint)
                         canvas.drawRoundRect(RectF(cx + r * 0.08f, cy + r * 0.05f, cx + r * 0.58f, cy + r * 0.52f), r * 0.08f, r * 0.08f, dotPaint)
                     }
-                    101 -> { // שעון היסטוריה קווי בראש המסך
+                    101 -> {
                         canvas.drawCircle(cx, cy, r * 0.86f, paint)
                         canvas.drawLine(cx, cy - r * 0.48f, cx, cy, paint)
                         canvas.drawLine(cx, cy, cx + r * 0.36f, cy + r * 0.24f, paint)
                     }
                     else -> {
-                        // ציור קווי נקי של סמל הקטגוריה ללא ריבוע רקע
                         canvas.drawCircle(cx, cy, r * 0.72f, paint)
                         canvas.drawLine(cx - r * 0.32f, cy, cx + r * 0.32f, cy, paint)
                         canvas.drawLine(cx, cy - r * 0.32f, cx, cy + r * 0.32f, paint)
