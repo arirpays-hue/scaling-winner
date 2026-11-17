@@ -356,8 +356,8 @@ object IosGlassTheme {
     }
 
     // =========================================================================
-    // חבילת 95 סמלים וקטוריים ייחודיים לערכת הזכוכית (Apple SF Symbols 6 Frosted Squircle)
-    // אפס כפילויות: לכל מחשבון (0..65), קטגוריה (300..311), כפתור (100..103) והגדרה (200..214) סמל ייחודי!
+    // חבילת 112 סמלים וקטוריים ייחודיים לערכת הזכוכית (Apple SF Symbols 6 Frosted Squircle)
+    // אפס כפילויות: לכל מחשבון (0..81), קטגוריה (300..312), כפתור (100..103) והגדרה (200..214) סמל ייחודי!
     // =========================================================================
     fun createSfSymbolDrawable(
         context: Context,
@@ -420,7 +420,7 @@ object IosGlassTheme {
                 canvas.drawRoundRect(sqRect, r * 0.48f, r * 0.48f, rimPaint)
 
                 when (categoryIndex) {
-                    0 -> { // 0. מחשבון רגיל: גוף מחשבון עם מסך עליון ו-4 כפתורים
+                    0 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.65f, cy - r * 0.80f, cx + r * 0.65f, cy + r * 0.80f), r * 0.18f, r * 0.18f, paint)
                         canvas.drawLine(cx - r * 0.40f, cy - r * 0.42f, cx + r * 0.40f, cy - r * 0.42f, paint)
                         canvas.drawCircle(cx - r * 0.26f, cy + r * 0.05f, r * 0.09f, dotPaint)
@@ -428,7 +428,7 @@ object IosGlassTheme {
                         canvas.drawCircle(cx - r * 0.26f, cy + r * 0.44f, r * 0.09f, dotPaint)
                         canvas.drawCircle(cx + r * 0.26f, cy + r * 0.44f, r * 0.09f, dotPaint)
                     }
-                    1 -> { // 1. מחשבון מדעי: גל סינוס f(x) חלק על ציר אופקי
+                    1 -> {
                         canvas.drawLine(cx - r * 0.78f, cy, cx + r * 0.78f, cy, rimPaint)
                         val path = Path().apply {
                             moveTo(cx - r * 0.80f, cy)
@@ -436,7 +436,7 @@ object IosGlassTheme {
                         }
                         canvas.drawPath(path, paint)
                     }
-                    2 -> { // 2. מחשבון מע״מ: חשבונית מס עם שוליים משוננים וסימן %
+                    2 -> {
                         val rec = Path().apply {
                             moveTo(cx - r * 0.60f, cy - r * 0.78f)
                             lineTo(cx + r * 0.60f, cy - r * 0.78f)
@@ -452,7 +452,7 @@ object IosGlassTheme {
                         canvas.drawCircle(cx - r * 0.20f, cy - r * 0.26f, r * 0.09f, dotPaint)
                         canvas.drawCircle(cx + r * 0.20f, cy + r * 0.12f, r * 0.09f, dotPaint)
                     }
-                    3 -> { // 3. מחשבון הלוואה: מבנה בנק קלאסי עם גג משולש ו-3 עמודים
+                    3 -> {
                         val path = Path().apply {
                             moveTo(cx - r * 0.80f, cy - r * 0.25f)
                             lineTo(cx, cy - r * 0.80f)
@@ -465,37 +465,37 @@ object IosGlassTheme {
                         canvas.drawLine(cx + r * 0.50f, cy - r * 0.20f, cx + r * 0.50f, cy + r * 0.65f, paint)
                         canvas.drawLine(cx - r * 0.80f, cy + r * 0.70f, cx + r * 0.80f, cy + r * 0.70f, paint)
                     }
-                    4 -> { // 4. המרת מרחקים: סרגל אופקי עם שנתות מדידה
+                    4 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.85f, cy - r * 0.38f, cx + r * 0.85f, cy + r * 0.38f), r * 0.15f, r * 0.15f, paint)
                         canvas.drawLine(cx - r * 0.42f, cy - r * 0.38f, cx - r * 0.42f, cy, paint)
                         canvas.drawLine(cx, cy - r * 0.38f, cx, cy + r * 0.12f, paint)
                         canvas.drawLine(cx + r * 0.42f, cy - r * 0.38f, cx + r * 0.42f, cy, paint)
                     }
-                    5 -> { // 5. המרת משקלים: מאזני כפות מאוזנים
+                    5 -> {
                         canvas.drawLine(cx, cy - r * 0.75f, cx, cy + r * 0.75f, paint)
                         canvas.drawLine(cx - r * 0.70f, cy - r * 0.35f, cx + r * 0.70f, cy - r * 0.35f, paint)
                         canvas.drawArc(RectF(cx - r * 0.85f, cy - r * 0.05f, cx - r * 0.35f, cy + r * 0.40f), 0f, 180f, false, paint)
                         canvas.drawArc(RectF(cx + r * 0.35f, cy - r * 0.05f, cx + r * 0.85f, cy + r * 0.40f), 0f, 180f, false, paint)
                     }
-                    6 -> { // 6. המרת טמפ׳: מדחום זכוכית עם כדורית ומעלה
+                    6 -> {
                         canvas.drawArc(RectF(cx - r * 0.45f, cy + r * 0.05f, cx + r * 0.45f, cy + r * 0.85f), -45f, 270f, false, paint)
                         canvas.drawLine(cx - r * 0.22f, cy - r * 0.75f, cx - r * 0.22f, cy + r * 0.20f, paint)
                         canvas.drawLine(cx + r * 0.22f, cy - r * 0.75f, cx + r * 0.22f, cy + r * 0.20f, paint)
                         canvas.drawCircle(cx + r * 0.56f, cy - r * 0.45f, r * 0.12f, paint)
                     }
-                    7 -> { // 7. מחשבון מתכנתים: סוגרי קוד < / >
+                    7 -> {
                         canvas.drawLine(cx - r * 0.35f, cy - r * 0.45f, cx - r * 0.80f, cy, paint)
                         canvas.drawLine(cx - r * 0.80f, cy, cx - r * 0.35f, cy + r * 0.45f, paint)
                         canvas.drawLine(cx + r * 0.35f, cy - r * 0.45f, cx + r * 0.80f, cy, paint)
                         canvas.drawLine(cx + r * 0.80f, cy, cx + r * 0.35f, cy + r * 0.45f, paint)
                         canvas.drawLine(cx + r * 0.15f, cy - r * 0.55f, cx - r * 0.15f, cy + r * 0.55f, paint)
                     }
-                    8 -> { // 8. חישוב אחוזים: סמל % קלאסי
+                    8 -> {
                         canvas.drawLine(cx - r * 0.60f, cy + r * 0.60f, cx + r * 0.60f, cy - r * 0.60f, paint)
                         canvas.drawCircle(cx - r * 0.40f, cy - r * 0.40f, r * 0.22f, paint)
                         canvas.drawCircle(cx + r * 0.40f, cy + r * 0.40f, r * 0.22f, paint)
                     }
-                    9 -> { // 9. חישוב הנחות: תגית מחיר אלכסונית עם חור
+                    9 -> {
                         val path = Path().apply {
                             moveTo(cx - r * 0.75f, cy - r * 0.75f); lineTo(cx + r * 0.10f, cy - r * 0.75f)
                             lineTo(cx + r * 0.80f, cy); lineTo(cx, cy + r * 0.80f); lineTo(cx - r * 0.75f, cy + r * 0.10f); close()
@@ -503,29 +503,29 @@ object IosGlassTheme {
                         canvas.drawPath(path, paint)
                         canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.12f, paint)
                     }
-                    10 -> { // 10. חלוקת טיפים: שני מטבעות חופפים
+                    10 -> {
                         canvas.drawCircle(cx - r * 0.25f, cy - r * 0.10f, r * 0.52f, paint)
                         canvas.drawCircle(cx + r * 0.30f, cy + r * 0.20f, r * 0.44f, paint)
                     }
-                    11 -> { // 11. מדד BMI: קו דופק אק"ג (ECG Pulse)
+                    11 -> {
                         val path = Path().apply {
                             moveTo(cx - r * 0.85f, cy); lineTo(cx - r * 0.35f, cy); lineTo(cx - r * 0.15f, cy - r * 0.65f)
                             lineTo(cx + r * 0.15f, cy + r * 0.65f); lineTo(cx + r * 0.35f, cy); lineTo(cx + r * 0.85f, cy)
                         }
                         canvas.drawPath(path, paint)
                     }
-                    12 -> { // 12. חישוב גיל: עוגת יום הולדת דו-שכבתית עם נר דולק
+                    12 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.74f, cy + r * 0.05f, cx + r * 0.74f, cy + r * 0.78f), r * 0.16f, r * 0.16f, paint)
                         canvas.drawLine(cx - r * 0.74f, cy + r * 0.40f, cx + r * 0.74f, cy + r * 0.40f, paint)
                         canvas.drawLine(cx, cy + r * 0.05f, cx, cy - r * 0.45f, paint)
                         canvas.drawCircle(cx, cy - r * 0.65f, r * 0.13f, dotPaint)
                     }
-                    13 -> { // 13. מטבעות לייב: גלובוס רשת קווי אורך ורוחב
+                    13 -> {
                         canvas.drawCircle(cx, cy, r * 0.76f, paint)
                         canvas.drawOval(RectF(cx - r * 0.38f, cy - r * 0.76f, cx + r * 0.38f, cy + r * 0.76f), paint)
                         canvas.drawLine(cx - r * 0.76f, cy, cx + r * 0.76f, cy, paint)
                     }
-                    14 -> { // 14. מחשבון BMR: להבת אנרגיה (Flame)
+                    14 -> {
                         val path = Path().apply {
                             moveTo(cx, cy - r * 0.85f)
                             cubicTo(cx + r * 0.80f, cy - r * 0.10f, cx + r * 0.65f, cy + r * 0.75f, cx, cy + r * 0.85f)
@@ -533,18 +533,18 @@ object IosGlassTheme {
                         }
                         canvas.drawPath(path, paint)
                     }
-                    15 -> { // 15. משוואות ריבועיות: פרבולה על ציר X
+                    15 -> {
                         canvas.drawLine(cx - r * 0.80f, cy + r * 0.48f, cx + r * 0.80f, cy + r * 0.48f, paint)
                         val path = Path().apply { moveTo(cx - r * 0.65f, cy - r * 0.65f); quadTo(cx, cy + r * 1.15f, cx + r * 0.65f, cy - r * 0.65f) }
                         canvas.drawPath(path, paint)
                     }
-                    16 -> { // 16. מחשבון שברים: 1/2
+                    16 -> {
                         canvas.drawLine(cx - r * 0.65f, cy + r * 0.65f, cx + r * 0.65f, cy - r * 0.65f, paint)
                         canvas.drawLine(cx - r * 0.40f, cy - r * 0.65f, cx - r * 0.40f, cy - r * 0.15f, paint)
                         canvas.drawLine(cx + r * 0.25f, cy + r * 0.25f, cx + r * 0.60f, cy + r * 0.25f, paint)
                         canvas.drawLine(cx + r * 0.25f, cy + r * 0.60f, cx + r * 0.60f, cy + r * 0.60f, paint)
                     }
-                    17 -> { // 17. ריבית דריבית: גרף צמיחה שבור עם חץ עליון
+                    17 -> {
                         val path = Path().apply {
                             moveTo(cx - r * 0.75f, cy + r * 0.65f); lineTo(cx - r * 0.20f, cy + r * 0.15f)
                             lineTo(cx + r * 0.15f, cy + r * 0.35f); lineTo(cx + r * 0.75f, cy - r * 0.55f)
@@ -553,23 +553,23 @@ object IosGlassTheme {
                         canvas.drawLine(cx + r * 0.35f, cy - r * 0.55f, cx + r * 0.75f, cy - r * 0.55f, paint)
                         canvas.drawLine(cx + r * 0.75f, cy - r * 0.55f, cx + r * 0.75f, cy - r * 0.15f, paint)
                     }
-                    18 -> { // 18. המרת מהירות: מד מהירות (Speedometer) עם מחוג
+                    18 -> {
                         canvas.drawArc(RectF(cx - r * 0.80f, cy - r * 0.60f, cx + r * 0.80f, cy + r * 0.80f), 165f, 210f, false, paint)
                         canvas.drawLine(cx, cy + r * 0.20f, cx + r * 0.45f, cy - r * 0.35f, paint)
                         canvas.drawCircle(cx, cy + r * 0.20f, r * 0.11f, dotPaint)
                     }
-                    19 -> { // 19. הגדרות: שני סליידרים אופקיים עם כפתורי כיוון
+                    19 -> {
                         canvas.drawLine(cx - r * 0.75f, cy - r * 0.42f, cx + r * 0.75f, cy - r * 0.42f, paint)
                         canvas.drawCircle(cx - r * 0.22f, cy - r * 0.42f, r * 0.20f, paint)
                         canvas.drawLine(cx - r * 0.75f, cy + r * 0.42f, cx + r * 0.75f, cy + r * 0.42f, paint)
                         canvas.drawCircle(cx + r * 0.25f, cy + r * 0.42f, r * 0.20f, paint)
                     }
-                    20 -> { // 20. מחשבון עלות דלק: משאבת דלק עם צינור תדלוק
+                    20 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.55f, cy - r * 0.75f, cx + r * 0.35f, cy + r * 0.75f), r * 0.15f, r * 0.15f, paint)
                         canvas.drawLine(cx + r * 0.35f, cy - r * 0.30f, cx + r * 0.70f, cy + r * 0.10f, paint)
                         canvas.drawLine(cx + r * 0.70f, cy + r * 0.10f, cx + r * 0.70f, cy + r * 0.55f, paint)
                     }
-                    21 -> { // 21. יעילות שריפת דלק: עלה אקולוגי (Eco Leaf) עם עורק מרכזי
+                    21 -> {
                         val leaf = Path().apply {
                             moveTo(cx - r * 0.65f, cy + r * 0.65f)
                             quadTo(cx - r * 0.72f, cy - r * 0.65f, cx + r * 0.72f, cy - r * 0.72f)
@@ -578,47 +578,47 @@ object IosGlassTheme {
                         canvas.drawPath(leaf, paint)
                         canvas.drawLine(cx - r * 0.65f, cy + r * 0.65f, cx + r * 0.35f, cy - r * 0.35f, paint)
                     }
-                    22 -> { // 22. ממוצע ציונים: כובע בוגרים אקדמי עם גדיל
+                    22 -> {
                         val cap = Path().apply {
                             moveTo(cx, cy - r * 0.72f); lineTo(cx + r * 0.88f, cy - r * 0.18f); lineTo(cx, cy + r * 0.35f); lineTo(cx - r * 0.88f, cy - r * 0.18f); close()
                         }
                         canvas.drawPath(cap, paint)
                         canvas.drawLine(cx + r * 0.68f, cy - r * 0.05f, cx + r * 0.68f, cy + r * 0.65f, paint)
                     }
-                    23 -> { // 23. מחשבון תשר מתקדם: פעמון הגשה למסעדה (Cloche) על מגש
+                    23 -> {
                         canvas.drawArc(RectF(cx - r * 0.74f, cy - r * 0.45f, cx + r * 0.74f, cy + r * 0.85f), 180f, 180f, true, paint)
                         canvas.drawCircle(cx, cy - r * 0.60f, r * 0.13f, paint)
                         canvas.drawLine(cx - r * 0.86f, cy + r * 0.42f, cx + r * 0.86f, cy + r * 0.42f, paint)
                     }
-                    24 -> { // 24. מחשבון מס מכירות: שקית קניות עם ידית קשתית
+                    24 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.64f, cy - r * 0.30f, cx + r * 0.64f, cy + r * 0.78f), r * 0.16f, r * 0.16f, paint)
                         canvas.drawArc(RectF(cx - r * 0.35f, cy - r * 0.76f, cx + r * 0.35f, cy + r * 0.02f), 180f, 180f, false, paint)
                     }
-                    25 -> { // 25. מחשבון מחיר יחידתי: שתי קופסאות בגדלים שונים להשוואה
+                    25 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.82f, cy - r * 0.35f, cx - r * 0.16f, cy + r * 0.55f), r * 0.12f, r * 0.12f, paint)
                         canvas.drawRoundRect(RectF(cx + r * 0.14f, cy - r * 0.68f, cx + r * 0.82f, cy + r * 0.55f), r * 0.12f, r * 0.12f, paint)
                     }
-                    26 -> { // 26. ממיר שעון עולמי: פני שעון מחוגים עם נקודות שעה
+                    26 -> {
                         canvas.drawCircle(cx, cy, r * 0.78f, paint)
                         canvas.drawLine(cx, cy - r * 0.45f, cx, cy, paint)
                         canvas.drawLine(cx, cy, cx + r * 0.36f, cy + r * 0.22f, paint)
                         canvas.drawCircle(cx, cy - r * 0.62f, r * 0.06f, dotPaint)
                         canvas.drawCircle(cx + r * 0.62f, cy, r * 0.06f, dotPaint)
                     }
-                    27 -> { // 27. מחשבון ביוץ: פרח 6 עלי כותרת
+                    27 -> {
                         canvas.drawCircle(cx, cy, r * 0.22f, paint)
                         for (i in 0 until 6) {
                             val a = Math.toRadians((i * 60).toDouble())
                             canvas.drawCircle((cx + cos(a) * r * 0.48f).toFloat(), (cy + sin(a) * r * 0.48f).toFloat(), r * 0.24f, paint)
                         }
                     }
-                    28 -> { // 28. ממיר הקסדצימלי: רשת סולמית # (Hex Grid)
+                    28 -> {
                         canvas.drawLine(cx - r * 0.30f, cy - r * 0.74f, cx - r * 0.30f, cy + r * 0.74f, paint)
                         canvas.drawLine(cx + r * 0.30f, cy - r * 0.74f, cx + r * 0.30f, cy + r * 0.74f, paint)
                         canvas.drawLine(cx - r * 0.74f, cy - r * 0.30f, cx + r * 0.74f, cy - r * 0.30f, paint)
                         canvas.drawLine(cx - r * 0.74f, cy + r * 0.30f, cx + r * 0.74f, cy + r * 0.30f, paint)
                     }
-                    29 -> { // 29. מחשבון חסכונות: יהלום מלוטש (Faceted Diamond)
+                    29 -> {
                         val gem = Path().apply {
                             moveTo(cx - r * 0.46f, cy - r * 0.70f); lineTo(cx + r * 0.46f, cy - r * 0.70f)
                             lineTo(cx + r * 0.82f, cy - r * 0.16f); lineTo(cx, cy + r * 0.80f); lineTo(cx - r * 0.82f, cy - r * 0.16f); close()
@@ -626,31 +626,31 @@ object IosGlassTheme {
                         canvas.drawPath(gem, paint)
                         canvas.drawLine(cx - r * 0.82f, cy - r * 0.16f, cx + r * 0.82f, cy - r * 0.16f, paint)
                     }
-                    30 -> { // 30. מחשבון תאריך: לוח שנה עם טבעות תלייה
+                    30 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.75f, cy - r * 0.65f, cx + r * 0.75f, cy + r * 0.75f), r * 0.20f, r * 0.20f, paint)
                         canvas.drawLine(cx - r * 0.75f, cy - r * 0.20f, cx + r * 0.75f, cy - r * 0.20f, paint)
                         canvas.drawLine(cx - r * 0.35f, cy - r * 0.85f, cx - r * 0.35f, cy - r * 0.45f, paint)
                         canvas.drawLine(cx + r * 0.35f, cy - r * 0.85f, cx + r * 0.35f, cy - r * 0.45f, paint)
                     }
-                    31 -> { // 31. כל 87 קטגוריות היחידות: קליבר מדידה הנדסי (Vernier Caliper)
+                    31 -> {
                         canvas.drawLine(cx - r * 0.82f, cy - r * 0.35f, cx + r * 0.82f, cy - r * 0.35f, paint)
                         canvas.drawLine(cx - r * 0.82f, cy - r * 0.35f, cx - r * 0.82f, cy + r * 0.65f, paint)
                         canvas.drawLine(cx - r * 0.15f, cy - r * 0.55f, cx - r * 0.15f, cy + r * 0.55f, paint)
                         canvas.drawRect(cx - r * 0.15f, cy - r * 0.55f, cx + r * 0.35f, cy - r * 0.15f, paint)
                     }
-                    32 -> { // 32. אינסטלציה, צנרת, ספיקה ולחץ: צינור עם גלגל שסתום וטיפה
+                    32 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.80f, cy - r * 0.18f, cx + r * 0.80f, cy + r * 0.18f), r * 0.10f, r * 0.10f, paint)
                         canvas.drawLine(cx, cy - r * 0.18f, cx, cy - r * 0.65f, paint)
                         canvas.drawLine(cx - r * 0.42f, cy - r * 0.65f, cx + r * 0.42f, cy - r * 0.65f, paint)
                         canvas.drawCircle(cx, cy + r * 0.58f, r * 0.16f, paint)
                     }
-                    33 -> { // 33. מינון תרופות, עירוי IV וסוכר: שקית עירוי עם צלב רפואי
+                    33 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.52f, cy - r * 0.72f, cx + r * 0.52f, cy + r * 0.42f), r * 0.18f, r * 0.18f, paint)
                         canvas.drawLine(cx - r * 0.24f, cy - r * 0.15f, cx + r * 0.24f, cy - r * 0.15f, paint)
                         canvas.drawLine(cx, cy - r * 0.38f, cx, cy + r * 0.08f, paint)
                         canvas.drawLine(cx, cy + r * 0.42f, cx, cy + r * 0.82f, paint)
                     }
-                    34 -> { // 34. בנייה, בטון, ריצוף ומיזוג BTU: קובייה תלת-ממדית איזומטרית
+                    34 -> {
                         val cube = Path().apply {
                             moveTo(cx, cy - r * 0.80f); lineTo(cx + r * 0.72f, cy - r * 0.36f)
                             lineTo(cx + r * 0.72f, cy + r * 0.40f); lineTo(cx, cy + r * 0.80f)
@@ -661,7 +661,7 @@ object IosGlassTheme {
                         canvas.drawLine(cx + r * 0.72f, cy - r * 0.36f, cx, cy + r * 0.05f, paint)
                         canvas.drawLine(cx, cy + r * 0.05f, cx, cy + r * 0.80f, paint)
                     }
-                    35 -> { // 35. קודי צבע של נגדים: נגד חשמלי עם 3 פסי צבע
+                    35 -> {
                         canvas.drawLine(cx - r * 0.90f, cy, cx - r * 0.55f, cy, paint)
                         canvas.drawLine(cx + r * 0.55f, cy, cx + r * 0.90f, cy, paint)
                         canvas.drawRoundRect(RectF(cx - r * 0.55f, cy - r * 0.34f, cx + r * 0.55f, cy + r * 0.34f), r * 0.14f, r * 0.14f, paint)
@@ -669,13 +669,13 @@ object IosGlassTheme {
                         canvas.drawLine(cx, cy - r * 0.34f, cx, cy + r * 0.34f, paint)
                         canvas.drawLine(cx + r * 0.25f, cy - r * 0.34f, cx + r * 0.25f, cy + r * 0.34f, paint)
                     }
-                    36 -> { // 36. מפענח קודי קבלים: קבל לוחות מקבילים
+                    36 -> {
                         canvas.drawLine(cx - r * 0.85f, cy, cx - r * 0.18f, cy, paint)
                         canvas.drawLine(cx + r * 0.18f, cy, cx + r * 0.85f, cy, paint)
                         canvas.drawLine(cx - r * 0.18f, cy - r * 0.62f, cx - r * 0.18f, cy + r * 0.62f, paint)
                         canvas.drawLine(cx + r * 0.18f, cy - r * 0.62f, cx + r * 0.18f, cy + r * 0.62f, paint)
                     }
-                    37 -> { // 37. עוביי חוטים AWG/SWG: חתך כבל רב-גידי
+                    37 -> {
                         canvas.drawCircle(cx, cy, r * 0.80f, paint)
                         canvas.drawCircle(cx, cy, r * 0.22f, dotPaint)
                         for (i in 0 until 6) {
@@ -683,18 +683,18 @@ object IosGlassTheme {
                             canvas.drawCircle((cx + cos(a) * r * 0.46f).toFloat(), (cy + sin(a) * r * 0.46f).toFloat(), r * 0.13f, dotPaint)
                         }
                     }
-                    38 -> { // 38. מעבדת חוק אוהם: סמל אומגה (Ω)
+                    38 -> {
                         canvas.drawArc(RectF(cx - r * 0.65f, cy - r * 0.72f, cx + r * 0.65f, cy + r * 0.48f), 135f, 270f, false, paint)
                         canvas.drawLine(cx - r * 0.78f, cy + r * 0.55f, cx - r * 0.28f, cy + r * 0.55f, paint)
                         canvas.drawLine(cx + r * 0.28f, cy + r * 0.55f, cx + r * 0.78f, cy + r * 0.55f, paint)
                     }
-                    39 -> { // 39. פלס בנאים דו-צירי: מבחנת פלס עם בועה במרכז
+                    39 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.86f, cy - r * 0.32f, cx + r * 0.86f, cy + r * 0.32f), r * 0.32f, r * 0.32f, paint)
                         canvas.drawLine(cx - r * 0.26f, cy - r * 0.32f, cx - r * 0.26f, cy + r * 0.32f, paint)
                         canvas.drawLine(cx + r * 0.26f, cy - r * 0.32f, cx + r * 0.26f, cy + r * 0.32f, paint)
                         canvas.drawCircle(cx, cy, r * 0.17f, dotPaint)
                     }
-                    40 -> { // 40. מצפן 3D מכויל: חוגת מצפן עם מחט מעוינת
+                    40 -> {
                         canvas.drawCircle(cx, cy, r * 0.80f, paint)
                         val needle = Path().apply {
                             moveTo(cx + r * 0.46f, cy - r * 0.46f); lineTo(cx + r * 0.13f, cy + r * 0.13f)
@@ -703,12 +703,12 @@ object IosGlassTheme {
                         canvas.drawPath(needle, paint)
                         canvas.drawCircle(cx, cy, r * 0.10f, dotPaint)
                     }
-                    41 -> { // 41. מד-זווית דו-זרועי וסרגל: קשת מד-זווית עם זרוע
+                    41 -> {
                         canvas.drawArc(RectF(cx - r * 0.80f, cy - r * 0.40f, cx + r * 0.80f, cy + r * 1.12f), 180f, 180f, true, paint)
                         canvas.drawLine(cx, cy + r * 0.35f, cx + r * 0.52f, cy - r * 0.24f, paint)
                         canvas.drawCircle(cx, cy + r * 0.35f, r * 0.11f, dotPaint)
                     }
-                    42 -> { // 42. שעון עצר כרונוגרף: סטופר עם לחצן עליון
+                    42 -> {
                         canvas.drawCircle(cx, cy + r * 0.10f, r * 0.70f, paint)
                         canvas.drawLine(cx - r * 0.24f, cy - r * 0.80f, cx + r * 0.24f, cy - r * 0.80f, paint)
                         canvas.drawLine(cx, cy - r * 0.80f, cx, cy - r * 0.60f, paint)
@@ -716,7 +716,7 @@ object IosGlassTheme {
                         canvas.drawLine(cx, cy + r * 0.10f, cx, cy - r * 0.30f, paint)
                         canvas.drawLine(cx, cy + r * 0.10f, cx + r * 0.34f, cy + r * 0.10f, paint)
                     }
-                    43 -> { // 43. פנס LED פיזי ואיתות SOS: פנס יד מאיר
+                    43 -> {
                         val body = Path().apply {
                             moveTo(cx - r * 0.26f, cy + r * 0.76f); lineTo(cx + r * 0.26f, cy + r * 0.76f)
                             lineTo(cx + r * 0.26f, cy + r * 0.10f); lineTo(cx + r * 0.52f, cy - r * 0.30f)
@@ -727,7 +727,7 @@ object IosGlassTheme {
                         canvas.drawLine(cx - r * 0.36f, cy - r * 0.46f, cx - r * 0.60f, cy - r * 0.75f, paint)
                         canvas.drawLine(cx + r * 0.36f, cy - r * 0.46f, cx + r * 0.60f, cy - r * 0.75f, paint)
                     }
-                    44 -> { // 44. הטבלה המחזורית ואטום: מודל אטום בוהר עם מסלולים מצטלבים
+                    44 -> {
                         canvas.save(); canvas.rotate(30f, cx, cy)
                         canvas.drawOval(RectF(cx - r * 0.84f, cy - r * 0.32f, cx + r * 0.84f, cy + r * 0.32f), paint)
                         canvas.restore(); canvas.save(); canvas.rotate(-30f, cx, cy)
@@ -735,25 +735,25 @@ object IosGlassTheme {
                         canvas.restore()
                         canvas.drawCircle(cx, cy, r * 0.15f, dotPaint)
                     }
-                    45 -> { // 45. מתרגם ומשדר קוד מורס: תיבת שידור עם נקודה-קו-נקודה
+                    45 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.82f, cy - r * 0.60f, cx + r * 0.82f, cy + r * 0.50f), r * 0.30f, r * 0.30f, paint)
                         canvas.drawCircle(cx - r * 0.48f, cy - r * 0.05f, r * 0.11f, dotPaint)
                         canvas.drawLine(cx - r * 0.18f, cy - r * 0.05f, cx + r * 0.22f, cy - r * 0.05f, paint)
                         canvas.drawCircle(cx + r * 0.52f, cy - r * 0.05f, r * 0.11f, dotPaint)
                     }
-                    46 -> { // 46. מחולל סיסמאות ומד אנטרופיה: מנעול אבטחה
+                    46 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.56f, cy - r * 0.08f, cx + r * 0.56f, cy + r * 0.76f), r * 0.16f, r * 0.16f, paint)
                         canvas.drawArc(RectF(cx - r * 0.36f, cy - r * 0.76f, cx + r * 0.36f, cy + r * 0.08f), 180f, 180f, false, paint)
                         canvas.drawCircle(cx, cy + r * 0.32f, r * 0.13f, dotPaint)
                     }
-                    47 -> { // 47. גימטריה, אתב״ש וספרות רומיות: לוח ספרות רומיות I V
+                    47 -> {
                         canvas.drawLine(cx - r * 0.70f, cy - r * 0.62f, cx + r * 0.70f, cy - r * 0.62f, paint)
                         canvas.drawLine(cx - r * 0.70f, cy + r * 0.62f, cx + r * 0.70f, cy + r * 0.62f, paint)
                         canvas.drawLine(cx - r * 0.42f, cy - r * 0.62f, cx - r * 0.42f, cy + r * 0.62f, paint)
                         canvas.drawLine(cx, cy - r * 0.62f, cx + r * 0.30f, cy + r * 0.62f, paint)
                         canvas.drawLine(cx + r * 0.60f, cy - r * 0.62f, cx + r * 0.30f, cy + r * 0.62f, paint)
                     }
-                    48 -> { // 48. מתכות יקרות: שני מטילי זהב טרפזיים
+                    48 -> {
                         val ingotBot = Path().apply {
                             moveTo(cx - r * 0.52f, cy + r * 0.22f); lineTo(cx + r * 0.52f, cy + r * 0.22f)
                             lineTo(cx + r * 0.78f, cy + r * 0.72f); lineTo(cx - r * 0.78f, cy + r * 0.72f); close()
@@ -765,25 +765,25 @@ object IosGlassTheme {
                         canvas.drawPath(ingotBot, paint)
                         canvas.drawPath(ingotTop, paint)
                     }
-                    49 -> { // 49. משכנתא ולוח סילוקין: בית עם גג משופע
+                    49 -> {
                         val roof = Path().apply {
                             moveTo(cx - r * 0.82f, cy - r * 0.05f); lineTo(cx, cy - r * 0.80f); lineTo(cx + r * 0.82f, cy - r * 0.05f)
                         }
                         canvas.drawPath(roof, paint)
                         canvas.drawRect(cx - r * 0.56f, cy - r * 0.05f, cx + r * 0.56f, cy + r * 0.76f, paint)
                     }
-                    50 -> { // 50. תשואת ROI ו-CAGR: גרף 3 עמודות עולות
+                    50 -> {
                         canvas.drawLine(cx - r * 0.80f, cy + r * 0.72f, cx + r * 0.80f, cy + r * 0.72f, paint)
                         canvas.drawRect(cx - r * 0.65f, cy + r * 0.15f, cx - r * 0.35f, cy + r * 0.72f, paint)
                         canvas.drawRect(cx - r * 0.15f, cy - r * 0.20f, cx + r * 0.15f, cy + r * 0.72f, paint)
                         canvas.drawRect(cx + r * 0.35f, cy - r * 0.65f, cx + r * 0.65f, cy + r * 0.72f, paint)
                     }
-                    51 -> { // 51. מרווח רווח ונקודת איזון: מזוודת עסקים
+                    51 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.75f, cy - r * 0.38f, cx + r * 0.75f, cy + r * 0.72f), r * 0.16f, r * 0.16f, paint)
                         canvas.drawRect(cx - r * 0.30f, cy - r * 0.72f, cx + r * 0.30f, cy - r * 0.38f, paint)
                         canvas.drawLine(cx - r * 0.75f, cy + r * 0.12f, cx + r * 0.75f, cy + r * 0.12f, paint)
                     }
-                    52 -> { // 52. סטטיסטיקה ועקומת פעמון: פעמון גאוס עם ציר מרכזי
+                    52 -> {
                         val bell = Path().apply {
                             moveTo(cx - r * 0.82f, cy + r * 0.62f)
                             cubicTo(cx - r * 0.34f, cy + r * 0.62f, cx - r * 0.30f, cy - r * 0.72f, cx, cy - r * 0.72f)
@@ -792,7 +792,7 @@ object IosGlassTheme {
                         canvas.drawPath(bell, paint)
                         canvas.drawLine(cx, cy - r * 0.72f, cx, cy + r * 0.62f, paint)
                     }
-                    53 -> { // 53. גאומטריה ופיתגורס: משולש ישר-זווית עם סימון 90°
+                    53 -> {
                         val tri = Path().apply {
                             moveTo(cx - r * 0.70f, cy + r * 0.66f); lineTo(cx + r * 0.72f, cy + r * 0.66f)
                             lineTo(cx - r * 0.70f, cy - r * 0.70f); close()
@@ -800,7 +800,7 @@ object IosGlassTheme {
                         canvas.drawPath(tri, paint)
                         canvas.drawRect(cx - r * 0.70f, cy + r * 0.36f, cx - r * 0.40f, cy + r * 0.66f, paint)
                     }
-                    54 -> { // 54. תורת המספרים וקומבינטוריקה: סמל סכום סיגמא (Σ)
+                    54 -> {
                         val sigma = Path().apply {
                             moveTo(cx + r * 0.60f, cy - r * 0.70f); lineTo(cx - r * 0.60f, cy - r * 0.70f)
                             lineTo(cx + r * 0.10f, cy); lineTo(cx - r * 0.60f, cy + r * 0.70f)
@@ -808,14 +808,14 @@ object IosGlassTheme {
                         }
                         canvas.drawPath(sigma, paint)
                     }
-                    55 -> { // 55. ייצוא PDF/CSV וגיבוי Drive: ענן עם חץ העלאה
+                    55 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.75f, cy - r * 0.25f, cx + r * 0.75f, cy + r * 0.45f), r * 0.35f, r * 0.35f, paint)
                         canvas.drawArc(RectF(cx - r * 0.40f, cy - r * 0.68f, cx + r * 0.35f, cy + r * 0.05f), 180f, 180f, false, paint)
                         canvas.drawLine(cx, cy + r * 0.75f, cx, cy - r * 0.10f, paint)
                         canvas.drawLine(cx - r * 0.22f, cy + r * 0.12f, cx, cy - r * 0.10f, paint)
                         canvas.drawLine(cx + r * 0.22f, cy + r * 0.12f, cx, cy - r * 0.10f, paint)
                     }
-                    56 -> { // 56. מרכז המועדפים וחישובים נעוצים: כוכב בתוך מדליון עגול
+                    56 -> {
                         canvas.drawCircle(cx, cy, r * 0.82f, rimPaint)
                         val starPath = Path()
                         for (i in 0 until 10) {
@@ -828,7 +828,7 @@ object IosGlassTheme {
                         starPath.close()
                         canvas.drawPath(starPath, paint)
                     }
-                    57 -> { // 57. ממירי מכניקה, כוח ומומנט: גלגל שיניים מכני 8 שיניים
+                    57 -> {
                         canvas.drawCircle(cx, cy, r * 0.36f, paint)
                         for (i in 0 until 8) {
                             val a = Math.toRadians((i * 45).toDouble())
@@ -841,7 +841,7 @@ object IosGlassTheme {
                             )
                         }
                     }
-                    58 -> { // 58. ממירי זורמים, צמיגות וספיקה: טיפה הידרודינמית עם גל פנימי
+                    58 -> {
                         val drop = Path().apply {
                             moveTo(cx, cy - r * 0.82f)
                             quadTo(cx + r * 0.74f, cy + r * 0.15f, cx, cy + r * 0.80f)
@@ -850,7 +850,7 @@ object IosGlassTheme {
                         canvas.drawPath(drop, paint)
                         canvas.drawArc(RectF(cx - r * 0.35f, cy + r * 0.05f, cx + r * 0.35f, cy + r * 0.55f), 20f, 140f, false, paint)
                     }
-                    59 -> { // 59. ממירי תרמודינמיקה וחום: 3 גלי חום אנכיים
+                    59 -> {
                         for (offset in listOf(-0.38f, 0f, 0.38f)) {
                             val ox = cx + r * offset
                             val wPath = Path().apply {
@@ -861,7 +861,7 @@ object IosGlassTheme {
                             canvas.drawPath(wPath, paint)
                         }
                     }
-                    60 -> { // 60. ממירי חשמל, מגנטיות ושדה: ברק אנרגיה (Lightning Bolt)
+                    60 -> {
                         val bolt = Path().apply {
                             moveTo(cx + r * 0.15f, cy - r * 0.84f)
                             lineTo(cx - r * 0.52f, cy + r * 0.05f)
@@ -873,7 +873,7 @@ object IosGlassTheme {
                         }
                         canvas.drawPath(bolt, paint)
                     }
-                    61 -> { // 61. ממירי אופטיקה, אקוסטיקה וקרינה: מנסרה אופטית השוברת קרן אור
+                    61 -> {
                         val prism = Path().apply {
                             moveTo(cx - r * 0.08f, cy - r * 0.68f)
                             lineTo(cx + r * 0.46f, cy + r * 0.66f)
@@ -885,7 +885,7 @@ object IosGlassTheme {
                         canvas.drawLine(cx + r * 0.20f, cy - r * 0.05f, cx + r * 0.86f, cy - r * 0.45f, paint)
                         canvas.drawLine(cx + r * 0.26f, cy + r * 0.18f, cx + r * 0.86f, cy + r * 0.35f, paint)
                     }
-                    62 -> { // 62. ממירי רפואה, כימיה ומעבדה: בקבוק מעבדה קוני (Erlenmeyer Flask)
+                    62 -> {
                         val flask = Path().apply {
                             moveTo(cx - r * 0.22f, cy - r * 0.76f); lineTo(cx + r * 0.22f, cy - r * 0.76f)
                             lineTo(cx + r * 0.22f, cy - r * 0.26f); lineTo(cx + r * 0.72f, cy + r * 0.74f)
@@ -894,17 +894,17 @@ object IosGlassTheme {
                         canvas.drawPath(flask, paint)
                         canvas.drawLine(cx - r * 0.46f, cy + r * 0.28f, cx + r * 0.46f, cy + r * 0.28f, paint)
                     }
-                    63 -> { // 63. ממירי תקשורת, טיפוגרפיה, חלל ובישול: כוכב לכת מוקף טבעת
+                    63 -> {
                         canvas.drawCircle(cx, cy, r * 0.42f, paint)
                         canvas.save(); canvas.rotate(-25f, cx, cy)
                         canvas.drawOval(RectF(cx - r * 0.88f, cy - r * 0.20f, cx + r * 0.88f, cy + r * 0.20f), paint)
                         canvas.restore()
                     }
-                    64 -> { // 64. מחשבון שכר, שעות נוספות, פנסיה ונטו: שטר כסף עם מדליון
+                    64 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.82f, cy - r * 0.48f, cx + r * 0.82f, cy + r * 0.48f), r * 0.14f, r * 0.14f, paint)
                         canvas.drawCircle(cx, cy, r * 0.22f, paint)
                     }
-                    65 -> { // 65. מטריצות, דטרמיננטה ומערכת משוואות: סוגרי מטריצה [ :: ]
+                    65 -> {
                         canvas.drawLine(cx - r * 0.72f, cy - r * 0.70f, cx - r * 0.44f, cy - r * 0.70f, paint)
                         canvas.drawLine(cx - r * 0.72f, cy - r * 0.70f, cx - r * 0.72f, cy + r * 0.70f, paint)
                         canvas.drawLine(cx - r * 0.72f, cy + r * 0.70f, cx - r * 0.44f, cy + r * 0.70f, paint)
@@ -916,17 +916,154 @@ object IosGlassTheme {
                         canvas.drawCircle(cx - r * 0.26f, cy + r * 0.26f, r * 0.11f, dotPaint)
                         canvas.drawCircle(cx + r * 0.26f, cy + r * 0.26f, r * 0.11f, dotPaint)
                     }
+                    // --- 16 הכלים החדשים (66..81) + קטגוריה 312 בסגנון הזכוכית ---
+                    66 -> { // 66. גלאי מתכות ושדה מגנטי: מגנט פרסה עם גלי שדה
+                        canvas.drawArc(RectF(cx - r * 0.62f, cy - r * 0.15f, cx + r * 0.62f, cy + r * 0.80f), 0f, 180f, false, paint)
+                        canvas.drawLine(cx - r * 0.62f, cy + r * 0.32f, cx - r * 0.62f, cy - r * 0.52f, paint)
+                        canvas.drawLine(cx + r * 0.62f, cy + r * 0.32f, cx + r * 0.62f, cy - r * 0.52f, paint)
+                        canvas.drawArc(RectF(cx - r * 0.40f, cy - r * 0.82f, cx + r * 0.40f, cy - r * 0.35f), 200f, 140f, false, paint)
+                    }
+                    67 -> { // 67. מד רטט וסיסמוגרף: גל רעידה סיסמי
+                        val seismo = Path().apply {
+                            moveTo(cx - r * 0.84f, cy)
+                            lineTo(cx - r * 0.46f, cy)
+                            lineTo(cx - r * 0.28f, cy - r * 0.55f)
+                            lineTo(cx - r * 0.08f, cy + r * 0.72f)
+                            lineTo(cx + r * 0.12f, cy - r * 0.80f)
+                            lineTo(cx + r * 0.32f, cy + r * 0.46f)
+                            lineTo(cx + r * 0.50f, cy)
+                            lineTo(cx + r * 0.84f, cy)
+                        }
+                        canvas.drawPath(seismo, paint)
+                    }
+                    68 -> { // 68. צופר חירום: כיפת צ'קלקה עם קרני אור
+                        canvas.drawArc(RectF(cx - r * 0.58f, cy - r * 0.25f, cx + r * 0.58f, cy + r * 0.85f), 180f, 180f, true, paint)
+                        canvas.drawLine(cx - r * 0.76f, cy + r * 0.32f, cx + r * 0.76f, cy + r * 0.32f, paint)
+                        canvas.drawLine(cx, cy - r * 0.48f, cx, cy - r * 0.82f, paint)
+                        canvas.drawLine(cx - r * 0.45f, cy - r * 0.36f, cx - r * 0.72f, cy - r * 0.65f, paint)
+                        canvas.drawLine(cx + r * 0.45f, cy - r * 0.36f, cx + r * 0.72f, cy - r * 0.65f, paint)
+                    }
+                    69 -> { // 69. מטרונום מוזיקלי: תיבה טרפזית עם מטוטלת
+                        val mBox = Path().apply {
+                            moveTo(cx - r * 0.28f, cy - r * 0.76f); lineTo(cx + r * 0.28f, cy - r * 0.76f)
+                            lineTo(cx + r * 0.68f, cy + r * 0.76f); lineTo(cx - r * 0.68f, cy + r * 0.76f); close()
+                        }
+                        canvas.drawPath(mBox, paint)
+                        canvas.drawLine(cx, cy + r * 0.65f, cx + r * 0.48f, cy - r * 0.55f, paint)
+                        canvas.drawCircle(cx + r * 0.32f, cy - r * 0.18f, r * 0.13f, dotPaint)
+                    }
+                    70 -> { // 70. מונה לחיצות: מסגרת מונה מפוצלת
+                        canvas.drawRoundRect(RectF(cx - r * 0.80f, cy - r * 0.52f, cx + r * 0.80f, cy + r * 0.52f), r * 0.16f, r * 0.16f, paint)
+                        canvas.drawLine(cx, cy - r * 0.52f, cx, cy + r * 0.52f, paint)
+                        canvas.drawLine(cx - r * 0.40f, cy - r * 0.24f, cx - r * 0.40f, cy + r * 0.24f, paint)
+                        canvas.drawCircle(cx + r * 0.40f, cy, r * 0.14f, paint)
+                    }
+                    71 -> { // 71. קודי צבע של סלילים: סליל השראות עם 3 ליפופים
+                        canvas.drawLine(cx - r * 0.88f, cy + r * 0.20f, cx - r * 0.60f, cy + r * 0.20f, paint)
+                        canvas.drawLine(cx + r * 0.60f, cy + r * 0.20f, cx + r * 0.88f, cy + r * 0.20f, paint)
+                        for (i in -1..1) {
+                            val lx = cx + i * r * 0.40f
+                            canvas.drawArc(RectF(lx - r * 0.22f, cy - r * 0.35f, lx + r * 0.22f, cy + r * 0.20f), 180f, 180f, false, paint)
+                        }
+                    }
+                    72 -> { // 72. שערים לוגיים: שער AND תקני
+                        val gatePath = Path().apply {
+                            moveTo(cx - r * 0.45f, cy - r * 0.55f); lineTo(cx, cy - r * 0.55f)
+                            arcTo(RectF(cx - r * 0.45f, cy - r * 0.55f, cx + r * 0.55f, cy + r * 0.55f), -90f, 180f, false)
+                            lineTo(cx - r * 0.45f, cy + r * 0.55f); close()
+                        }
+                        canvas.drawPath(gatePath, paint)
+                        canvas.drawLine(cx - r * 0.85f, cy - r * 0.26f, cx - r * 0.45f, cy - r * 0.26f, paint)
+                        canvas.drawLine(cx - r * 0.85f, cy + r * 0.26f, cx - r * 0.45f, cy + r * 0.26f, paint)
+                        canvas.drawLine(cx + r * 0.55f, cy, cx + r * 0.88f, cy, paint)
+                    }
+                    73 -> { // 73. ממיר HEX ל-RGB: כרטיס צבע עם <>
+                        canvas.drawRoundRect(RectF(cx - r * 0.78f, cy - r * 0.62f, cx + r * 0.78f, cy + r * 0.62f), r * 0.18f, r * 0.18f, paint)
+                        canvas.drawLine(cx - r * 0.15f, cy - r * 0.24f, cx - r * 0.42f, cy, paint)
+                        canvas.drawLine(cx - r * 0.42f, cy, cx - r * 0.15f, cy + r * 0.24f, paint)
+                        canvas.drawLine(cx + r * 0.15f, cy - r * 0.24f, cx + r * 0.42f, cy, paint)
+                        canvas.drawLine(cx + r * 0.42f, cy, cx + r * 0.15f, cy + r * 0.24f, paint)
+                    }
+                    74 -> { // 74. יחס גובה-רוחב (21:9): מסגרת מסך רחב עם פינות קנה-מידה
+                        canvas.drawRoundRect(RectF(cx - r * 0.84f, cy - r * 0.50f, cx + r * 0.84f, cy + r * 0.50f), r * 0.14f, r * 0.14f, paint)
+                        canvas.drawLine(cx - r * 0.55f, cy - r * 0.24f, cx - r * 0.25f, cy - r * 0.24f, paint)
+                        canvas.drawLine(cx - r * 0.55f, cy - r * 0.24f, cx - r * 0.55f, cy + r * 0.06f, paint)
+                        canvas.drawLine(cx + r * 0.55f, cy + r * 0.24f, cx + r * 0.25f, cy + r * 0.24f, paint)
+                        canvas.drawLine(cx + r * 0.55f, cy + r * 0.24f, cx + r * 0.55f, cy - r * 0.06f, paint)
+                    }
+                    75 -> { // 75. מצב הסוללה: סוללה אנכית עם קווי טעינה
+                        canvas.drawRoundRect(RectF(cx - r * 0.46f, cy - r * 0.62f, cx + r * 0.46f, cy + r * 0.78f), r * 0.14f, r * 0.14f, paint)
+                        canvas.drawRect(cx - r * 0.20f, cy - r * 0.82f, cx + r * 0.20f, cy - r * 0.62f, paint)
+                        canvas.drawLine(cx - r * 0.22f, cy + r * 0.35f, cx + r * 0.22f, cy + r * 0.35f, paint)
+                        canvas.drawLine(cx - r * 0.22f, cy, cx + r * 0.22f, cy, paint)
+                    }
+                    76 -> { // 76. צריכת אנרגיה וחשבון חשמל: בית עם ברק אנרגיה
+                        val house = Path().apply {
+                            moveTo(cx, cy - r * 0.82f); lineTo(cx + r * 0.78f, cy - r * 0.10f)
+                            lineTo(cx + r * 0.58f, cy - r * 0.10f); lineTo(cx + r * 0.58f, cy + r * 0.76f)
+                            lineTo(cx - r * 0.58f, cy + r * 0.76f); lineTo(cx - r * 0.58f, cy - r * 0.10f)
+                            lineTo(cx - r * 0.78f, cy - r * 0.10f); close()
+                        }
+                        canvas.drawPath(house, paint)
+                        canvas.drawLine(cx + r * 0.08f, cy - r * 0.22f, cx - r * 0.14f, cy + r * 0.12f, paint)
+                        canvas.drawLine(cx - r * 0.14f, cy + r * 0.12f, cx + r * 0.14f, cy + r * 0.12f, paint)
+                        canvas.drawLine(cx + r * 0.14f, cy + r * 0.12f, cx - r * 0.08f, cy + r * 0.46f, paint)
+                    }
+                    77 -> { // 77. הצפנת טקסט ו-Hash: מנעול צופן עם סימן +
+                        canvas.drawRoundRect(RectF(cx - r * 0.58f, cy - r * 0.08f, cx + r * 0.58f, cy + r * 0.78f), r * 0.16f, r * 0.16f, paint)
+                        canvas.drawArc(RectF(cx - r * 0.36f, cy - r * 0.76f, cx + r * 0.36f, cy + r * 0.08f), 180f, 180f, false, paint)
+                        canvas.drawLine(cx - r * 0.20f, cy + r * 0.35f, cx + r * 0.20f, cy + r * 0.35f, paint)
+                        canvas.drawLine(cx, cy + r * 0.15f, cx, cy + r * 0.55f, paint)
+                    }
+                    78 -> { // 78. פתקים חכמים: דף פתק מקופל עם שורות
+                        val doc = Path().apply {
+                            moveTo(cx - r * 0.62f, cy - r * 0.78f); lineTo(cx + r * 0.25f, cy - r * 0.78f)
+                            lineTo(cx + r * 0.62f, cy - r * 0.40f); lineTo(cx + r * 0.62f, cy + r * 0.78f)
+                            lineTo(cx - r * 0.62f, cy + r * 0.78f); close()
+                        }
+                        canvas.drawPath(doc, paint)
+                        canvas.drawLine(cx - r * 0.35f, cy - r * 0.10f, cx + r * 0.35f, cy - r * 0.10f, paint)
+                        canvas.drawLine(cx - r * 0.35f, cy + r * 0.28f, cx + r * 0.20f, cy + r * 0.28f, paint)
+                    }
+                    79 -> { // 79. סורק ומחולל PDF: מסגרת סריקה עם קו לייזר
+                        canvas.drawLine(cx - r * 0.76f, cy - r * 0.42f, cx - r * 0.76f, cy - r * 0.76f, paint)
+                        canvas.drawLine(cx - r * 0.76f, cy - r * 0.76f, cx - r * 0.42f, cy - r * 0.76f, paint)
+                        canvas.drawLine(cx + r * 0.76f, cy - r * 0.42f, cx + r * 0.76f, cy - r * 0.76f, paint)
+                        canvas.drawLine(cx + r * 0.76f, cy - r * 0.76f, cx + r * 0.42f, cy - r * 0.76f, paint)
+                        canvas.drawLine(cx - r * 0.76f, cy + r * 0.42f, cx - r * 0.76f, cy + r * 0.76f, paint)
+                        canvas.drawLine(cx - r * 0.76f, cy + r * 0.76f, cx - r * 0.42f, cy + r * 0.76f, paint)
+                        canvas.drawLine(cx + r * 0.76f, cy + r * 0.42f, cx + r * 0.76f, cy + r * 0.76f, paint)
+                        canvas.drawLine(cx + r * 0.76f, cy + r * 0.76f, cx + r * 0.42f, cy + r * 0.76f, paint)
+                        canvas.drawLine(cx - r * 0.84f, cy, cx + r * 0.84f, cy, paint)
+                    }
+                    80 -> { // 80. מדידת טבעת: טבעת עם יהלום
+                        canvas.drawCircle(cx, cy + r * 0.18f, r * 0.56f, paint)
+                        val rGem = Path().apply {
+                            moveTo(cx - r * 0.28f, cy - r * 0.38f); lineTo(cx, cy - r * 0.80f); lineTo(cx + r * 0.28f, cy - r * 0.38f); close()
+                        }
+                        canvas.drawPath(rGem, paint)
+                    }
+                    81 -> { // 81. מידות נעליים, בגדים וכובעים: חולצת טי-שירט
+                        val shirt = Path().apply {
+                            moveTo(cx - r * 0.35f, cy - r * 0.72f); lineTo(cx + r * 0.35f, cy - r * 0.72f)
+                            lineTo(cx + r * 0.82f, cy - r * 0.25f); lineTo(cx + r * 0.55f, cy + r * 0.05f)
+                            lineTo(cx + r * 0.45f, cy - r * 0.10f); lineTo(cx + r * 0.45f, cy + r * 0.74f)
+                            lineTo(cx - r * 0.45f, cy + r * 0.74f); lineTo(cx - r * 0.45f, cy - r * 0.10f)
+                            lineTo(cx - r * 0.55f, cy + r * 0.05f); lineTo(cx - r * 0.82f, cy - r * 0.25f); close()
+                        }
+                        canvas.drawPath(shirt, paint)
+                    }
                     // --- סמלי סרגל עליון (100..103) ---
-                    100 -> { // 100. חלון צף PiP
+                    100 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.80f, cy - r * 0.65f, cx + r * 0.80f, cy + r * 0.65f), r * 0.20f, r * 0.20f, paint)
                         canvas.drawRoundRect(RectF(cx + r * 0.05f, cy - r * 0.05f, cx + r * 0.65f, cy + r * 0.50f), r * 0.10f, r * 0.10f, paint)
                     }
-                    101 -> { // 101. היסטוריית חישובים
+                    101 -> {
                         canvas.drawArc(RectF(cx - r * 0.75f, cy - r * 0.75f, cx + r * 0.75f, cy + r * 0.75f), -60f, 300f, false, paint)
                         canvas.drawLine(cx, cy - r * 0.40f, cx, cy, paint)
                         canvas.drawLine(cx, cy, cx + r * 0.30f, cy + r * 0.20f, paint)
                     }
-                    102, 103 -> { // 102/103. כוכב מועדפים בסרגל העליון
+                    102, 103 -> {
                         val starPath = Path()
                         for (i in 0 until 10) {
                             val rad = if (i % 2 == 0) r * 0.82f else r * 0.36f
@@ -940,38 +1077,38 @@ object IosGlassTheme {
                         canvas.drawPath(starPath, paint)
                     }
                     // --- סמלי הגדרות וכלים (200..214) ---
-                    200 -> { // 200. חיפוש
+                    200 -> {
                         canvas.drawCircle(cx - r * 0.12f, cy - r * 0.12f, r * 0.52f, paint)
                         canvas.drawLine(cx + r * 0.25f, cy + r * 0.25f, cx + r * 0.75f, cy + r * 0.75f, paint)
                     }
-                    201 -> { // 201. צלילי הקשה: אקוולייזר קולי
+                    201 -> {
                         canvas.drawLine(cx - r * 0.60f, cy - r * 0.22f, cx - r * 0.60f, cy + r * 0.22f, paint)
                         canvas.drawLine(cx - r * 0.20f, cy - r * 0.65f, cx - r * 0.20f, cy + r * 0.65f, paint)
                         canvas.drawLine(cx + r * 0.20f, cy - r * 0.42f, cx + r * 0.20f, cy + r * 0.42f, paint)
                         canvas.drawLine(cx + r * 0.60f, cy - r * 0.75f, cx + r * 0.60f, cy + r * 0.75f, paint)
                     }
-                    202 -> { // 202. בהירות: שמש
+                    202 -> {
                         canvas.drawCircle(cx, cy, r * 0.38f, paint)
                         for (i in 0 until 8) {
                             val a = Math.toRadians((i * 45).toDouble())
                             canvas.drawLine((cx + cos(a) * r * 0.52f).toFloat(), (cy + sin(a) * r * 0.52f).toFloat(), (cx + cos(a) * r * 0.82f).toFloat(), (cy + sin(a) * r * 0.82f).toFloat(), paint)
                         }
                     }
-                    203 -> { // 203. שקיפות: שני מעגלים חופפים
+                    203 -> {
                         canvas.drawCircle(cx - r * 0.22f, cy, r * 0.48f, paint)
                         canvas.drawCircle(cx + r * 0.22f, cy, r * 0.48f, paint)
                     }
-                    204 -> { // 204. רטט בלחיצה: סמארטפון עם גלי רטט בצדדים
+                    204 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.40f, cy - r * 0.72f, cx + r * 0.40f, cy + r * 0.72f), r * 0.14f, r * 0.14f, paint)
                         canvas.drawLine(cx - r * 0.72f, cy - r * 0.35f, cx - r * 0.72f, cy + r * 0.35f, paint)
                         canvas.drawLine(cx + r * 0.72f, cy - r * 0.35f, cx + r * 0.72f, cy + r * 0.35f, paint)
                     }
-                    205 -> { // 205. סוג צליל: תו מוזיקלי (♪)
+                    205 -> {
                         canvas.drawCircle(cx - r * 0.22f, cy + r * 0.45f, r * 0.24f, paint)
                         canvas.drawLine(cx + r * 0.02f, cy + r * 0.45f, cx + r * 0.02f, cy - r * 0.65f, paint)
                         canvas.drawLine(cx + r * 0.02f, cy - r * 0.65f, cx + r * 0.55f, cy - r * 0.40f, paint)
                     }
-                    206 -> { // 206. צליל AC: רמקול עם גלי קול
+                    206 -> {
                         val spk = Path().apply {
                             moveTo(cx - r * 0.65f, cy - r * 0.28f); lineTo(cx - r * 0.25f, cy - r * 0.28f)
                             lineTo(cx + r * 0.22f, cy - r * 0.68f); lineTo(cx + r * 0.22f, cy + r * 0.68f)
@@ -980,25 +1117,25 @@ object IosGlassTheme {
                         canvas.drawPath(spk, paint)
                         canvas.drawArc(RectF(cx + r * 0.05f, cy - r * 0.45f, cx + r * 0.68f, cy + r * 0.45f), -50f, 100f, false, paint)
                     }
-                    207 -> { // 207. אנימציות: כוכב שביט עם שובל תנועה
+                    207 -> {
                         canvas.drawCircle(cx + r * 0.35f, cy - r * 0.35f, r * 0.24f, paint)
                         canvas.drawLine(cx - r * 0.75f, cy + r * 0.75f, cx + r * 0.15f, cy - r * 0.15f, paint)
                         canvas.drawLine(cx - r * 0.75f, cy + r * 0.30f, cx - r * 0.15f, cy - r * 0.30f, paint)
                     }
-                    208 -> { // 208. מסך תמיד דולק: ירח וכוכב
+                    208 -> {
                         canvas.drawArc(RectF(cx - r * 0.68f, cy - r * 0.68f, cx + r * 0.68f, cy + r * 0.68f), 35f, 250f, false, paint)
                         canvas.drawCircle(cx + r * 0.38f, cy - r * 0.38f, r * 0.12f, dotPaint)
                     }
-                    209 -> { // 209. צורת כפתורים: ריבוע מעוגל משולב במעגל
+                    209 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.72f, cy - r * 0.72f, cx + r * 0.28f, cy + r * 0.28f), r * 0.22f, r * 0.22f, paint)
                         canvas.drawCircle(cx + r * 0.22f, cy + r * 0.22f, r * 0.48f, paint)
                     }
-                    210 -> { // 210. דיוק עשרוני: כוונת מדויקת (Crosshair Target)
+                    210 -> {
                         canvas.drawCircle(cx, cy, r * 0.62f, paint)
                         canvas.drawLine(cx - r * 0.85f, cy, cx + r * 0.85f, cy, paint)
                         canvas.drawLine(cx, cy - r * 0.85f, cx, cy + r * 0.85f, paint)
                     }
-                    211 -> { // 211. מצב מקצועי Pro Mode: טיל משוגר
+                    211 -> {
                         val rocket = Path().apply {
                             moveTo(cx, cy - r * 0.85f)
                             quadTo(cx + r * 0.55f, cy - r * 0.10f, cx + r * 0.38f, cy + r * 0.55f)
@@ -1008,26 +1145,26 @@ object IosGlassTheme {
                         canvas.drawPath(rocket, paint)
                         canvas.drawCircle(cx, cy - r * 0.10f, r * 0.14f, dotPaint)
                     }
-                    212 -> { // 212. יד דומיננטית: כף יד פתוחה
+                    212 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.48f, cy - r * 0.05f, cx + r * 0.48f, cy + r * 0.75f), r * 0.24f, r * 0.24f, paint)
                         for (ox in listOf(-0.34f, -0.12f, 0.12f, 0.34f)) {
                             canvas.drawLine(cx + r * ox, cy - r * 0.05f, cx + r * ox, cy - r * 0.68f, paint)
                         }
                     }
-                    213 -> { // 213. רשימת סימון: שורות תפריט עם וי
+                    213 -> {
                         for (oy in listOf(-0.42f, 0f, 0.42f)) {
                             canvas.drawLine(cx - r * 0.72f, cy + r * oy, cx + r * 0.22f, cy + r * oy, paint)
                             canvas.drawCircle(cx + r * 0.58f, cy + r * oy, r * 0.11f, dotPaint)
                         }
                     }
-                    214 -> { // 214. מצב תצוגה: פלטת צבעים עם 3 נקודות גוון
+                    214 -> {
                         canvas.drawCircle(cx, cy, r * 0.78f, paint)
                         canvas.drawCircle(cx - r * 0.28f, cy - r * 0.22f, r * 0.12f, dotPaint)
                         canvas.drawCircle(cx + r * 0.26f, cy - r * 0.22f, r * 0.12f, dotPaint)
                         canvas.drawCircle(cx, cy + r * 0.30f, r * 0.14f, paint)
                     }
-                    // --- סמלי 12 קטגוריות העל בתפריט הצד (300..311) - ייחודיים לחלוטין! ---
-                    300 -> { // 300. סרט סימנייה (Bookmark Ribbon)
+                    // --- סמלי 13 קטגוריות העל בתפריט הצד (300..312) ---
+                    300 -> {
                         val bm = Path().apply {
                             moveTo(cx - r * 0.52f, cy - r * 0.78f); lineTo(cx + r * 0.52f, cy - r * 0.78f)
                             lineTo(cx + r * 0.52f, cy + r * 0.78f); lineTo(cx, cy + r * 0.38f)
@@ -1035,7 +1172,7 @@ object IosGlassTheme {
                         }
                         canvas.drawPath(bm, paint)
                     }
-                    301 -> { // 301. קטגוריית מתמטיקה ומדע: ארבעת סימני החשבון (+ − × =) בחלוקה רבעונית
+                    301 -> {
                         val o = r * 0.45f
                         canvas.drawLine(cx - o - r * 0.20f, cy - o, cx - o + r * 0.20f, cy - o, paint)
                         canvas.drawLine(cx - o, cy - o - r * 0.20f, cx - o, cy - o + r * 0.20f, paint)
@@ -1045,18 +1182,18 @@ object IosGlassTheme {
                         canvas.drawLine(cx + o - r * 0.20f, cy + o - r * 0.10f, cx + o + r * 0.20f, cy + o - r * 0.10f, paint)
                         canvas.drawLine(cx + o - r * 0.20f, cy + o + r * 0.10f, cx + o + r * 0.20f, cy + o + r * 0.10f, paint)
                     }
-                    302 -> { // 302. קטגוריית פיננסים וצרכנות: כרטיס אשראי עם פס מגנטי ושבב
+                    302 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.82f, cy - r * 0.54f, cx + r * 0.82f, cy + r * 0.54f), r * 0.16f, r * 0.16f, paint)
                         canvas.drawLine(cx - r * 0.82f, cy - r * 0.16f, cx + r * 0.82f, cy - r * 0.16f, paint)
                         canvas.drawRect(cx - r * 0.52f, cy + r * 0.08f, cx - r * 0.18f, cy + r * 0.32f, paint)
                     }
-                    303 -> { // 303. קטגוריית המרות, רכב ודלק: שני חצי המרה מעגליים (Sync Arrows)
+                    303 -> {
                         canvas.drawArc(RectF(cx - r * 0.72f, cy - r * 0.72f, cx + r * 0.72f, cy + r * 0.72f), -150f, 130f, false, paint)
                         canvas.drawArc(RectF(cx - r * 0.72f, cy - r * 0.72f, cx + r * 0.72f, cy + r * 0.72f), 30f, 130f, false, paint)
                         canvas.drawLine(cx + r * 0.35f, cy - r * 0.70f, cx + r * 0.68f, cy - r * 0.36f, paint)
                         canvas.drawLine(cx - r * 0.35f, cy + r * 0.70f, cx - r * 0.68f, cy + r * 0.36f, paint)
                     }
-                    304 -> { // 304. קטגוריית בריאות, זמן ותאריכים: לב שלם קלאסי
+                    304 -> {
                         val heart = Path().apply {
                             moveTo(cx, cy + r * 0.76f)
                             lineTo(cx - r * 0.76f, cy - r * 0.10f)
@@ -1066,19 +1203,19 @@ object IosGlassTheme {
                         }
                         canvas.drawPath(heart, paint)
                     }
-                    305 -> { // 305. קטגוריית Pro 87 יחידות: מערכת צירים תלת-ממדית (X, Y, Z)
+                    305 -> {
                         canvas.drawLine(cx, cy, cx, cy - r * 0.82f, paint)
                         canvas.drawLine(cx, cy, cx + r * 0.76f, cy + r * 0.46f, paint)
                         canvas.drawLine(cx, cy, cx - r * 0.76f, cy + r * 0.46f, paint)
                         canvas.drawCircle(cx, cy, r * 0.13f, dotPaint)
                     }
-                    306 -> { // 306. קטגוריית Pro הנדסה, אינסטלציה ובנייה: מחוגת שרטוט הנדסית (Drafting Compass)
+                    306 -> {
                         canvas.drawCircle(cx, cy - r * 0.68f, r * 0.14f, paint)
                         canvas.drawLine(cx - r * 0.08f, cy - r * 0.54f, cx - r * 0.62f, cy + r * 0.78f, paint)
                         canvas.drawLine(cx + r * 0.08f, cy - r * 0.54f, cx + r * 0.62f, cy + r * 0.78f, paint)
                         canvas.drawArc(RectF(cx - r * 0.65f, cy - r * 0.15f, cx + r * 0.65f, cy + r * 0.45f), 20f, 140f, false, paint)
                     }
-                    307 -> { // 307. קטגוריית Pro מעבדת אלקטרוניקה: שבב מעגל משולב (IC Microchip)
+                    307 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.50f, cy - r * 0.50f, cx + r * 0.50f, cy + r * 0.50f), r * 0.12f, r * 0.12f, paint)
                         for (o in listOf(-0.26f * r, 0.26f * r)) {
                             canvas.drawLine(cx + o, cy - r * 0.85f, cx + o, cy - r * 0.50f, paint)
@@ -1087,12 +1224,12 @@ object IosGlassTheme {
                             canvas.drawLine(cx + r * 0.50f, cy + o, cx + r * 0.85f, cy + o, paint)
                         }
                     }
-                    308 -> { // 308. קטגוריית Pro חיישנים ומדידה: ג'ירוסקופ דו-טבעתי עם ציר
+                    308 -> {
                         canvas.drawCircle(cx, cy, r * 0.80f, paint)
                         canvas.drawOval(RectF(cx - r * 0.80f, cy - r * 0.34f, cx + r * 0.80f, cy + r * 0.34f), paint)
                         canvas.drawCircle(cx, cy, r * 0.14f, dotPaint)
                     }
-                    309 -> { // 309. קטגוריית Pro מדע, אטום, מורס והצפנה: מיקרוסקופ / סליל כפול
+                    309 -> {
                         val s1 = Path().apply {
                             moveTo(cx - r * 0.55f, cy - r * 0.78f)
                             cubicTo(cx + r * 0.70f, cy - r * 0.25f, cx - r * 0.70f, cy + r * 0.25f, cx + r * 0.55f, cy + r * 0.78f)
@@ -1104,11 +1241,11 @@ object IosGlassTheme {
                         canvas.drawPath(s1, paint)
                         canvas.drawPath(s2, paint)
                     }
-                    310 -> { // 310. קטגוריית Pro השקעות, משכנתא ועסקים: גרף עוגה (Pie Chart) עם פלח נשלף
+                    310 -> {
                         canvas.drawArc(RectF(cx - r * 0.78f, cy - r * 0.72f, cx + r * 0.66f, cy + r * 0.78f), 15f, 255f, true, paint)
                         canvas.drawArc(RectF(cx - r * 0.62f, cy - r * 0.84f, cx + r * 0.82f, cy + r * 0.60f), -75f, 75f, true, paint)
                     }
-                    311 -> { // 311. קטגוריית Pro סטטיסטיקה, גאומטריה ומטריצות: סמל אינסוף (∞)
+                    311 -> {
                         val inf = Path().apply {
                             moveTo(cx, cy)
                             cubicTo(cx + r * 0.45f, cy - r * 0.65f, cx + r * 0.88f, cy - r * 0.55f, cx + r * 0.88f, cy)
@@ -1117,6 +1254,12 @@ object IosGlassTheme {
                             cubicTo(cx - r * 0.88f, cy + r * 0.55f, cx - r * 0.45f, cy + r * 0.65f, cx, cy)
                         }
                         canvas.drawPath(inf, paint)
+                    }
+                    312 -> { // 312. קטגוריית Pro כלי עזר, מטרונום, פתקים ומידות: ארגז כלים הנדסי
+                        canvas.drawRoundRect(RectF(cx - r * 0.80f, cy - r * 0.36f, cx + r * 0.80f, cy + r * 0.74f), r * 0.16f, r * 0.16f, paint)
+                        canvas.drawRect(cx - r * 0.32f, cy - r * 0.68f, cx + r * 0.32f, cy - r * 0.36f, paint)
+                        canvas.drawLine(cx - r * 0.80f, cy + r * 0.15f, cx + r * 0.80f, cy + r * 0.15f, paint)
+                        canvas.drawCircle(cx, cy + r * 0.15f, r * 0.12f, dotPaint)
                     }
                     else -> {
                         canvas.drawCircle(cx, cy, r * 0.55f, paint)
