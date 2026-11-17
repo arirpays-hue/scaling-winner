@@ -35,24 +35,23 @@ import java.util.*
 import kotlin.math.*
 
 // =========================================================================
-// מנוע סידור כיוון טקסט דו-כיווני (BiDi RTL/LTR Formatter) + מפענח תרגילים חי לשדות קלט
+// מנוע סידור כיוון טקסט דו-כיווני (BiDi RTL/LTR Formatter) + מפענח תרגילים חי ללא לופים!
 // =========================================================================
 object BidiFmt {
+    var isSilentLiveUpdate: Boolean = false
+
     fun ltr(text: Any): String = "\u200E\u2066$text\u2069\u200E"
 
     fun rtlParagraph(vararg lines: String): String {
         return lines.joinToString("\n") { line -> "\u200F${fixRtlLineTokens(line)}" }
     }
 
-    // מתקן היפוך של מילים באנגלית בסוגריים, מספרים, אחוזים ומטבעות בתוך משפט עברי
     fun fixRtlLineTokens(rawLine: String): String {
         if (rawLine.contains('\u2066')) return rawLine
         var s = rawLine.replace("\u200E", "").replace("\u200F", "")
-        // בידוד מונחים באנגלית בתוך סוגריים כמו (Gross Margin) או (Break-Even)
         s = Regex("\\([A-Za-z0-9\\s/\\-+.,]+\\)").replace(s) { m ->
             "\u200E\u2066${m.value}\u2069\u200E"
         }
-        // בידוד מספרים עם יחידות מידה, אחוזים או מטבעות כמו 25%, 20₪, 640₪, 16:9
         s = Regex("([₪$€£¥]?[+-]?\\d+(?:[.,:]\\d+)*(?:\\s*[%°€$₪£¥a-zA-ZµΩ²³/+\\-*×÷=]+)?)").replace(s) { m ->
             "\u200E\u2066${m.value.trim()}\u2069\u200E"
         }
@@ -65,7 +64,6 @@ object BidiFmt {
         return tv
     }
 
-    // מפענח מספר או תרגיל מתמטי שנכתב בתוך תיבת קלט (למשל "1920/2" או "60+20")
     fun evalInputExpr(editText: EditText, fallback: Double): Double {
         val raw = editText.text?.toString()?.trim() ?: return fallback
         if (raw.isEmpty()) return fallback
@@ -78,17 +76,23 @@ object BidiFmt {
         }
     }
 
-    // מאפשר הקלדת תרגילים (כולל +, -, *, /, ^, סוגריים) בתוך שדות קלט ומחבר עדכון ויזואלי חי!
     fun bindLiveInputs(vararg inputs: EditText, onUpdate: () -> Unit) {
         val watcher = object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
-                try { onUpdate() } catch (_: Throwable) {}
+                if (isSilentLiveUpdate) return
+                try {
+                    isSilentLiveUpdate = true
+                    onUpdate()
+                } catch (_: Throwable) {
+                } finally {
+                    isSilentLiveUpdate = false
+                }
             }
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         }
         for (et in inputs) {
-            // פותח את המקלדת גם לתרגילים מתמטיים (+ - * / ( )) ולא רק ספרות בודדות
+            et.tag = "HAS_CUSTOM_LIVE_WATCHER"
             if (et.inputType and InputType.TYPE_CLASS_NUMBER != 0) {
                 et.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
             }
@@ -96,19 +100,24 @@ object BidiFmt {
         }
     }
 
-    // מחבר עדכון חי אוטומטי לכל מסך מחשבון שיש בו שדות קלט וכפתור חישוב!
+    // מחבר עדכון חי אוטומטי רק למחשבונים שאין להם מאזין חי ייעודי, וללא צלילי מקלדת או לופים!
     fun attachUniversalLiveVisualizer(screenRoot: View?) {
-        if (screenRoot == null) return
+        if (screenRoot == null || screenRoot.tag == "SKIP_UNIVERSAL_LIVE") return
         val editTexts = mutableListOf<EditText>()
         var primaryCalcButton: TextView? = null
 
         fun scan(v: View) {
+            if (v.tag == "SKIP_UNIVERSAL_LIVE") return
             when (v) {
-                is EditText -> editTexts.add(v)
+                is EditText -> {
+                    if (v.tag != "HAS_CUSTOM_LIVE_WATCHER") {
+                        editTexts.add(v)
+                    }
+                }
                 is TextView -> {
                     if (v.isClickable && primaryCalcButton == null) {
                         val t = v.text?.toString() ?: ""
-                        if (t.startsWith("חשב") || t.startsWith("פתור") || t.startsWith("נתח") || t.startsWith("המר") || t.startsWith("הצפן")) {
+                        if (t.startsWith("חשב") || t.startsWith("פתור") || t.startsWith("נתח")) {
                             primaryCalcButton = v
                         }
                     }
@@ -124,12 +133,20 @@ object BidiFmt {
 
         val liveWatcher = object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
-                try { calcBtn.performClick() } catch (_: Throwable) {}
+                if (isSilentLiveUpdate) return
+                try {
+                    isSilentLiveUpdate = true
+                    calcBtn.performClick()
+                } catch (_: Throwable) {
+                } finally {
+                    isSilentLiveUpdate = false
+                }
             }
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         }
         for (et in editTexts) {
+            et.tag = "HAS_CUSTOM_LIVE_WATCHER"
             et.addTextChangedListener(liveWatcher)
         }
     }
@@ -150,15 +167,12 @@ class RealMetronomeSoundEngine(context: Context) {
             .build()
         soundPool = SoundPool.Builder().setMaxStreams(4).setAudioAttributes(attrs).build()
 
-        // 0: מטרונום עץ מכני אמיתי (Woodblock Tock/Tick)
         accentIds[0] = loadSynthesizedClick(context, "metro_wood_hi.wav", freq1 = 1180.0, freq2 = 1860.0, decayMs = 22.0, noiseMix = 0.38)
         regularIds[0] = loadSynthesizedClick(context, "metro_wood_lo.wav", freq1 = 840.0, freq2 = 1320.0, decayMs = 20.0, noiseMix = 0.35)
 
-        // 1: קליק אולפן דיגיטלי חד (Studio Quartz Click)
         accentIds[1] = loadSynthesizedClick(context, "metro_studio_hi.wav", freq1 = 2200.0, freq2 = 3300.0, decayMs = 14.0, noiseMix = 0.15)
         regularIds[1] = loadSynthesizedClick(context, "metro_studio_lo.wav", freq1 = 1450.0, freq2 = 2150.0, decayMs = 13.0, noiseMix = 0.15)
 
-        // 2: מקל תופים (Drum Rimshot Stick)
         accentIds[2] = loadSynthesizedClick(context, "metro_stick_hi.wav", freq1 = 680.0, freq2 = 2650.0, decayMs = 28.0, noiseMix = 0.55)
         regularIds[2] = loadSynthesizedClick(context, "metro_stick_lo.wav", freq1 = 520.0, freq2 = 1950.0, decayMs = 25.0, noiseMix = 0.50)
     }
@@ -791,7 +805,6 @@ fun MainActivity.createProMetronomeScreen(): View {
                 canvas.drawCircle(startX + b * dotSpacing, 26f * d, if (isCurrent) 9f * d else 6.5f * d, p)
             }
 
-            // מיקום המשקולת על זרוע המטרונום משתנה ויזואלית בהתאם ל-BPM שנכתב!
             val weightRatio = ((bpm - 30f) / 210f).coerceIn(0.15f, 0.90f)
             val angleDeg = if (isPlaying) (swingDir * 26f) else ((bpm - 120) / 6f).coerceIn(-22f, 22f)
             val rad = Math.toRadians((angleDeg - 90f).toDouble())
@@ -1169,19 +1182,18 @@ fun MainActivity.createProLogicGatesScreen(): View {
             p.color = if (outY) highCol else lowCol
             canvas.drawLine(outStartX, cy, w * 0.86f, cy, p)
 
-            // ציור צורת השער ההנדסית האמיתית לפי השער שנבחר!
             p.color = if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
             p.strokeWidth = 2.6f * d
             val gatePath = Path()
             when (gateIdx) {
-                0, 3 -> { // AND / NAND (D-shape)
+                0, 3 -> {
                     gatePath.moveTo(cx - 34f * d, cy - 32f * d)
                     gatePath.lineTo(cx, cy - 32f * d)
                     gatePath.arcTo(RectF(cx - 34f * d, cy - 32f * d, cx + 34f * d, cy + 32f * d), -90f, 180f, false)
                     gatePath.lineTo(cx - 34f * d, cy + 32f * d)
                     gatePath.close()
                 }
-                1, 2, 4, 5 -> { // OR / XOR / NOR / XNOR (Curved shield shape)
+                1, 2, 4, 5 -> {
                     gatePath.moveTo(cx - 34f * d, cy - 32f * d)
                     gatePath.quadTo(cx + 10f * d, cy - 32f * d, cx + 34f * d, cy)
                     gatePath.quadTo(cx + 10f * d, cy + 32f * d, cx - 34f * d, cy + 32f * d)
@@ -1194,7 +1206,7 @@ fun MainActivity.createProLogicGatesScreen(): View {
                         canvas.drawPath(xorArc, p)
                     }
                 }
-                else -> { // NOT (Triangle Inverter)
+                else -> {
                     gatePath.moveTo(cx - 32f * d, cy - 30f * d)
                     gatePath.lineTo(cx + 32f * d, cy)
                     gatePath.lineTo(cx - 32f * d, cy + 30f * d)
@@ -1275,11 +1287,15 @@ fun MainActivity.createProLogicGatesScreen(): View {
 }
 
 // =========================================================================
-// 8. ממיר צבעים HEX ל-RGB / HSL / HSV / CMYK עם עדכון חי (Color Converter - Tab 73)
+// 8. ממיר צבעים HEX ל-RGB / HSL / HSV / CMYK - מוגן ב-100% מלופ הקשות מקלדת (Tab 73)
 // =========================================================================
 fun MainActivity.createProHexRgbColorScreen(): View {
-    val scroll = ScrollView(this)
-    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
+    val scroll = ScrollView(this).apply { tag = "SKIP_UNIVERSAL_LIVE" }
+    val root = LinearLayout(this).apply {
+        tag = "SKIP_UNIVERSAL_LIVE"
+        orientation = LinearLayout.VERTICAL
+        setPadding(dp(20f), dp(12f), dp(20f), dp(24f))
+    }
     root.addView(
         createProCanvaHeader(
             "🎨 ממיר צבעים HEX / RGB / HSL / HSV / CMYK",
@@ -1361,11 +1377,13 @@ fun MainActivity.createProHexRgbColorScreen(): View {
     }
 
     val hexIn = createInputBox("קוד HEX (למשל ${BidiFmt.ltr("#00F5D4")})").apply {
-        inputType = InputType.TYPE_CLASS_TEXT
+        tag = "HAS_CUSTOM_LIVE_WATCHER"
+        inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
         setText("#00F5D4")
     }
     val rgbIn = createInputBox("או הזן RGB מופרד בפסיק (למשל ${BidiFmt.ltr("0, 245, 212")})").apply {
-        inputType = InputType.TYPE_CLASS_TEXT
+        tag = "HAS_CUSTOM_LIVE_WATCHER"
+        inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
         setText("0, 245, 212")
     }
     val resTv = BidiFmt.applyRtlToResultView(createResultTextView().apply { textSize = 15.5f })
@@ -1412,16 +1430,21 @@ fun MainActivity.createProHexRgbColorScreen(): View {
 
     hexIn.addTextChangedListener(object : TextWatcher {
         override fun afterTextChanged(s: Editable?) {
-            if (isInternalChange) return
+            if (isInternalChange || !hexIn.hasFocus()) return
             val raw = s?.toString()?.trim()?.removePrefix("#") ?: ""
             if (raw.length == 6) {
                 try {
                     val col = Color.parseColor("#$raw")
                     isInternalChange = true
-                    rgbIn.setText("${Color.red(col)}, ${Color.green(col)}, ${Color.blue(col)}")
-                    isInternalChange = false
+                    val targetRgb = "${Color.red(col)}, ${Color.green(col)}, ${Color.blue(col)}"
+                    if (rgbIn.text.toString() != targetRgb) {
+                        rgbIn.setText(targetRgb)
+                    }
                     updateColorDetails(col)
-                } catch (_: Exception) {}
+                } catch (_: Exception) {
+                } finally {
+                    isInternalChange = false
+                }
             }
         }
         override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -1430,14 +1453,20 @@ fun MainActivity.createProHexRgbColorScreen(): View {
 
     rgbIn.addTextChangedListener(object : TextWatcher {
         override fun afterTextChanged(s: Editable?) {
-            if (isInternalChange) return
+            if (isInternalChange || !rgbIn.hasFocus()) return
             val parts = s?.toString()?.split(",", " ")?.mapNotNull { it.trim().toIntOrNull() } ?: emptyList()
             if (parts.size >= 3) {
-                val col = Color.rgb(parts[0].coerceIn(0, 255), parts[1].coerceIn(0, 255), parts[2].coerceIn(0, 255))
-                isInternalChange = true
-                hexIn.setText(String.format(Locale.US, "#%02X%02X%02X", Color.red(col), Color.green(col), Color.blue(col)))
-                isInternalChange = false
-                updateColorDetails(col)
+                try {
+                    isInternalChange = true
+                    val col = Color.rgb(parts[0].coerceIn(0, 255), parts[1].coerceIn(0, 255), parts[2].coerceIn(0, 255))
+                    val targetHex = String.format(Locale.US, "#%02X%02X%02X", Color.red(col), Color.green(col), Color.blue(col))
+                    if (hexIn.text.toString() != targetHex) {
+                        hexIn.setText(targetHex)
+                    }
+                    updateColorDetails(col)
+                } finally {
+                    isInternalChange = false
+                }
             }
         }
         override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -1453,6 +1482,7 @@ fun MainActivity.createProHexRgbColorScreen(): View {
             isInternalChange = false
             updateColorDetails(col)
         } catch (_: Exception) {
+            isInternalChange = false
             Toast.makeText(this, "קוד HEX לא תקין (דוגמה: #00F5D4)", Toast.LENGTH_SHORT).show()
         }
     }
@@ -1511,12 +1541,10 @@ fun MainActivity.createProAspectRatioScreen(): View {
             p.color = if (isMinimalistMode) MinimalistTheme.ACCENT_PASTEL_BLUE else Color.argb(55, 0, 245, 212)
             canvas.drawRoundRect(rRect, 12f * d, 12f * d, p)
 
-            // קו אלכסון פנימי שממחיש את גודל המסך באינצ'ים
             p.style = Paint.Style.STROKE; p.strokeWidth = 1.4f * d
             p.color = if (isMinimalistMode) Color.argb(90, 44, 44, 44) else Color.argb(110, 255, 255, 255)
             canvas.drawLine(rRect.left + 8f * d, rRect.bottom - 8f * d, rRect.right - 8f * d, rRect.top + 8f * d, p)
 
-            // מסגרת המסך
             p.strokeWidth = 2.4f * d
             p.color = if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else primaryColor
             canvas.drawRoundRect(rRect, 12f * d, 12f * d, p)
@@ -1526,7 +1554,6 @@ fun MainActivity.createProAspectRatioScreen(): View {
             p.color = if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
             canvas.drawText(BidiFmt.ltr(ratioLabel), cx, cy + 5f * d, p)
 
-            // מידות חיות סביב המלבן
             p.textSize = 12.0f * d
             val subText = "${BidiFmt.ltr("${Utils.formatResult(wPx, 0)} × ${Utils.formatResult(hPx, 0)}")}  •  ${BidiFmt.ltr("${Utils.formatResult(diagInch, 1)}\"")}  •  ${BidiFmt.ltr("${Utils.formatResult(ppiValue, 1)} PPI")}"
             CanvasUiHelper.drawFittedText(canvas, subText, cx, height - 10f * d, width - 24f * d, 12.5f * d, 9f * d, p)
@@ -1736,7 +1763,7 @@ fun MainActivity.createProBatteryMonitorScreen(): View {
             "מכויל ומסונכרן היטב עם מתח התא (${BidiFmt.ltr("$voltageMv mV")})"
         }
 
-        if (chargeGuard80Enabled && isCharging && pctLevel >= 80) {
+        if (chargeGuard80Enabled && isCharging && pctLevel >= 80 && !BidiFmt.isSilentLiveUpdate) {
             try {
                 ToneGenerator(AudioManager.STREAM_NOTIFICATION, 90).startTone(ToneGenerator.TONE_PROP_BEEP2, 200)
             } catch (_: Exception) {}
@@ -1846,7 +1873,6 @@ fun MainActivity.createProElectricityBillScreen(): View {
             val w = width.toFloat(); val h = height.toFloat()
             val isMin = isMinimalistMode
 
-            // חוגת עומס הספק משמאל
             val gaugeCx = w * 0.28f; val gaugeCy = h * 0.56f; val r = min(w * 0.20f, h * 0.36f)
             p.style = Paint.Style.STROKE; p.strokeWidth = 8f * d
             p.color = if (isMin) Color.argb(35, 44, 44, 44) else Color.argb(45, 255, 255, 255)
@@ -1866,7 +1892,6 @@ fun MainActivity.createProElectricityBillScreen(): View {
             p.textSize = 14.5f * d
             canvas.drawText(BidiFmt.ltr("${Utils.formatResult(currentWatts, 0)}W"), gaugeCx, gaugeCy + 5f * d, p)
 
-            // 3 עמודות השוואה מימין (יומי, חודשי, דו-חודשי)
             val chartLeft = w * 0.54f; val chartRight = w - 20f * d
             val chartBottom = h - 28f * d; val maxBarH = h * 0.56f
             val biMonthly = monthlyCostIls * 2.0
@@ -1948,7 +1973,6 @@ fun MainActivity.createProEncryptionLabScreen(): View {
     var currentSampleCipher = "תסזפ צזספ 2026"
     var currentShaHex = "30a7d8eb7747b610e435f2914622b50f"
 
-    // צג ויזואלי של גלגל צופן קיסר + מטריצת סיביות SHA-256 שמשתנה בזמן אמת!
     val cipherWheelCanvas = object : View(this) {
         private val p = Paint(Paint.ANTI_ALIAS_FLAG)
         override fun onDraw(canvas: Canvas) {
@@ -1988,7 +2012,6 @@ fun MainActivity.createProEncryptionLabScreen(): View {
             p.color = if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
             canvas.drawText(BidiFmt.ltr("+$currentShift"), wheelCx, wheelCy + 4f * d, p)
 
-            // מטריצת ביטים ויזואלית של SHA-256 בצד ימין
             val gridLeft = w * 0.60f; val gridTop = 24f * d
             val cellSize = min((w * 0.34f) / 8f, (h * 0.62f) / 4f)
             for (rIdx in 0 until 4) {
@@ -2313,7 +2336,9 @@ fun MainActivity.createProRingSizerScreen(): View {
         }
     }
 
-    val screenDiagIn = createInputBox("📱 או הזן גודל מסך הטלפון באינצ׳ים לכיול אוטומטי (למשל 6.5)")
+    val screenDiagIn = createInputBox("📱 או הזן גודל מסך הטלפון באינצ׳ים לכיול אוטומטי (למשל 6.5)").apply {
+        tag = "HAS_CUSTOM_LIVE_WATCHER"
+    }
     val calibByInchBtn = createActionBtn("כייל אוטומטית לפי אינצ׳ים של המסך 📐", false) {
         val diagInches = BidiFmt.evalInputExpr(screenDiagIn, 0.0).toFloat()
         if (diagInches in 3.5f..16.0f) {
@@ -2370,7 +2395,6 @@ fun MainActivity.createProShoeClothingHatSizeScreen(): View {
             val w = width.toFloat(); val h = height.toFloat()
             val isMin = isMinimalistMode
 
-            // 1. שרטוט סוליית נעל משמאל (משתנה בגודל לפי curFootCm)
             val shoeScale = ((curFootCm - 15.0) / 20.0).toFloat().coerceIn(0.45f, 1.15f)
             val sx = w * 0.20f; val sy = h * 0.46f
             val shoeW = 48f * d * shoeScale; val shoeH = 22f * d * shoeScale
@@ -2381,7 +2405,6 @@ fun MainActivity.createProShoeClothingHatSizeScreen(): View {
             p.color = if (isMin) MinimalistTheme.TEXT_CHARCOAL else primaryColor
             canvas.drawRoundRect(RectF(sx - shoeW, sy - shoeH, sx + shoeW, sy + shoeH), shoeH, shoeH, p)
 
-            // 2. שרטוט גזרת חולצה במרכז (משתנה ברוחב לפי curChestCm)
             val shirtScale = ((curChestCm - 70.0) / 70.0).toFloat().coerceIn(0.55f, 1.25f)
             val cx = w * 0.52f; val cy = h * 0.46f
             val sw = 28f * d * shirtScale; val sh = 32f * d
@@ -2405,7 +2428,6 @@ fun MainActivity.createProShoeClothingHatSizeScreen(): View {
             p.color = if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
             canvas.drawPath(shirtPath, p)
 
-            // 3. שרטוט כובע מימין (משתנה לפי curHeadCm)
             val hatScale = ((curHeadCm - 50.0) / 16.0).toFloat().coerceIn(0.65f, 1.20f)
             val hx = w * 0.82f; val hy = h * 0.50f
             val hr = 24f * d * hatScale
