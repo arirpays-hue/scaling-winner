@@ -533,6 +533,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         root.addView(titleTv)
 
         val searchBox = createInputBox("חפש תרגיל או תוצאה בהיסטוריה...").apply {
+            tag = "HAS_CUSTOM_LIVE_WATCHER"
             inputType = InputType.TYPE_CLASS_TEXT
             visibility = if (historyList.size > 3) View.VISIBLE else View.GONE
         }
@@ -747,6 +748,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         })
 
         val searchBox = createInputBox("חפש ברשימה...").apply {
+            tag = "HAS_CUSTOM_LIVE_WATCHER"
             inputType = InputType.TYPE_CLASS_TEXT
             visibility = if (items.size > 6) View.VISIBLE else View.GONE
         }
@@ -1154,6 +1156,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     fun feedback(view: View, symbol: String = "") {
+        // מונע לחלוטין צלילי הקשה ורטט בזמן עדכון ויזואלי חי ברקע!
+        if (BidiFmt.isSilentLiveUpdate) return
         if (useHaptic) view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
         if (useSound && !MiniGameEngine.isAnimalParty) {
             if (symbol == "AC" && useCustomAcSound && acSoundId != 0) {
@@ -1807,8 +1811,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             MinimalistTheme.applyMinimalistStylingToHierarchy(rawView, this)
         }
 
-        // חיבור אוטומטי של עדכון ויזואלי חי תוך כדי הקלדת מספר או תרגיל בכל המחשבונים
-        if (index != 0 && index != 1 && index != 19 && index != 78) {
+        // חיבור אוטומטי של עדכון ויזואלי חי תוך כדי הקלדה (למעט ממיר הצבעים 73 ופתקים 78 שפועלים באופן עצמאי)
+        if (index !in listOf(0, 1, 19, 73, 78)) {
             BidiFmt.attachUniversalLiveVisualizer(rawView)
         }
 
