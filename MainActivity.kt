@@ -174,7 +174,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         "🌌 ממירי תקשורת, טיפוגרפיה, חלל ובישול", // 63
         "💳 מחשבון שכר, שעות נוספות, פנסיה ונטו", // 64
         "🧮 מטריצות, דטרמיננטה ומערכת משוואות",   // 65
-        // --- 16 כלי ה-Pro החדשים מתוך צילומי המסך (66..81) ---
         "🧲 גלאי מתכות ושדה מגנטי (EMF)",         // 66
         "📈 מד רטט וסיסמוגרף חי (Vibrometer)",    // 67
         "🚨 צופר חירום והתרעה קולית (Siren)",      // 68
@@ -193,20 +192,19 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         "👟 מידות נעליים, בגדים וכובעים"          // 81
     )
 
-    // כל 16 הכלים החדשים מרוכזים יחד בקטגוריה 312 כדי שיופיעו מיד בתפריט הצד!
     val drawerSections = listOf(
         Triple(301, "📐 מתמטיקה ומדע", listOf(0, 1, 8, 15, 16, 7, 28, 22)),
         Triple(302, "💳 פיננסים וצרכנות", listOf(2, 24, 3, 17, 29, 9, 25, 10, 23, 13)),
         Triple(303, "🔄 המרות, רכב ודלק", listOf(4, 5, 6, 18, 20, 21)),
         Triple(304, "❤️ בריאות, זמן ותאריכים", listOf(11, 14, 27, 12, 30, 26)),
-        Triple(312, "🛠️ Pro: 16 כלים חדשים (מתכות, סלילים, שערים, טבעת ועוד)", listOf(66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81)),
         Triple(305, "📐 Pro: 87 קטגוריות יחידות לפי תחום", listOf(31, 57, 58, 59, 60, 61, 62, 63)),
         Triple(306, "🔧 Pro: הנדסת אינסטלציה, רפואה ובנייה", listOf(32, 33, 34)),
-        Triple(307, "⚡ Pro: מעבדת אלקטרוניקה וחשמל", listOf(35, 36, 37, 38)),
-        Triple(308, "🧭 Pro: חיישנים, פלס, מצפן ומדידה", listOf(39, 40, 41, 42, 43)),
-        Triple(309, "🔬 Pro: מדע, אטום, מורס, הצפנה וטקסט", listOf(44, 45, 46, 47)),
+        Triple(307, "⚡ Pro: מעבדת אלקטרוניקה, סלילים ושערים", listOf(35, 36, 71, 37, 38, 72, 76)),
+        Triple(308, "🧭 Pro: חיישנים, פלס, מצפן, מתכות ורטט", listOf(39, 40, 41, 66, 67, 42, 43, 68, 75)),
+        Triple(309, "🔬 Pro: מדע, אטום, מורס, הצפנה וצבעים", listOf(44, 45, 46, 77, 47, 73, 74)),
         Triple(310, "📊 Pro: השקעות, משכנתא, שכר, זהב ועסקים", listOf(48, 49, 50, 51, 64)),
-        Triple(311, "🧮 Pro: סטטיסטיקה, גאומטריה, מטריצות וענן", listOf(52, 53, 54, 65, 55))
+        Triple(311, "🧮 Pro: סטטיסטיקה, גאומטריה, מטריצות וענן", listOf(52, 53, 54, 65, 55)),
+        Triple(312, "🛠️ Pro: כלי עזר, מטרונום, פתקים ומידות", listOf(69, 70, 78, 79, 80, 81))
     )
 
     var currentInput = ""; var justCalculated = false
@@ -383,9 +381,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             drawerMenu?.addView(sectionItemsContainer)
         }
 
-        // פתיחה אוטומטית של קטגוריית 16 הכלים החדשים (312) בתפריט הצד כדי שתראה אותם מיד!
         expandedSections.add(301)
-        expandedSections.add(312)
 
         val bottomSpacer = Space(this).apply {
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
@@ -1689,9 +1685,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                         val ch = container.getChildAt(i)
                         if (ch is TextView && (ch.text.contains("Pro Mode") || ch.text.contains("מצב מקצועי"))) {
                             hasProBtn = true
-                            val proEnabled = ProState.isProEnabled(prefs)
-                            ch.text = if (proEnabled) "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-64 כלים): מופעל 🟢"
-                            else "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-64 כלים): כבוי 🔴"
                             break
                         }
                     }
@@ -1704,13 +1697,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                         ) {
                             val nextState = !ProState.isProEnabled(prefs)
                             ProState.setProEnabled(prefs, nextState)
-                            if (nextState) {
-                                expandedSections.add(312)
-                                expandedSections.add(305)
-                            }
                             Toast.makeText(
                                 this,
-                                if (nextState) "🚀 מצב מקצועי הופעל! כל 16 הכלים החדשים זמינים בתפריט הצד" else "מצב מקצועי כובה",
+                                if (nextState) "🚀 מצב מקצועי הופעל! קטגוריות ה-Pro נוספו לתפריט הצד" else "מצב מקצועי כובה",
                                 Toast.LENGTH_SHORT
                             ).show()
                             applyTheme()
@@ -1791,7 +1780,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             63 -> createProDigitalAstroUnitsScreen()
             64 -> createProSalaryAndTaxScreen()
             65 -> createProMatrixAndEquationsScreen()
-            // --- 16 מסכי ה-Pro החדשים מתוך צילומי המסך (66..81) ---
             66 -> createProMetalDetectorScreen()
             67 -> createProVibrometerScreen()
             68 -> createProEmergencySirenScreen()
