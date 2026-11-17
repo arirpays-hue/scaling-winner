@@ -16,39 +16,122 @@ import android.media.ToneGenerator
 import android.os.BatteryManager
 import android.os.Handler
 import android.os.Looper
+import android.text.Editable
 import android.text.InputType
+import android.text.TextWatcher
 import android.util.Base64
 import android.util.DisplayMetrics
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
-import android.view.WindowManager
+import android.view.ViewGroup
 import android.widget.*
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.security.MessageDigest
-import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.*
 
 // =========================================================================
-// מנוע סידור כיוון טקסט דו-כיווני (BiDi RTL/LTR Formatter) - מונע היפוך מספרים, יחידות ונוסחאות בעברית!
+// מנוע סידור כיוון טקסט דו-כיווני (BiDi RTL/LTR Formatter) + מפענח תרגילים חי לשדות קלט
 // =========================================================================
 object BidiFmt {
-    // עוטף מספרים, יחידות מידה, נוסחאות וטקסט באנגלית בבידוד משמאל-לימין (LRI..PDI)
     fun ltr(text: Any): String = "\u200E\u2066$text\u2069\u200E"
 
-    // מסדר פסקה מרובת שורות כך שכל שורה תוצג מימין-לשמאל (RTL) ללא היפוך סימנים
     fun rtlParagraph(vararg lines: String): String {
-        return lines.joinToString("\n") { line -> "\u200F$line" }
+        return lines.joinToString("\n") { line -> "\u200F${fixRtlLineTokens(line)}" }
+    }
+
+    // מתקן היפוך של מילים באנגלית בסוגריים, מספרים, אחוזים ומטבעות בתוך משפט עברי
+    fun fixRtlLineTokens(rawLine: String): String {
+        if (rawLine.contains('\u2066')) return rawLine
+        var s = rawLine.replace("\u200E", "").replace("\u200F", "")
+        // בידוד מונחים באנגלית בתוך סוגריים כמו (Gross Margin) או (Break-Even)
+        s = Regex("\\([A-Za-z0-9\\s/\\-+.,]+\\)").replace(s) { m ->
+            "\u200E\u2066${m.value}\u2069\u200E"
+        }
+        // בידוד מספרים עם יחידות מידה, אחוזים או מטבעות כמו 25%, 20₪, 640₪, 16:9
+        s = Regex("([₪$€£¥]?[+-]?\\d+(?:[.,:]\\d+)*(?:\\s*[%°€$₪£¥a-zA-ZµΩ²³/+\\-*×÷=]+)?)").replace(s) { m ->
+            "\u200E\u2066${m.value.trim()}\u2069\u200E"
+        }
+        return s
     }
 
     fun applyRtlToResultView(tv: TextView): TextView {
         tv.textDirection = View.TEXT_DIRECTION_RTL
         tv.gravity = Gravity.RIGHT
         return tv
+    }
+
+    // מפענח מספר או תרגיל מתמטי שנכתב בתוך תיבת קלט (למשל "1920/2" או "60+20")
+    fun evalInputExpr(editText: EditText, fallback: Double): Double {
+        val raw = editText.text?.toString()?.trim() ?: return fallback
+        if (raw.isEmpty()) return fallback
+        raw.toDoubleOrNull()?.let { return it }
+        return try {
+            val v = SmartNotesMathEngine.evalWithVars(raw, emptyMap())
+            if (!v.isNaN() && !v.isInfinite()) v else fallback
+        } catch (_: Throwable) {
+            fallback
+        }
+    }
+
+    // מאפשר הקלדת תרגילים (כולל +, -, *, /, ^, סוגריים) בתוך שדות קלט ומחבר עדכון ויזואלי חי!
+    fun bindLiveInputs(vararg inputs: EditText, onUpdate: () -> Unit) {
+        val watcher = object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+                try { onUpdate() } catch (_: Throwable) {}
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        }
+        for (et in inputs) {
+            // פותח את המקלדת גם לתרגילים מתמטיים (+ - * / ( )) ולא רק ספרות בודדות
+            if (et.inputType and InputType.TYPE_CLASS_NUMBER != 0) {
+                et.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+            }
+            et.addTextChangedListener(watcher)
+        }
+    }
+
+    // מחבר עדכון חי אוטומטי לכל מסך מחשבון שיש בו שדות קלט וכפתור חישוב!
+    fun attachUniversalLiveVisualizer(screenRoot: View?) {
+        if (screenRoot == null) return
+        val editTexts = mutableListOf<EditText>()
+        var primaryCalcButton: TextView? = null
+
+        fun scan(v: View) {
+            when (v) {
+                is EditText -> editTexts.add(v)
+                is TextView -> {
+                    if (v.isClickable && primaryCalcButton == null) {
+                        val t = v.text?.toString() ?: ""
+                        if (t.startsWith("חשב") || t.startsWith("פתור") || t.startsWith("נתח") || t.startsWith("המר") || t.startsWith("הצפן")) {
+                            primaryCalcButton = v
+                        }
+                    }
+                }
+                is ViewGroup -> {
+                    for (i in 0 until v.childCount) scan(v.getChildAt(i))
+                }
+            }
+        }
+        scan(screenRoot)
+        val calcBtn = primaryCalcButton ?: return
+        if (editTexts.isEmpty()) return
+
+        val liveWatcher = object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+                try { calcBtn.performClick() } catch (_: Throwable) {}
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        }
+        for (et in editTexts) {
+            et.addTextChangedListener(liveWatcher)
+        }
     }
 }
 
@@ -91,7 +174,7 @@ class RealMetronomeSoundEngine(context: Context) {
         return try {
             val file = File(context.cacheDir, fileName)
             val sampleRate = 44100
-            val durationSamples = (sampleRate * 0.045).toInt() // 45ms crisp acoustic click
+            val durationSamples = (sampleRate * 0.045).toInt()
             val pcmData = ByteArray(durationSamples * 2)
             val buffer = ByteBuffer.wrap(pcmData).order(ByteOrder.LITTLE_ENDIAN)
             val rng = Random(42L)
@@ -99,7 +182,6 @@ class RealMetronomeSoundEngine(context: Context) {
             for (i in 0 until durationSamples) {
                 val t = i.toDouble() / sampleRate
                 val tMs = t * 1000.0
-                // מעטפת תקיפה מיידית של פטיש עץ ודעיכה אקספוננציאלית טבעית
                 val attack = (tMs / 0.8).coerceAtMost(1.0)
                 val bodyEnv = exp(-tMs / decayMs)
                 val transientEnv = exp(-tMs / 2.2)
@@ -117,13 +199,13 @@ class RealMetronomeSoundEngine(context: Context) {
                 header.put("RIFF".toByteArray(Charsets.US_ASCII))
                 header.putInt(totalDataLen)
                 header.put("WAVEfmt ".toByteArray(Charsets.US_ASCII))
-                header.putInt(16) // PCM chunk size
-                header.putShort(1) // PCM format
-                header.putShort(1) // Mono
+                header.putInt(16)
+                header.putShort(1)
+                header.putShort(1)
                 header.putInt(sampleRate)
-                header.putInt(sampleRate * 2) // Byte rate
-                header.putShort(2) // Block align
-                header.putShort(16) // Bits per sample
+                header.putInt(sampleRate * 2)
+                header.putShort(2)
+                header.putShort(16)
                 header.put("data".toByteArray(Charsets.US_ASCII))
                 header.putInt(pcmData.size)
                 fos.write(header.array())
@@ -161,7 +243,7 @@ class MetalDetectorRadarCanvasView(context: Context, private val activity: MainA
     var earthDipAngleDeg: Float = 38.0f
     var trueMetalAnomalyUt: Float = 0.0f
     var estimatedDepthCm: Float = 0.0f
-    var detectionState: Int = 0 // 0=Earth only, 1=Deep/Weak Metal, 2=Buried Ferromagnetic Metal, 3=Close Strong Metal
+    var detectionState: Int = 0
     private var pulsePhase: Float = 0f
 
     private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
@@ -180,13 +262,12 @@ class MetalDetectorRadarCanvasView(context: Context, private val activity: MainA
         val maxR = min(w, h) * 0.31f
 
         val statusColor = when (detectionState) {
-            3 -> Color.parseColor("#FF1744") // מתכת קרובה מאוד
-            2 -> Color.parseColor("#FF9100") // מתכת מתחת לאדמה / בקיר
-            1 -> Color.parseColor("#FFEA00") // אנומליה עמוקה / חלשה
-            else -> if (isMin) Color.parseColor("#2E7D32") else Color.parseColor("#00E676") // שדה טבעי של כדור הארץ
+            3 -> Color.parseColor("#FF1744")
+            2 -> Color.parseColor("#FF9100")
+            1 -> Color.parseColor("#FFEA00")
+            else -> if (isMin) Color.parseColor("#2E7D32") else Color.parseColor("#00E676")
         }
 
-        // גלי מכ"ם מתפשטים
         for (i in 1..3) {
             val r = maxR * (0.28f * i + (pulsePhase % 0.28f))
             val alpha = ((1f - (r / (maxR * 1.15f))).coerceIn(0f, 1f) * 145).toInt()
@@ -195,7 +276,6 @@ class MetalDetectorRadarCanvasView(context: Context, private val activity: MainA
             canvas.drawCircle(cx, cy, r, ringPaint)
         }
 
-        // קשת סקאלה של אנומליית המתכת נטו (ללא השדה של כדור הארץ)
         val arcRect = RectF(cx - maxR, cy - maxR, cx + maxR, cy + maxR)
         ringPaint.strokeWidth = 8f * d
         ringPaint.color = if (isMin) Color.argb(35, 44, 44, 44) else Color.argb(45, 255, 255, 255)
@@ -214,7 +294,6 @@ class MetalDetectorRadarCanvasView(context: Context, private val activity: MainA
         fillPaint.color = statusColor
         canvas.drawCircle(cx, cy, 6f * d, fillPaint)
 
-        // סרגל חתך עומק תת-קרקעי בתחתית הקנבס
         val barTop = h * 0.77f
         val barBot = h * 0.86f
         val barLeft = 22f * d
@@ -317,7 +396,6 @@ fun MainActivity.createProMetalDetectorScreen(): View {
                 val bx = e.values[0]; val by = e.values[1]; val bz = e.values[2]
                 val totalUt = sqrt(bx * bx + by * by + bz * bz)
 
-                // פירוק וקטורי ביחס לכוח הכבידה (עמיד ב-100% לסיבוב הטלפון באוויר!)
                 val gNorm = sqrt(gravityVec[0] * gravityVec[0] + gravityVec[1] * gravityVec[1] + gravityVec[2] * gravityVec[2]).coerceAtLeast(0.1f)
                 val gx = gravityVec[0] / gNorm; val gy = gravityVec[1] / gNorm; val gz = gravityVec[2] / gNorm
 
@@ -337,13 +415,9 @@ fun MainActivity.createProMetalDetectorScreen(): View {
                     smoothedBh = 0.75f * smoothedBh + 0.25f * bh
                 }
 
-                // חישוב אנומליית מתכת אמיתית לעומת שדה כדור הארץ:
-                // בסיבוב הטלפון באוויר ללא מתכת, גם smoothedUt וגם smoothedBv וגם dipDeg נשארים קבועים!
                 val deltaMagnitude = abs(smoothedUt - radarCanvas.earthBaselineUt)
                 val deltaVertical = abs(smoothedBv - radarCanvas.earthBaselineBv)
                 val dipShift = abs(dipDeg - radarCanvas.earthDipAngleDeg)
-
-                // משקלול אנומליה מרחבית שמתעלם מסיבוב סתמי של המכשיר
                 val metalAnomaly = max(deltaMagnitude, deltaVertical * 0.90f)
 
                 val state = when {
@@ -353,7 +427,6 @@ fun MainActivity.createProMetalDetectorScreen(): View {
                     else -> 0
                 }
 
-                // הערכת עומק לפי דעיכת דיפול מגנטי (1/r^3)
                 val estDepthCm = if (metalAnomaly >= 1.5f) {
                     (42.0 / metalAnomaly.toDouble().pow(0.36)).toFloat().coerceIn(2f, 40f)
                 } else 0f
@@ -653,6 +726,7 @@ fun MainActivity.createProEmergencySirenScreen(): View {
         showItemPicker("בחר דפוס סירנה", modeNames) { chosen ->
             sirenMode = modeNames.indexOf(chosen).coerceAtLeast(0)
             modeBtn.text = "סוג צופר: $chosen"
+            beaconCanvas.invalidate()
         }
     }
 
@@ -717,10 +791,14 @@ fun MainActivity.createProMetronomeScreen(): View {
                 canvas.drawCircle(startX + b * dotSpacing, 26f * d, if (isCurrent) 9f * d else 6.5f * d, p)
             }
 
-            val angleDeg = if (isPlaying) (swingDir * 26f) else 0f
+            // מיקום המשקולת על זרוע המטרונום משתנה ויזואלית בהתאם ל-BPM שנכתב!
+            val weightRatio = ((bpm - 30f) / 210f).coerceIn(0.15f, 0.90f)
+            val angleDeg = if (isPlaying) (swingDir * 26f) else ((bpm - 120) / 6f).coerceIn(-22f, 22f)
             val rad = Math.toRadians((angleDeg - 90f).toDouble())
             val tipX = (pivotX + cos(rad) * armLen).toFloat()
             val tipY = (pivotY + sin(rad) * armLen).toFloat()
+            val weightX = (pivotX + cos(rad) * (armLen * (1f - weightRatio * 0.55f))).toFloat()
+            val weightY = (pivotY + sin(rad) * (armLen * (1f - weightRatio * 0.55f))).toFloat()
 
             p.style = Paint.Style.STROKE
             p.strokeWidth = 3.5f * d
@@ -729,7 +807,7 @@ fun MainActivity.createProMetronomeScreen(): View {
 
             p.style = Paint.Style.FILL
             p.color = if (isMinimalistMode) MinimalistTheme.ACCENT_TERRACOTTA else primaryColor
-            canvas.drawCircle(tipX, tipY, 10f * d, p)
+            canvas.drawCircle(weightX, weightY, 10.5f * d, p)
             canvas.drawCircle(pivotX, pivotY, 7f * d, p)
 
             p.color = if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
@@ -754,10 +832,22 @@ fun MainActivity.createProMetronomeScreen(): View {
         }
     }
 
-    val bpmIn = createInputBox("קצב בפעמות לדקה (BPM 30-240)").apply { setText("120") }
+    val bpmIn = createInputBox("קצב בפעמות לדקה או תרגיל (למשל 120 או 60*2)").apply { setText("120") }
     val resTv = BidiFmt.applyRtlToResultView(createResultTextView()).apply {
         text = BidiFmt.rtlParagraph("קצב נוכחי: ${BidiFmt.ltr("120 BPM")} (${BidiFmt.ltr("0.500")} שניות לפעמה)")
     }
+
+    fun syncBpmFromInput() {
+        bpm = BidiFmt.evalInputExpr(bpmIn, 120.0).roundToInt().coerceIn(30, 240)
+        pendulumCanvas.invalidate()
+        resTv.text = BidiFmt.rtlParagraph(
+            "קצב מטרונום: ${BidiFmt.ltr("$bpm BPM")}",
+            "• מרווח בין נקישות: ${BidiFmt.ltr("${Utils.formatResult(60.0 / bpm, 3)} sec")} (${BidiFmt.ltr("${60000 / bpm} ms")})",
+            "• סאונד: ${soundProfiles[soundProfileIdx]}"
+        )
+    }
+
+    BidiFmt.bindLiveInputs(bpmIn) { syncBpmFromInput() }
 
     val beatRunner = object : Runnable {
         override fun run() {
@@ -773,7 +863,7 @@ fun MainActivity.createProMetronomeScreen(): View {
     }
 
     val playBtn = createActionBtn("▶️ הפעל / עצור מטרונום", true) {
-        bpm = (bpmIn.text.toString().toIntOrNull() ?: 120).coerceIn(30, 240)
+        syncBpmFromInput()
         isPlaying = !isPlaying
         if (isPlaying) {
             currentBeat = 0
@@ -784,11 +874,6 @@ fun MainActivity.createProMetronomeScreen(): View {
             handler.removeCallbacksAndMessages(null)
             pendulumCanvas.invalidate()
         }
-        resTv.text = BidiFmt.rtlParagraph(
-            "קצב מטרונום פעיל: ${BidiFmt.ltr("$bpm BPM")}",
-            "• מרווח בין נקישות: ${BidiFmt.ltr("${Utils.formatResult(60.0 / bpm, 3)} sec")} (${BidiFmt.ltr("${60000 / bpm} ms")})",
-            "• סאונד: ${soundProfiles[soundProfileIdx]}"
-        )
     }
 
     val soundProfileBtn = createActionBtn("סוג נקישה: ${soundProfiles[0]}", false) {}
@@ -797,6 +882,7 @@ fun MainActivity.createProMetronomeScreen(): View {
             soundProfileIdx = soundProfiles.indexOf(chosen).coerceAtLeast(0)
             soundProfileBtn.text = "סוג נקישה: $chosen"
             metroAudio.playBeat(soundProfileIdx, true)
+            syncBpmFromInput()
         }
     }
 
@@ -811,8 +897,6 @@ fun MainActivity.createProMetronomeScreen(): View {
             if (avgMs > 0) {
                 bpm = (60000.0 / avgMs).roundToInt().coerceIn(30, 240)
                 bpmIn.setText(bpm.toString())
-                pendulumCanvas.invalidate()
-                resTv.text = BidiFmt.rtlParagraph("קצב שנקבע בלחיצות: ${BidiFmt.ltr("$bpm BPM")}")
             }
         }
     }
@@ -844,10 +928,11 @@ fun MainActivity.createProMetronomeScreen(): View {
 fun MainActivity.createProTallyCounterScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("🔢 מונה לחיצות חכם (Tally Counter)", "מנייה מהירה בלחיצה, הגדרת יעד וגודל צעד עם שמירה אוטומטית"))
+    root.addView(createProCanvaHeader("🔢 מונה לחיצות חכם (Tally Counter)", "מנייה מהירה בלחיצה, הגדרת יעד וגודל צעד עם עדכון צג חי ושמירה אוטומטית"))
 
     var count = prefs?.getInt("pro_tally_count", 0) ?: 0
     var targetGoal = prefs?.getInt("pro_tally_target", 100) ?: 100
+    var currentStep = 1
 
     val counterCanvas = object : View(this) {
         private val p = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -876,7 +961,7 @@ fun MainActivity.createProTallyCounterScreen(): View {
 
             p.textSize = 12.5f * d
             p.color = if (isMin) MinimalistTheme.TEXT_MUTED_GREY else Color.LTGRAY
-            val bottomLbl = "\u200Fיעד: ${BidiFmt.ltr("$count / $targetGoal")} (${BidiFmt.ltr("${(progress * 100).toInt()}%")}) • לחץ להוספה"
+            val bottomLbl = "\u200Fיעד: ${BidiFmt.ltr("$count / $targetGoal")} (${BidiFmt.ltr("${(progress * 100).toInt()}%")}) • צעד: ${BidiFmt.ltr("+$currentStep")}"
             canvas.drawText(bottomLbl, cx, height - 14f * d, p)
         }
     }.apply {
@@ -888,43 +973,43 @@ fun MainActivity.createProTallyCounterScreen(): View {
         }
     }
 
-    val stepIn = createInputBox("גודל צעד בכל לחיצה (ברירת מחדל 1)").apply { setText("1") }
-    val targetIn = createInputBox("יעד מנייה (למשל 100)").apply { setText(targetGoal.toString()) }
-    val resTv = BidiFmt.applyRtlToResultView(createResultTextView()).apply {
-        text = BidiFmt.rtlParagraph("מונה נוכחי: ${BidiFmt.ltr(count)}")
-    }
+    val stepIn = createInputBox("גודל צעד בכל לחיצה (למשל 1 או 5*2)").apply { setText("1") }
+    val targetIn = createInputBox("יעד מנייה (למשל 100 או 50*4)").apply { setText(targetGoal.toString()) }
+    val resTv = BidiFmt.applyRtlToResultView(createResultTextView())
 
     fun updateCounter(delta: Int) {
-        targetGoal = (targetIn.text.toString().toIntOrNull() ?: 100).coerceAtLeast(1)
+        currentStep = BidiFmt.evalInputExpr(stepIn, 1.0).roundToInt().coerceAtLeast(1)
+        targetGoal = BidiFmt.evalInputExpr(targetIn, 100.0).roundToInt().coerceAtLeast(1)
         count += delta
         prefs?.edit()?.putInt("pro_tally_count", count)?.putInt("pro_tally_target", targetGoal)?.apply()
         counterCanvas.invalidate()
         val rem = (targetGoal - count).coerceAtLeast(0)
+        val clicksLeft = ceil(rem.toDouble() / currentStep).roundToInt()
         resTv.text = BidiFmt.rtlParagraph(
             "מונה נוכחי: ${BidiFmt.ltr(count)}",
-            "• נותרו להשלמת היעד: ${BidiFmt.ltr(rem)}"
+            "• נותרו להשלמת היעד: ${BidiFmt.ltr(rem)} (כ-${BidiFmt.ltr(clicksLeft)} לחיצות בצעד של ${BidiFmt.ltr(currentStep)})"
         )
     }
 
+    BidiFmt.bindLiveInputs(stepIn, targetIn) { updateCounter(0) }
+
     counterCanvas.setOnClickListener {
         feedback(it)
-        val step = stepIn.text.toString().toIntOrNull() ?: 1
-        updateCounter(step)
+        updateCounter(BidiFmt.evalInputExpr(stepIn, 1.0).roundToInt())
     }
 
     val plusBtn = createActionBtn("➕ הוסף למניין (+)", true) {
-        val step = stepIn.text.toString().toIntOrNull() ?: 1
-        updateCounter(step)
+        updateCounter(BidiFmt.evalInputExpr(stepIn, 1.0).roundToInt())
     }
     val minusBtn = createActionBtn("➖ הפחת מהמניין (-)", false) {
-        val step = stepIn.text.toString().toIntOrNull() ?: 1
-        updateCounter(-step)
+        updateCounter(-BidiFmt.evalInputExpr(stepIn, 1.0).roundToInt())
     }
     val resetBtn = createActionBtn("🔄 אפס מונה ל-0", false) {
         count = 0
         updateCounter(0)
     }
 
+    updateCounter(0)
     root.addView(counterCanvas); root.addView(plusBtn); root.addView(minusBtn); root.addView(resetBtn)
     root.addView(stepIn); root.addView(targetIn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
     scroll.addView(root); return scroll
@@ -936,7 +1021,7 @@ fun MainActivity.createProTallyCounterScreen(): View {
 fun MainActivity.createProInductorColorScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("🌀 קודי צבע של סלילים (Inductors)", "פענוח סלילי השראות ב-µH/mH/H וחישוב היגב השראתי XL = 2πfL"))
+    root.addView(createProCanvaHeader("🌀 קודי צבע של סלילים (Inductors)", "פענוח סלילי השראות ב-µH/mH/H וחישוב חי של היגב השראתי XL = 2πfL"))
 
     val colors = listOf(
         Triple("שחור (0)", 0, Color.BLACK), Triple("חום (1)", 1, Color.rgb(121, 85, 72)),
@@ -948,6 +1033,7 @@ fun MainActivity.createProInductorColorScreen(): View {
     var b1 = 1; var b2 = 0; var mult = 1
     var bandCols = intArrayOf(colors[1].third, colors[0].third, colors[1].third, Color.rgb(212, 175, 55))
     var labelStr = "100 µH ±5%"
+    var currentXlOhms = 62.83
 
     val coilCanvas = object : View(this) {
         private val p = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -955,7 +1041,7 @@ fun MainActivity.createProInductorColorScreen(): View {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
             val w = width.toFloat(); val h = height.toFloat()
-            val cy = h * 0.44f
+            val cy = h * 0.40f
             val isMin = isMinimalistMode
 
             p.style = Paint.Style.STROKE; p.strokeWidth = 5f * d
@@ -978,11 +1064,12 @@ fun MainActivity.createProInductorColorScreen(): View {
             }
 
             p.color = if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
-            p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD; p.textSize = 15f * d
-            canvas.drawText("\u200Fהשראות הסליל: ${BidiFmt.ltr(labelStr)}", w / 2f, h - 14f * d, p)
+            p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD; p.textSize = 14f * d
+            val summaryLine = "\u200Fהשראות: ${BidiFmt.ltr(labelStr)}  |  היגב: ${BidiFmt.ltr("XL = ${Utils.formatResult(currentXlOhms, 1)} Ω")}"
+            CanvasUiHelper.drawFittedText(canvas, summaryLine, w / 2f, h - 14f * d, w - 24f * d, 14f * d, 9.5f * d, p)
         }
     }.apply {
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(175f)).apply { bottomMargin = dp(12f) }
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(180f)).apply { bottomMargin = dp(12f) }
         background = when {
             isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProInductorColorScreen, 20f, 2)
             isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProInductorColorScreen, 20f)
@@ -993,14 +1080,15 @@ fun MainActivity.createProInductorColorScreen(): View {
     val btn1 = createActionBtn("פס 1: ${colors[b1].first}", false) {}
     val btn2 = createActionBtn("פס 2: ${colors[b2].first}", false) {}
     val btnM = createActionBtn("מכפיל: ${BidiFmt.ltr("×10^$mult")} (${colors[mult].first})", false) {}
-    val freqIn = createInputBox("תדר עבודה ב-kHz לחישוב היגב השראתי XL").apply { setText("100") }
+    val freqIn = createInputBox("תדר עבודה ב-kHz לחישוב היגב השראתי XL (למשל 100)").apply { setText("100") }
     val resTv = BidiFmt.applyRtlToResultView(createResultTextView())
 
     fun updateInductor() {
         val microHenries = (b1 * 10 + b2) * 10.0.pow(mult)
         val milliHenries = microHenries / 1000.0
-        val freqHz = (freqIn.text.toString().toDoubleOrNull() ?: 100.0) * 1000.0
-        val xlOhms = 2.0 * PI * freqHz * (microHenries * 1e-6)
+        val freqKhz = BidiFmt.evalInputExpr(freqIn, 100.0).coerceAtLeast(0.0)
+        val freqHz = freqKhz * 1000.0
+        currentXlOhms = 2.0 * PI * freqHz * (microHenries * 1e-6)
 
         bandCols = intArrayOf(colors[b1].third, colors[b2].third, colors[mult].third, Color.rgb(212, 175, 55))
         labelStr = if (microHenries >= 1000) "${Utils.formatResult(milliHenries, 2)} mH ±5%" else "${Utils.formatResult(microHenries, 1)} µH ±5%"
@@ -1013,10 +1101,11 @@ fun MainActivity.createProInductorColorScreen(): View {
             "השראות הסליל (L):",
             "• ב-מיקרו-הנרי: ${BidiFmt.ltr("${Utils.formatResult(microHenries, 2)} µH")}",
             "• ב-מילי-הנרי: ${BidiFmt.ltr("${Utils.formatResult(milliHenries, 4)} mH")}",
-            "• היגב השראתי (${BidiFmt.ltr("XL = 2πfL")}): ${BidiFmt.ltr("${Utils.formatResult(xlOhms, 2)} Ω")}"
+            "• היגב השראתי בתדר ${BidiFmt.ltr("${Utils.formatResult(freqKhz, 2)} kHz")}: ${BidiFmt.ltr("${Utils.formatResult(currentXlOhms, 2)} Ω")}"
         )
     }
 
+    BidiFmt.bindLiveInputs(freqIn) { updateInductor() }
     btn1.setOnClickListener { showItemPicker("בחר צבע פס 1", colors.map { it.first }) { c -> b1 = colors.indexOfFirst { it.first == c }; updateInductor() } }
     btn2.setOnClickListener { showItemPicker("בחר צבע פס 2", colors.map { it.first }) { c -> b2 = colors.indexOfFirst { it.first == c }; updateInductor() } }
     btnM.setOnClickListener { showItemPicker("בחר מכפיל", colors.map { it.first }) { c -> mult = colors.indexOfFirst { it.first == c }; updateInductor() } }
@@ -1029,12 +1118,12 @@ fun MainActivity.createProInductorColorScreen(): View {
 }
 
 // =========================================================================
-// 7. סימולטור שערים לוגיים וטבלאות אמת (Logic Gates Simulator - Tab 72)
+// 7. סימולטור שערים לוגיים וטבלאות אמת עם שרטוט IEEE תקני לכל שער (Logic Gates - Tab 72)
 // =========================================================================
 fun MainActivity.createProLogicGatesScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("🔌 שערים לוגיים וטבלאות אמת", "סימולטור שערים דיגיטליים (AND, OR, XOR, NAND, NOR, XNOR, NOT) וטבלת אמת חיה"))
+    root.addView(createProCanvaHeader("🔌 שערים לוגיים וטבלאות אמת", "סימולטור שערים דיגיטליים (AND, OR, XOR, NAND, NOR, XNOR, NOT) ושרטוט שער חי"))
 
     val gates = listOf("AND (ו-לוגי)", "OR (או-לוגי)", "XOR (או מוציא)", "NAND (לא-ו)", "NOR (לא-או)", "XNOR (שקילות)", "NOT (שלילה / מהפך)")
     var gateIdx = 0
@@ -1065,30 +1154,73 @@ fun MainActivity.createProLogicGatesScreen(): View {
             val lowCol = if (isMin) Color.parseColor("#757575") else Color.parseColor("#90A4AE")
 
             p.style = Paint.Style.STROKE; p.strokeWidth = 3.2f * d
-            p.color = if (inA) highCol else lowCol
-            canvas.drawLine(w * 0.14f, cy - 18f * d, cx - 34f * d, cy - 18f * d, p)
-            if (gateIdx != 6) {
+            if (gateIdx == 6) {
+                p.color = if (inA) highCol else lowCol
+                canvas.drawLine(w * 0.14f, cy, cx - 32f * d, cy, p)
+            } else {
+                p.color = if (inA) highCol else lowCol
+                canvas.drawLine(w * 0.14f, cy - 18f * d, cx - 34f * d, cy - 18f * d, p)
                 p.color = if (inB) highCol else lowCol
                 canvas.drawLine(w * 0.14f, cy + 18f * d, cx - 34f * d, cy + 18f * d, p)
             }
-            p.color = if (outY) highCol else lowCol
-            canvas.drawLine(cx + 38f * d, cy, w * 0.86f, cy, p)
 
+            val hasBubble = gateIdx in listOf(3, 4, 5, 6)
+            val outStartX = if (hasBubble) cx + 44f * d else cx + 34f * d
+            p.color = if (outY) highCol else lowCol
+            canvas.drawLine(outStartX, cy, w * 0.86f, cy, p)
+
+            // ציור צורת השער ההנדסית האמיתית לפי השער שנבחר!
             p.color = if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
-            canvas.drawRoundRect(RectF(cx - 34f * d, cy - 32f * d, cx + 34f * d, cy + 32f * d), 14f * d, 14f * d, p)
+            p.strokeWidth = 2.6f * d
+            val gatePath = Path()
+            when (gateIdx) {
+                0, 3 -> { // AND / NAND (D-shape)
+                    gatePath.moveTo(cx - 34f * d, cy - 32f * d)
+                    gatePath.lineTo(cx, cy - 32f * d)
+                    gatePath.arcTo(RectF(cx - 34f * d, cy - 32f * d, cx + 34f * d, cy + 32f * d), -90f, 180f, false)
+                    gatePath.lineTo(cx - 34f * d, cy + 32f * d)
+                    gatePath.close()
+                }
+                1, 2, 4, 5 -> { // OR / XOR / NOR / XNOR (Curved shield shape)
+                    gatePath.moveTo(cx - 34f * d, cy - 32f * d)
+                    gatePath.quadTo(cx + 10f * d, cy - 32f * d, cx + 34f * d, cy)
+                    gatePath.quadTo(cx + 10f * d, cy + 32f * d, cx - 34f * d, cy + 32f * d)
+                    gatePath.quadTo(cx - 16f * d, cy, cx - 34f * d, cy - 32f * d)
+                    if (gateIdx == 2 || gateIdx == 5) {
+                        val xorArc = Path().apply {
+                            moveTo(cx - 42f * d, cy - 32f * d)
+                            quadTo(cx - 24f * d, cy, cx - 42f * d, cy + 32f * d)
+                        }
+                        canvas.drawPath(xorArc, p)
+                    }
+                }
+                else -> { // NOT (Triangle Inverter)
+                    gatePath.moveTo(cx - 32f * d, cy - 30f * d)
+                    gatePath.lineTo(cx + 32f * d, cy)
+                    gatePath.lineTo(cx - 32f * d, cy + 30f * d)
+                    gatePath.close()
+                }
+            }
+            canvas.drawPath(gatePath, p)
+            if (hasBubble) {
+                canvas.drawCircle(cx + 39f * d, cy, 5f * d, p)
+            }
 
             p.style = Paint.Style.FILL; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
-            p.textSize = 15f * d
-            canvas.drawText(gates[gateIdx].substringBefore(" "), cx, cy + 5f * d, p)
-
             p.textSize = 13f * d
-            canvas.drawText(BidiFmt.ltr("A=${if (inA) 1 else 0}"), w * 0.14f, cy - 26f * d, p)
-            if (gateIdx != 6) canvas.drawText(BidiFmt.ltr("B=${if (inB) 1 else 0}"), w * 0.14f, cy + 36f * d, p)
+            canvas.drawText(gates[gateIdx].substringBefore(" "), cx - 4f * d, cy + 5f * d, p)
+
+            if (gateIdx == 6) {
+                canvas.drawText(BidiFmt.ltr("A=${if (inA) 1 else 0}"), w * 0.14f, cy - 12f * d, p)
+            } else {
+                canvas.drawText(BidiFmt.ltr("A=${if (inA) 1 else 0}"), w * 0.14f, cy - 26f * d, p)
+                canvas.drawText(BidiFmt.ltr("B=${if (inB) 1 else 0}"), w * 0.14f, cy + 36f * d, p)
+            }
             p.color = if (outY) highCol else lowCol
             canvas.drawText(BidiFmt.ltr("Y=${if (outY) 1 else 0}"), w * 0.86f, cy - 12f * d, p)
         }
     }.apply {
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(185f)).apply { bottomMargin = dp(12f) }
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(190f)).apply { bottomMargin = dp(12f) }
         background = when {
             isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProLogicGatesScreen, 20f, 2)
             isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProLogicGatesScreen, 20f)
@@ -1143,40 +1275,89 @@ fun MainActivity.createProLogicGatesScreen(): View {
 }
 
 // =========================================================================
-// 8. ממיר צבעים HEX ל-RGB / HSL / CMYK (Color Converter - Tab 73)
+// 8. ממיר צבעים HEX ל-RGB / HSL / HSV / CMYK עם עדכון חי (Color Converter - Tab 73)
 // =========================================================================
 fun MainActivity.createProHexRgbColorScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("🎨 ממיר צבעים HEX / RGB / HSL / CMYK", "המרה דו-כיוונית בין קוד HEX לערכי RGB, HSL ודפוס CMYK עם הרמוניית צבעים"))
+    root.addView(
+        createProCanvaHeader(
+            "🎨 ממיר צבעים HEX / RGB / HSL / HSV / CMYK",
+            "המרה דו-כיוונית חיה עם תצוגת הצבע הנבחר והצבע המשלים (לחץ על כל ריבוע להעתקת קוד ה-HEX)"
+        )
+    )
 
     var currentColor = Color.parseColor("#00F5D4")
+    var isInternalChange = false
+
+    fun getComplementaryColor(col: Int): Int {
+        return Color.rgb(255 - Color.red(col), 255 - Color.green(col), 255 - Color.blue(col))
+    }
+
     val swatchCanvas = object : View(this) {
         private val p = Paint(Paint.ANTI_ALIAS_FLAG)
+
+        override fun onTouchEvent(event: MotionEvent): Boolean {
+            if (event.action == MotionEvent.ACTION_UP) {
+                feedback(this)
+                if (event.x < width * 0.64f) {
+                    val mainHex = String.format(Locale.US, "#%06X", 0xFFFFFF and currentColor)
+                    copyToClipboard(mainHex)
+                    Toast.makeText(context, "קוד הצבע הנבחר ($mainHex) הועתק ללוח 📋", Toast.LENGTH_SHORT).show()
+                } else {
+                    val compCol = getComplementaryColor(currentColor)
+                    val compHex = String.format(Locale.US, "#%06X", 0xFFFFFF and compCol)
+                    copyToClipboard(compHex)
+                    Toast.makeText(context, "קוד הצבע המשלים ($compHex) הועתק ללוח 📋", Toast.LENGTH_SHORT).show()
+                }
+                return true
+            }
+            return true
+        }
+
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
             val w = width.toFloat(); val h = height.toFloat()
-            val hsv = FloatArray(3)
-            Color.colorToHSV(currentColor, hsv)
-            val compColor = Color.HSVToColor(floatArrayOf((hsv[0] + 180f) % 360f, hsv[1], hsv[2]))
+            val compColor = getComplementaryColor(currentColor)
+
+            val mainHex = String.format(Locale.US, "#%06X", 0xFFFFFF and currentColor)
+            val compHex = String.format(Locale.US, "#%06X", 0xFFFFFF and compColor)
+
+            val leftRect = RectF(16f * d, 12f * d, w * 0.62f, h - 12f * d)
+            val rightRect = RectF(w * 0.66f, 12f * d, w - 16f * d, h - 12f * d)
 
             p.style = Paint.Style.FILL
             p.color = currentColor
-            canvas.drawRoundRect(RectF(16f * d, 14f * d, w * 0.62f, h - 14f * d), 16f * d, 16f * d, p)
+            canvas.drawRoundRect(leftRect, 16f * d, 16f * d, p)
 
             p.color = compColor
-            canvas.drawRoundRect(RectF(w * 0.66f, 14f * d, w - 16f * d, h - 14f * d), 16f * d, 16f * d, p)
+            canvas.drawRoundRect(rightRect, 16f * d, 16f * d, p)
 
-            p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD; p.textSize = 13f * d
-            p.color = MinimalistTheme.ensureReadableTextOnBg(Color.WHITE, currentColor, 2.4)
-            canvas.drawText(BidiFmt.ltr(String.format("#%06X", 0xFFFFFF and currentColor)), w * 0.39f, h / 2f + 5f * d, p)
+            p.style = Paint.Style.STROKE
+            p.strokeWidth = 1.2f * d
+            p.color = if (isMinimalistMode) Color.argb(40, 44, 44, 44) else Color.argb(65, 255, 255, 255)
+            canvas.drawRoundRect(leftRect, 16f * d, 16f * d, p)
+            canvas.drawRoundRect(rightRect, 16f * d, 16f * d, p)
 
-            p.color = MinimalistTheme.ensureReadableTextOnBg(Color.WHITE, compColor, 2.4)
-            canvas.drawText("משלים", w * 0.81f, h / 2f + 5f * d, p)
+            p.style = Paint.Style.FILL
+            p.textAlign = Paint.Align.CENTER
+            p.typeface = Typeface.DEFAULT_BOLD
+
+            val mainTxtCol = MinimalistTheme.ensureReadableTextOnBg(Color.WHITE, currentColor, 2.4)
+            p.color = mainTxtCol
+            p.textSize = 15.5f * d
+            canvas.drawText(BidiFmt.ltr(mainHex), leftRect.centerX(), leftRect.centerY() + 6f * d, p)
+
+            val compTxtCol = MinimalistTheme.ensureReadableTextOnBg(Color.WHITE, compColor, 2.4)
+            p.color = compTxtCol
+            p.textSize = 13.5f * d
+            canvas.drawText("משלים", rightRect.centerX(), rightRect.centerY() - 6f * d, p)
+            p.textSize = 13.0f * d
+            canvas.drawText(BidiFmt.ltr(compHex), rightRect.centerX(), rightRect.centerY() + 14f * d, p)
         }
     }.apply {
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(130f)).apply { bottomMargin = dp(12f) }
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(135f)).apply { bottomMargin = dp(12f) }
     }
 
     val hexIn = createInputBox("קוד HEX (למשל ${BidiFmt.ltr("#00F5D4")})").apply {
@@ -1187,39 +1368,92 @@ fun MainActivity.createProHexRgbColorScreen(): View {
         inputType = InputType.TYPE_CLASS_TEXT
         setText("0, 245, 212")
     }
-    val resTv = BidiFmt.applyRtlToResultView(createResultTextView().apply { textSize = 16.0f })
+    val resTv = BidiFmt.applyRtlToResultView(createResultTextView().apply { textSize = 15.5f })
 
     fun updateColorDetails(col: Int) {
         currentColor = col
         swatchCanvas.invalidate()
         val r = Color.red(col); val g = Color.green(col); val b = Color.blue(col)
+        val compCol = getComplementaryColor(col)
+        val cr = Color.red(compCol); val cg = Color.green(compCol); val cb = Color.blue(compCol)
+
         val hsv = FloatArray(3)
         Color.colorToHSV(col, hsv)
+        val hueDeg = hsv[0].roundToInt()
+        val satHsvPct = (hsv[1] * 100f).roundToInt()
+        val valHsvPct = (hsv[2] * 100f).roundToInt()
 
         val rf = r / 255f; val gf = g / 255f; val bf = b / 255f
-        val k = 1f - maxOf(rf, gf, bf)
+        val cMax = maxOf(rf, gf, bf)
+        val cMin = minOf(rf, gf, bf)
+        val delta = cMax - cMin
+        val lightness = (cMax + cMin) / 2f
+        val satHsl = if (delta == 0f) 0f else delta / (1f - abs(2f * lightness - 1f))
+        val satHslPct = (satHsl * 100f).roundToInt()
+        val lightHslPct = (lightness * 100f).roundToInt()
+
+        val k = 1f - cMax
         val c = if (k < 1f) (1f - rf - k) / (1f - k) else 0f
         val m = if (k < 1f) (1f - gf - k) / (1f - k) else 0f
         val y = if (k < 1f) (1f - bf - k) / (1f - k) else 0f
 
         val hexStr = String.format(Locale.US, "#%02X%02X%02X", r, g, b)
+        val compHexStr = String.format(Locale.US, "#%06X", 0xFFFFFF and compCol)
+
         resTv.text = BidiFmt.rtlParagraph(
-            "פלט מרחבי צבע:",
-            "• קוד HEX: ${BidiFmt.ltr(hexStr)}",
-            "• ערכי RGB: ${BidiFmt.ltr("($r, $g, $b)")}",
-            "• מרחב HSV / HSB: ${BidiFmt.ltr("(${hsv[0].roundToInt()}°, ${(hsv[1] * 100).roundToInt()}%, ${(hsv[2] * 100).roundToInt()}%)")}",
+            "פלט מרחבי צבע מדויק:",
+            "• קוד HEX: ${BidiFmt.ltr(hexStr)}  |  משלים: ${BidiFmt.ltr(compHexStr)}",
+            "• ערכי RGB: ${BidiFmt.ltr("($r, $g, $b)")}  |  משלים: ${BidiFmt.ltr("($cr, $cg, $cb)")}",
+            "• מרחב HSL: ${BidiFmt.ltr("($hueDeg°, $satHslPct%, $lightHslPct%)")}",
+            "• מרחב HSV / HSB: ${BidiFmt.ltr("($hueDeg°, $satHsvPct%, $valHsvPct%)")}",
             "• דפוס CMYK: ${BidiFmt.ltr("C:${(c * 100).roundToInt()}%  M:${(m * 100).roundToInt()}%  Y:${(y * 100).roundToInt()}%  K:${(k * 100).roundToInt()}%")}"
         )
     }
 
-    val fromHexBtn = createActionBtn("המר מקוד HEX ל-RGB/CMYK 🎨", true) {
+    hexIn.addTextChangedListener(object : TextWatcher {
+        override fun afterTextChanged(s: Editable?) {
+            if (isInternalChange) return
+            val raw = s?.toString()?.trim()?.removePrefix("#") ?: ""
+            if (raw.length == 6) {
+                try {
+                    val col = Color.parseColor("#$raw")
+                    isInternalChange = true
+                    rgbIn.setText("${Color.red(col)}, ${Color.green(col)}, ${Color.blue(col)}")
+                    isInternalChange = false
+                    updateColorDetails(col)
+                } catch (_: Exception) {}
+            }
+        }
+        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+    })
+
+    rgbIn.addTextChangedListener(object : TextWatcher {
+        override fun afterTextChanged(s: Editable?) {
+            if (isInternalChange) return
+            val parts = s?.toString()?.split(",", " ")?.mapNotNull { it.trim().toIntOrNull() } ?: emptyList()
+            if (parts.size >= 3) {
+                val col = Color.rgb(parts[0].coerceIn(0, 255), parts[1].coerceIn(0, 255), parts[2].coerceIn(0, 255))
+                isInternalChange = true
+                hexIn.setText(String.format(Locale.US, "#%02X%02X%02X", Color.red(col), Color.green(col), Color.blue(col)))
+                isInternalChange = false
+                updateColorDetails(col)
+            }
+        }
+        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+    })
+
+    val fromHexBtn = createActionBtn("המר מקוד HEX ל-RGB / HSL / CMYK 🎨", true) {
         val raw = hexIn.text.toString().trim().removePrefix("#")
         try {
             val col = Color.parseColor("#$raw")
+            isInternalChange = true
             rgbIn.setText("${Color.red(col)}, ${Color.green(col)}, ${Color.blue(col)}")
+            isInternalChange = false
             updateColorDetails(col)
         } catch (_: Exception) {
-            Toast.makeText(this, "קוד HEX לא תקין (דוגמה: #FF5733)", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "קוד HEX לא תקין (דוגמה: #00F5D4)", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -1227,7 +1461,9 @@ fun MainActivity.createProHexRgbColorScreen(): View {
         val parts = rgbIn.text.toString().split(",", " ").mapNotNull { it.trim().toIntOrNull() }
         if (parts.size >= 3) {
             val col = Color.rgb(parts[0].coerceIn(0, 255), parts[1].coerceIn(0, 255), parts[2].coerceIn(0, 255))
+            isInternalChange = true
             hexIn.setText(String.format(Locale.US, "#%02X%02X%02X", Color.red(col), Color.green(col), Color.blue(col)))
+            isInternalChange = false
             updateColorDetails(col)
         }
     }
@@ -1239,32 +1475,35 @@ fun MainActivity.createProHexRgbColorScreen(): View {
 }
 
 // =========================================================================
-// 9. יחס גובה-רוחב ורזולוציה (Aspect Ratio Calculator - Tab 74)
+// 9. יחס גובה-רוחב ורזולוציה עם שינוי צורה חי בזמן הקלדה (Aspect Ratio - Tab 74)
 // =========================================================================
 fun MainActivity.createProAspectRatioScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("🖥️ יחס גובה-רוחב ורזולוציה (Aspect Ratio)", "חישוב יחס מסך ווידאו (16:9, 21:9, 4:3), צפיפות פיקסלים PPI ומגה-פיקסל"))
+    root.addView(createProCanvaHeader("🖥️ יחס גובה-רוחב ורזולוציה (Aspect Ratio)", "המלבן הוויזואלי, קו האלכסון וצפיפות ה-PPI מתעדכנים בזמן אמת לפי המספרים או התרגיל שהוקלד"))
 
-    var wPx = 1920.0; var hPx = 1080.0
+    var wPx = 1920.0
+    var hPx = 1080.0
+    var diagInch = 24.0
     var ratioLabel = "16 : 9"
+    var ppiValue = 91.8
 
     val screenCanvas = object : View(this) {
         private val p = Paint(Paint.ANTI_ALIAS_FLAG)
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
-            val cx = width / 2f; val cy = height / 2f
-            val maxW = width * 0.72f; val maxH = height * 0.72f
-            val ratio = (wPx / hPx.coerceAtLeast(1.0)).toFloat().coerceIn(0.4f, 3.0f)
+            val cx = width / 2f; val cy = height * 0.48f
+            val maxW = width * 0.68f; val maxH = height * 0.64f
+            val ratio = (wPx / hPx.coerceAtLeast(1.0)).toFloat().coerceIn(0.30f, 3.60f)
 
             val rectW: Float; val rectH: Float
-            if (ratio >= 1f) {
+            if (ratio >= maxW / maxH) {
                 rectW = maxW
-                rectH = (maxW / ratio).coerceAtMost(maxH)
+                rectH = (maxW / ratio).coerceAtLeast(28f * d)
             } else {
                 rectH = maxH
-                rectW = (maxH * ratio).coerceAtMost(maxW)
+                rectW = (maxH * ratio).coerceAtLeast(28f * d)
             }
 
             val rRect = RectF(cx - rectW / 2f, cy - rectH / 2f, cx + rectW / 2f, cy + rectH / 2f)
@@ -1272,17 +1511,28 @@ fun MainActivity.createProAspectRatioScreen(): View {
             p.color = if (isMinimalistMode) MinimalistTheme.ACCENT_PASTEL_BLUE else Color.argb(55, 0, 245, 212)
             canvas.drawRoundRect(rRect, 12f * d, 12f * d, p)
 
-            p.style = Paint.Style.STROKE; p.strokeWidth = 2.4f * d
+            // קו אלכסון פנימי שממחיש את גודל המסך באינצ'ים
+            p.style = Paint.Style.STROKE; p.strokeWidth = 1.4f * d
+            p.color = if (isMinimalistMode) Color.argb(90, 44, 44, 44) else Color.argb(110, 255, 255, 255)
+            canvas.drawLine(rRect.left + 8f * d, rRect.bottom - 8f * d, rRect.right - 8f * d, rRect.top + 8f * d, p)
+
+            // מסגרת המסך
+            p.strokeWidth = 2.4f * d
             p.color = if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else primaryColor
             canvas.drawRoundRect(rRect, 12f * d, 12f * d, p)
 
             p.style = Paint.Style.FILL; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
-            p.textSize = 16f * d
+            p.textSize = 16.5f * d
             p.color = if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
-            canvas.drawText(BidiFmt.ltr(ratioLabel), cx, cy + 6f * d, p)
+            canvas.drawText(BidiFmt.ltr(ratioLabel), cx, cy + 5f * d, p)
+
+            // מידות חיות סביב המלבן
+            p.textSize = 12.0f * d
+            val subText = "${BidiFmt.ltr("${Utils.formatResult(wPx, 0)} × ${Utils.formatResult(hPx, 0)}")}  •  ${BidiFmt.ltr("${Utils.formatResult(diagInch, 1)}\"")}  •  ${BidiFmt.ltr("${Utils.formatResult(ppiValue, 1)} PPI")}"
+            CanvasUiHelper.drawFittedText(canvas, subText, cx, height - 10f * d, width - 24f * d, 12.5f * d, 9f * d, p)
         }
     }.apply {
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(170f)).apply { bottomMargin = dp(12f) }
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(190f)).apply { bottomMargin = dp(12f) }
         background = when {
             isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProAspectRatioScreen, 20f, 2)
             isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProAspectRatioScreen, 20f)
@@ -1290,34 +1540,37 @@ fun MainActivity.createProAspectRatioScreen(): View {
         }
     }
 
-    val widthIn = createInputBox("רוחב בפיקסלים / ס״מ (למשל 1920)").apply { setText("1920") }
-    val heightIn = createInputBox("גובה בפיקסלים / ס״מ (למשל 1080)").apply { setText("1080") }
+    val widthIn = createInputBox("רוחב בפיקסלים או תרגיל (למשל 1920 או 1280*2)").apply { setText("1920") }
+    val heightIn = createInputBox("גובה בפיקסלים או תרגיל (למשל 1080)").apply { setText("1080") }
     val diagInchIn = createInputBox("אלכסון מסך באינצ'ים לחישוב PPI (למשל 24)").apply { setText("24") }
     val resTv = BidiFmt.applyRtlToResultView(createResultTextView().apply { textSize = 16.0f })
 
-    val calcBtn = createActionBtn("חשב יחס גובה-רוחב ו-PPI 🖥️", true) {
-        wPx = (widthIn.text.toString().toDoubleOrNull() ?: 1920.0).coerceAtLeast(1.0)
-        hPx = (heightIn.text.toString().toDoubleOrNull() ?: 1080.0).coerceAtLeast(1.0)
-        val diagInch = (diagInchIn.text.toString().toDoubleOrNull() ?: 24.0).coerceAtLeast(0.5)
+    fun recalculateAspect() {
+        wPx = BidiFmt.evalInputExpr(widthIn, 1920.0).coerceAtLeast(1.0)
+        hPx = BidiFmt.evalInputExpr(heightIn, 1080.0).coerceAtLeast(1.0)
+        diagInch = BidiFmt.evalInputExpr(diagInchIn, 24.0).coerceAtLeast(0.5)
 
         val g = Utils.gcd(wPx.roundToLong(), hPx.roundToLong()).coerceAtLeast(1L)
         val rw = wPx.roundToLong() / g
         val rh = hPx.roundToLong() / g
         ratioLabel = "$rw : $rh"
-        screenCanvas.invalidate()
 
         val diagPx = hypot(wPx, hPx)
-        val ppi = diagPx / diagInch
+        ppiValue = diagPx / diagInch
         val megaPixels = (wPx * hPx) / 1e6
+        screenCanvas.invalidate()
 
         resTv.text = BidiFmt.rtlParagraph(
             "ניתוח תצוגה ורזולוציה:",
             "• יחס גובה-רוחב מצומצם: ${BidiFmt.ltr("$rw : $rh")} (יחס עשרוני: ${BidiFmt.ltr("${Utils.formatResult(wPx / hPx, 3)} : 1")})",
-            "• צפיפות פיקסלים ב-${BidiFmt.ltr("${Utils.formatResult(diagInch, 1)}\"")}: ${BidiFmt.ltr("${Utils.formatResult(ppi, 1)} PPI")}",
+            "• צפיפות פיקסלים ב-${BidiFmt.ltr("${Utils.formatResult(diagInch, 1)}\"")}: ${BidiFmt.ltr("${Utils.formatResult(ppiValue, 1)} PPI")}",
             "• סך פיקסלים: ${BidiFmt.ltr("${Utils.formatResult(megaPixels, 2)} MP")} (אלכסון: ${BidiFmt.ltr("${Utils.formatResult(diagPx, 0)} px")})"
         )
     }
-    calcBtn.performClick()
+
+    BidiFmt.bindLiveInputs(widthIn, heightIn, diagInchIn) { recalculateAspect() }
+    val calcBtn = createActionBtn("חשב יחס גובה-רוחב ו-PPI 🖥️", true) { recalculateAspect() }
+    recalculateAspect()
 
     root.addView(screenCanvas); root.addView(widthIn); root.addView(heightIn); root.addView(diagInchIn)
     root.addView(calcBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
@@ -1354,10 +1607,9 @@ fun MainActivity.createProBatteryMonitorScreen(): View {
             val w = width.toFloat(); val h = height.toFloat()
             val isMin = isMinimalistMode
 
-            // חוגה שמאלית: אחוז סוללה וזרם חי (mA)
             val leftCx = w * 0.28f; val rightCx = w * 0.72f
-            val cy = h * 0.46f
-            val r = min(w * 0.20f, h * 0.33f)
+            val cy = h * 0.44f
+            val r = min(w * 0.20f, h * 0.32f)
 
             p.style = Paint.Style.STROKE; p.strokeWidth = 8f * d
             p.color = if (isMin) Color.argb(35, 44, 44, 44) else Color.argb(45, 255, 255, 255)
@@ -1373,7 +1625,6 @@ fun MainActivity.createProBatteryMonitorScreen(): View {
             p.color = levelCol; p.strokeCap = Paint.Cap.ROUND
             canvas.drawArc(RectF(leftCx - r, cy - r, leftCx + r, cy + r), -90f, (pctLevel / 100f) * 360f, false, p)
 
-            // חוגה ימנית: מד חום ובריאות תרמית
             val tempCol = when {
                 tempC >= 40f -> Color.parseColor("#FF1744")
                 tempC >= 36f -> Color.parseColor("#FF9100")
@@ -1392,8 +1643,9 @@ fun MainActivity.createProBatteryMonitorScreen(): View {
 
             p.textSize = 11.5f * d
             val flowPrefix = if (isCharging) "+" else ""
-            canvas.drawText(BidiFmt.ltr("$flowPrefix$currentMa mA"), leftCx, cy + r + 18f * d, p)
-            canvas.drawText(BidiFmt.ltr("$voltageMv mV • ${Utils.formatResult(powerWatts.toDouble(), 1)}W"), rightCx, cy + r + 18f * d, p)
+            val currentStored = (designCapacityMah * pctLevel) / 100
+            canvas.drawText(BidiFmt.ltr("$flowPrefix$currentMa mA • $currentStored mAh"), leftCx, cy + r + 20f * d, p)
+            canvas.drawText(BidiFmt.ltr("$voltageMv mV • ${Utils.formatResult(powerWatts.toDouble(), 1)}W"), rightCx, cy + r + 20f * d, p)
         }
     }.apply {
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(215f)).apply { bottomMargin = dp(12f) }
@@ -1404,13 +1656,13 @@ fun MainActivity.createProBatteryMonitorScreen(): View {
         }
     }
 
-    val capIn = createInputBox("קיבולת סוללה מקורית של המכשיר ב-mAh (למשל 5000)").apply {
+    val capIn = createInputBox("קיבולת סוללה מקורית ב-mAh (למשל 5000)").apply {
         setText(designCapacityMah.toString())
     }
     val resTv = BidiFmt.applyRtlToResultView(createResultTextView().apply { textSize = 15.0f })
 
     fun readAndAnalyzeBattery(): String {
-        designCapacityMah = (capIn.text.toString().toIntOrNull() ?: 5000).coerceIn(1500, 20000)
+        designCapacityMah = BidiFmt.evalInputExpr(capIn, 5000.0).roundToInt().coerceIn(1000, 30000)
         prefs?.edit()?.putInt("pro_bat_design_mah", designCapacityMah)?.apply()
 
         val bm = getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
@@ -1455,7 +1707,6 @@ fun MainActivity.createProBatteryMonitorScreen(): View {
             }
         }
 
-        // נרמול זרם מ-µA ל-mA
         val absMa = abs(if (abs(rawCurrentNow) > 25000) rawCurrentNow / 1000 else rawCurrentNow).let {
             if (it in 20..12000) it else if (isCharging) 1650 else 310
         }
@@ -1463,8 +1714,7 @@ fun MainActivity.createProBatteryMonitorScreen(): View {
         powerWatts = (absMa * (voltageMv / 1000f)) / 1000f
         batCareCanvas.invalidate()
 
-        val currentStoredMah = if (rawChargeCounter > 100000) (rawChargeCounter / 1000) else ((designCapacityMah * pctLevel) / 100)
-        // חישוב זמן טעינה ל-80% ול-100% או זמן עבודה נותר
+        val currentStoredMah = if (rawChargeCounter > 100000 && designCapacityMah == 5000) (rawChargeCounter / 1000) else ((designCapacityMah * pctLevel) / 100)
         val timeEstimateLine = if (isCharging) {
             val mahTo80 = ((designCapacityMah * 0.80).toInt() - currentStoredMah).coerceAtLeast(0)
             val mahTo100 = (designCapacityMah - currentStoredMah).coerceAtLeast(0)
@@ -1478,7 +1728,6 @@ fun MainActivity.createProBatteryMonitorScreen(): View {
             "• זמן סוללה נותר: מסך פעיל ${BidiFmt.ltr("${Utils.formatResult(hrsScreenOn, 1)} שע׳")} | משחקים ${BidiFmt.ltr("${Utils.formatResult(hrsGaming, 1)} שע׳")} | המתנה ${BidiFmt.ltr("${Utils.formatResult(hrsStandby, 0)} שע׳")}"
         }
 
-        // בדיקת כיול עקומת מתח Li-ion מול אחוז מדווח (BMS Calibration Check)
         val expectedMv = 3350 + (pctLevel * 9.5).toInt()
         val bmsDriftMv = abs(voltageMv - expectedMv)
         val bmsDiagnosis = if (bmsDriftMv > 190 && !isCharging) {
@@ -1504,14 +1753,15 @@ fun MainActivity.createProBatteryMonitorScreen(): View {
         )
     }
 
-    // 1. כפתור אופטימיזציית צריכה וקירור אקטיבי בלחיצה אחת!
+    BidiFmt.bindLiveInputs(capIn) { resTv.text = readAndAnalyzeBattery() }
+
     val optimizeNowBtn = createActionBtn("🛠️ בצע אופטימיזציית סוללה וקירור אקטיבי כעת", true) {
         keepScreenOn = false
         updateKeepScreenOn()
         useAnimations = false
         savePreferences()
         val lp = window.attributes
-        lp.screenBrightness = 0.35f // הנמכת בהירות מסך לחיסכון מיידי וקירור
+        lp.screenBrightness = 0.35f
         window.attributes = lp
         Runtime.getRuntime().gc()
 
@@ -1524,7 +1774,6 @@ fun MainActivity.createProBatteryMonitorScreen(): View {
         Toast.makeText(this, "⚡ אופטימיזציית חיסכון וקירור סוללה הופעלה!", Toast.LENGTH_SHORT).show()
     }
 
-    // 2. אשף כיול בקר סוללה (BMS Calibration & Health Reset)
     val calibrateBmsBtn = createActionBtn("⚖️ אשף כיול סוללה ואיפוס סטיית אחוזים (BMS)", false) {
         prefs?.edit()
             ?.putInt("pro_bms_calib_mv", voltageMv)
@@ -1545,7 +1794,6 @@ fun MainActivity.createProBatteryMonitorScreen(): View {
         )
     }
 
-    // 3. שומר טעינה חכם (80% Charge Guard)
     val guardBtn = createActionBtn(
         if (chargeGuard80Enabled) "🛡️ שומר טעינה בריאה (התראה ב-80% ונגד התחממות): מופעל 🟢"
         else "🛡️ שומר טעינה בריאה (התראה ב-80% ונגד התחממות): כבוי 🔴",
@@ -1578,14 +1826,16 @@ fun MainActivity.createProBatteryMonitorScreen(): View {
 }
 
 // =========================================================================
-// 11. מחשבון חשבון חשמל וצריכת אנרגיה (Electricity Bill & Energy - Tab 76)
+// 11. מחשבון חשבון חשמל וצריכת אנרגיה עם מד צריכה וגרף חי (Electricity Bill - Tab 76)
 // =========================================================================
 fun MainActivity.createProElectricityBillScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("⚡ מחשבון חשבון חשמל וצריכת אנרגיה", "חישוב צריכת קוט״ש (kWh) ועלות יומית, חודשית ושנתית לפי תעריף החשמל"))
+    root.addView(createProCanvaHeader("⚡ מחשבון חשבון חשמל וצריכת אנרגיה", "מד העומס וגרף העלויות משתנים בזמן אמת לפי הספק המכשיר, שעות הפעולה והתעריף"))
 
-    var monthlyCostIls = 140.0
+    var currentWatts = 1500.0
+    var dailyCostIls = 4.80
+    var monthlyCostIls = 144.0
     var monthlyKwh = 225.0
 
     val energyCanvas = object : View(this) {
@@ -1596,49 +1846,89 @@ fun MainActivity.createProElectricityBillScreen(): View {
             val w = width.toFloat(); val h = height.toFloat()
             val isMin = isMinimalistMode
 
-            p.style = Paint.Style.FILL
-            p.color = if (isMin) MinimalistTheme.ACCENT_BUTTER_YELLOW else Color.argb(55, 255, 213, 79)
-            canvas.drawRoundRect(RectF(18f * d, 18f * d, w - 18f * d, h - 18f * d), 18f * d, 18f * d, p)
+            // חוגת עומס הספק משמאל
+            val gaugeCx = w * 0.28f; val gaugeCy = h * 0.56f; val r = min(w * 0.20f, h * 0.36f)
+            p.style = Paint.Style.STROKE; p.strokeWidth = 8f * d
+            p.color = if (isMin) Color.argb(35, 44, 44, 44) else Color.argb(45, 255, 255, 255)
+            canvas.drawArc(RectF(gaugeCx - r, gaugeCy - r, gaugeCx + r, gaugeCy + r), 150f, 240f, false, p)
 
+            val loadRatio = (currentWatts / 3500.0).toFloat().coerceIn(0.04f, 1f)
+            p.color = when {
+                loadRatio > 0.75f -> Color.parseColor("#FF3B30")
+                loadRatio > 0.40f -> Color.parseColor("#FF9100")
+                else -> Color.parseColor("#00E676")
+            }
+            p.strokeCap = Paint.Cap.ROUND
+            canvas.drawArc(RectF(gaugeCx - r, gaugeCy - r, gaugeCx + r, gaugeCy + r), 150f, loadRatio * 240f, false, p)
+
+            p.style = Paint.Style.FILL; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
             p.color = if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
-            p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
-            p.textSize = 22f * d
-            canvas.drawText("\u200F${BidiFmt.ltr("₪${Utils.formatResult(monthlyCostIls, 1)}")} לחודש", w / 2f, h * 0.48f, p)
-            p.textSize = 13.5f * d
-            canvas.drawText("\u200Fצריכה חודשית: ${BidiFmt.ltr("${Utils.formatResult(monthlyKwh, 1)} kWh")} (קוט״ש)", w / 2f, h * 0.74f, p)
+            p.textSize = 14.5f * d
+            canvas.drawText(BidiFmt.ltr("${Utils.formatResult(currentWatts, 0)}W"), gaugeCx, gaugeCy + 5f * d, p)
+
+            // 3 עמודות השוואה מימין (יומי, חודשי, דו-חודשי)
+            val chartLeft = w * 0.54f; val chartRight = w - 20f * d
+            val chartBottom = h - 28f * d; val maxBarH = h * 0.56f
+            val biMonthly = monthlyCostIls * 2.0
+            val maxVal = biMonthly.coerceAtLeast(10.0)
+            val vals = listOf(dailyCostIls to "יומי", monthlyCostIls to "חודשי", biMonthly to "דו-חודשי")
+            val barW = (chartRight - chartLeft) / 4.2f
+
+            for ((idx, pair) in vals.withIndex()) {
+                val bx = chartLeft + idx * (barW * 1.45f)
+                val bh = ((pair.first / maxVal).toFloat().coerceIn(0.08f, 1f)) * maxBarH
+                p.color = when (idx) {
+                    0 -> Color.parseColor("#29B6F6")
+                    1 -> if (isMin) MinimalistTheme.ACCENT_TERRACOTTA else primaryColor
+                    else -> Color.parseColor("#FFB300")
+                }
+                canvas.drawRoundRect(RectF(bx, chartBottom - bh, bx + barW, chartBottom), 6f * d, 6f * d, p)
+                p.color = if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
+                p.textSize = 10.5f * d
+                canvas.drawText(pair.second, bx + barW / 2f, chartBottom + 14f * d, p)
+                canvas.drawText(BidiFmt.ltr("₪${Utils.formatResult(pair.first, 0)}"), bx + barW / 2f, chartBottom - bh - 5f * d, p)
+            }
         }
     }.apply {
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(135f)).apply { bottomMargin = dp(12f) }
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(185f)).apply { bottomMargin = dp(12f) }
+        background = when {
+            isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProElectricityBillScreen, 20f, 2)
+            isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProElectricityBillScreen, 20f)
+            else -> GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(20f).toFloat() }
+        }
     }
 
-    val wattsIn = createInputBox("הספק מכשיר בוואט (W - למשל 1500 למזגן/תנור)").apply { setText("1500") }
+    val wattsIn = createInputBox("הספק מכשיר בוואט או תרגיל (למשל 1500 או 750*2)").apply { setText("1500") }
     val hoursIn = createInputBox("שעות הפעלה ביום (למשל 5)").apply { setText("5") }
-    val tariffIn = createInputBox("תעריף לקוט״ש בש״ח (כולל מע״מ, למשל 0.64)").apply { setText("0.64") }
+    val tariffIn = createInputBox("תעריף לקוט״ש בש״ח (למשל 0.64)").apply { setText("0.64") }
     val resTv = BidiFmt.applyRtlToResultView(createResultTextView().apply { textSize = 16.0f })
 
-    val calcBtn = createActionBtn("חשב צריכת אנרגיה וחשבון חשמל ⚡", true) {
-        val w = wattsIn.text.toString().toDoubleOrNull() ?: 1500.0
-        val hrs = hoursIn.text.toString().toDoubleOrNull() ?: 5.0
-        val rate = tariffIn.text.toString().toDoubleOrNull() ?: 0.64
+    fun updateEnergyCalc() {
+        currentWatts = BidiFmt.evalInputExpr(wattsIn, 1500.0).coerceAtLeast(0.0)
+        val hrs = BidiFmt.evalInputExpr(hoursIn, 5.0).coerceIn(0.0, 24.0)
+        val rate = BidiFmt.evalInputExpr(tariffIn, 0.64).coerceAtLeast(0.0)
 
-        val dailyKwh = (w * hrs) / 1000.0
+        val dailyKwh = (currentWatts * hrs) / 1000.0
         monthlyKwh = dailyKwh * 30.0
         val yearlyKwh = dailyKwh * 365.0
 
-        val dailyCost = dailyKwh * rate
+        dailyCostIls = dailyKwh * rate
         monthlyCostIls = monthlyKwh * rate
         val yearlyCost = yearlyKwh * rate
         energyCanvas.invalidate()
 
         resTv.text = BidiFmt.rtlParagraph(
             "סיכום צריכת חשמל ועלויות:",
-            "• יומי: ${BidiFmt.ltr("${Utils.formatResult(dailyKwh, 2)} kWh")}  ➔  ${BidiFmt.ltr("₪${Utils.formatResult(dailyCost, 2)}")}",
+            "• יומי: ${BidiFmt.ltr("${Utils.formatResult(dailyKwh, 2)} kWh")}  ➔  ${BidiFmt.ltr("₪${Utils.formatResult(dailyCostIls, 2)}")}",
             "• חודשי (30 יום): ${BidiFmt.ltr("${Utils.formatResult(monthlyKwh, 1)} kWh")}  ➔  ${BidiFmt.ltr("₪${Utils.formatResult(monthlyCostIls, 2)}")}",
             "• דו-חודשי (חשבון חברת חשמל): ${BidiFmt.ltr("₪${Utils.formatResult(monthlyCostIls * 2, 2)}")}",
             "• שנתי (365 יום): ${BidiFmt.ltr("${Utils.formatResult(yearlyKwh, 0)} kWh")}  ➔  ${BidiFmt.ltr("₪${Utils.formatResult(yearlyCost, 0)}")}"
         )
     }
-    calcBtn.performClick()
+
+    BidiFmt.bindLiveInputs(wattsIn, hoursIn, tariffIn) { updateEnergyCalc() }
+    val calcBtn = createActionBtn("חשב צריכת אנרגיה וחשבון חשמל ⚡", true) { updateEnergyCalc() }
+    updateEnergyCalc()
 
     root.addView(energyCanvas); root.addView(wattsIn); root.addView(hoursIn); root.addView(tariffIn)
     root.addView(calcBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
@@ -1646,12 +1936,88 @@ fun MainActivity.createProElectricityBillScreen(): View {
 }
 
 // =========================================================================
-// 12. מעבדת הצפנה, צפנים ו-Hash (Encryption & Hash Lab - Tab 77)
+// 12. מעבדת הצפנה, צפנים ו-Hash עם גלגל צופן אינטראקטיבי חי (Encryption Lab - Tab 77)
 // =========================================================================
 fun MainActivity.createProEncryptionLabScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("🔐 הצפנת טקסט, צפנים ו-Hash", "צופן קיסר (עברית/אנגלית), קידוד Base64 דו-כיווני וגיבוב SHA-256 / MD5"))
+    root.addView(createProCanvaHeader("🔐 הצפנת טקסט, צפנים ו-Hash", "גלגל צופן קיסר אינטראקטיבי, קידוד Base64 דו-כיווני וגיבוב SHA-256 / MD5 חי"))
+
+    var currentShift = 3
+    var currentSamplePlain = "שלום עולם 2026"
+    var currentSampleCipher = "תסזפ צזספ 2026"
+    var currentShaHex = "30a7d8eb7747b610e435f2914622b50f"
+
+    // צג ויזואלי של גלגל צופן קיסר + מטריצת סיביות SHA-256 שמשתנה בזמן אמת!
+    val cipherWheelCanvas = object : View(this) {
+        private val p = Paint(Paint.ANTI_ALIAS_FLAG)
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            val d = resources.displayMetrics.density
+            val w = width.toFloat(); val h = height.toFloat()
+            val isMin = isMinimalistMode
+
+            val wheelCx = w * 0.30f; val wheelCy = h * 0.48f
+            val outerR = min(w * 0.24f, h * 0.38f)
+            val innerR = outerR * 0.66f
+
+            p.style = Paint.Style.STROKE; p.strokeWidth = 2f * d
+            p.color = if (isMin) MinimalistTheme.TEXT_CHARCOAL else primaryColor
+            canvas.drawCircle(wheelCx, wheelCy, outerR, p)
+            p.color = if (isMin) MinimalistTheme.ACCENT_TERRACOTTA else Color.parseColor("#00E676")
+            canvas.drawCircle(wheelCx, wheelCy, innerR, p)
+
+            val heb = "אבגדהוזחטיכלמנסעפצקרשת"
+            p.style = Paint.Style.FILL; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
+            for (i in 0 until 11) {
+                val ang = Math.toRadians((i * (360.0 / 11.0) - 90.0))
+                val ox = (wheelCx + cos(ang) * (outerR * 0.83f)).toFloat()
+                val oy = (wheelCy + sin(ang) * (outerR * 0.83f)).toFloat() + 4f * d
+                p.textSize = 10.5f * d
+                p.color = if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
+                canvas.drawText(heb[i * 2].toString(), ox, oy, p)
+
+                val shiftedIdx = ((i * 2 + currentShift) % heb.length + heb.length) % heb.length
+                val ix = (wheelCx + cos(ang) * (innerR * 0.72f)).toFloat()
+                val iy = (wheelCy + sin(ang) * (innerR * 0.72f)).toFloat() + 4f * d
+                p.color = if (isMin) Color.parseColor("#D84315") else Color.parseColor("#00E676")
+                canvas.drawText(heb[shiftedIdx].toString(), ix, iy, p)
+            }
+
+            p.textSize = 11.5f * d
+            p.color = if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
+            canvas.drawText(BidiFmt.ltr("+$currentShift"), wheelCx, wheelCy + 4f * d, p)
+
+            // מטריצת ביטים ויזואלית של SHA-256 בצד ימין
+            val gridLeft = w * 0.60f; val gridTop = 24f * d
+            val cellSize = min((w * 0.34f) / 8f, (h * 0.62f) / 4f)
+            for (rIdx in 0 until 4) {
+                for (cIdx in 0 until 8) {
+                    val hexChar = currentShaHex.getOrElse(rIdx * 8 + cIdx) { '0' }
+                    val nibble = hexChar.digitToIntOrNull(16) ?: 0
+                    p.color = if (nibble >= 8) {
+                        if (isMin) MinimalistTheme.ACCENT_TERRACOTTA else primaryColor
+                    } else {
+                        if (isMin) Color.argb(40, 44, 44, 44) else Color.argb(45, 255, 255, 255)
+                    }
+                    val rx = gridLeft + cIdx * cellSize
+                    val ry = gridTop + rIdx * cellSize
+                    canvas.drawRoundRect(RectF(rx + 1.5f * d, ry + 1.5f * d, rx + cellSize - 1.5f * d, ry + cellSize - 1.5f * d), 3f * d, 3f * d, p)
+                }
+            }
+
+            p.color = if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
+            val bottomPreview = "\u200F${currentSamplePlain.take(12)}  ➔  ${currentSampleCipher.take(12)}"
+            CanvasUiHelper.drawFittedText(canvas, bottomPreview, w / 2f, h - 10f * d, w - 24f * d, 13f * d, 9.5f * d, p)
+        }
+    }.apply {
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(185f)).apply { bottomMargin = dp(12f) }
+        background = when {
+            isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProEncryptionLabScreen, 20f, 2)
+            isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProEncryptionLabScreen, 20f)
+            else -> GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(20f).toFloat() }
+        }
+    }
 
     val textIn = createInputBox("הזן טקסט להצפנה או פענוח...").apply {
         inputType = InputType.TYPE_CLASS_TEXT
@@ -1680,16 +2046,21 @@ fun MainActivity.createProEncryptionLabScreen(): View {
         return bytes.joinToString("") { "%02x".format(it) }
     }
 
-    val encBtn = createActionBtn("הצפן וחשב חתימות Hash 🔐", true) {
+    fun updateEncryptionLive() {
         val raw = textIn.text.toString()
-        val s = shiftIn.text.toString().toIntOrNull() ?: 3
-        val caesar = caesarShift(raw, s)
+        currentShift = BidiFmt.evalInputExpr(shiftIn, 3.0).roundToInt()
+        val caesar = caesarShift(raw, currentShift)
         val b64 = Base64.encodeToString(raw.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
         val sha256 = hashString(raw, "SHA-256")
         val md5 = hashString(raw, "MD5")
 
+        currentSamplePlain = raw
+        currentSampleCipher = caesar
+        currentShaHex = sha256
+        cipherWheelCanvas.invalidate()
+
         resTv.text = BidiFmt.rtlParagraph(
-            "• צופן קיסר (היסט ${BidiFmt.ltr(s)}):",
+            "• צופן קיסר (היסט ${BidiFmt.ltr(currentShift)}):",
             caesar,
             "• קידוד Base64:",
             BidiFmt.ltr(b64),
@@ -1700,6 +2071,9 @@ fun MainActivity.createProEncryptionLabScreen(): View {
         )
     }
 
+    BidiFmt.bindLiveInputs(textIn, shiftIn) { updateEncryptionLive() }
+
+    val encBtn = createActionBtn("הצפן וחשב חתימות Hash 🔐", true) { updateEncryptionLive() }
     val decB64Btn = createActionBtn("פענח טקסט מקוד Base64 🔓", false) {
         try {
             val decoded = String(Base64.decode(textIn.text.toString().trim(), Base64.DEFAULT), Charsets.UTF_8)
@@ -1709,269 +2083,9 @@ fun MainActivity.createProEncryptionLabScreen(): View {
         }
     }
 
-    encBtn.performClick()
-    root.addView(textIn); root.addView(shiftIn); root.addView(encBtn); root.addView(decB64Btn)
+    updateEncryptionLive()
+    root.addView(cipherWheelCanvas); root.addView(textIn); root.addView(shiftIn); root.addView(encBtn); root.addView(decB64Btn)
     root.addView(createPinResultButton(resTv)); root.addView(resTv)
-    scroll.addView(root); return scroll
-}
-
-// =========================================================================
-// 13. פתקים חכמים ורשימות - חסין קריסות ב-100% ועם כיוון טקסט תקני (Smart Notes - Tab 78)
-// =========================================================================
-private data class SmartNoteItem(val title: String, val body: String, val date: String)
-
-fun MainActivity.createProSmartNotesScreen(): View {
-    val scroll = ScrollView(this)
-    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(
-        createProCanvaHeader(
-            "📝 פתקים חכמים ורשימות (Smart Notes)",
-            "מחברת פתקים אישית עם שמירה אוטומטית, פתרון משוואות מתוך טקסט וסיכום רשימות"
-        )
-    )
-
-    val titleIn = createInputBox("כותרת הפתק (למשל: רשימת קניות / מידות חדר)").apply {
-        inputType = InputType.TYPE_CLASS_TEXT
-        textDirection = View.TEXT_DIRECTION_RTL
-        gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
-    }
-    val bodyIn = createInputBox("תוכן הפתק או תרגיל (למשל: ${BidiFmt.ltr("150 + 240 * 2")})...").apply {
-        inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
-        textDirection = View.TEXT_DIRECTION_RTL
-        gravity = Gravity.RIGHT or Gravity.TOP
-        minLines = 3
-    }
-    val statusTv = BidiFmt.applyRtlToResultView(createResultTextView().apply {
-        textSize = 15.5f
-        setPadding(0, dp(8f), 0, dp(8f))
-    })
-    val notesListContainer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-
-    // אחסון חסין קריסות ב-100% (ללא JSON שעלול לקרוס מתווים מיוחדים או ירידות שורה)
-    fun encodeField(s: String): String = try {
-        Base64.encodeToString(s.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
-    } catch (_: Throwable) { "" }
-
-    fun decodeField(b64: String): String = try {
-        String(Base64.decode(b64, Base64.NO_WRAP), Charsets.UTF_8)
-    } catch (_: Throwable) { "" }
-
-    fun loadNotesSafely(): MutableList<SmartNoteItem> {
-        val list = mutableListOf<SmartNoteItem>()
-        try {
-            val raw = prefs?.getString("pro_smart_notes_v2", "") ?: ""
-            if (raw.isNotBlank()) {
-                for (entry in raw.split("||")) {
-                    val parts = entry.split("::")
-                    if (parts.size >= 3) {
-                        val t = decodeField(parts[0])
-                        val b = decodeField(parts[1])
-                        val d = decodeField(parts[2])
-                        if (t.isNotEmpty() || b.isNotEmpty()) {
-                            list.add(SmartNoteItem(t, b, d))
-                        }
-                    }
-                }
-            }
-        } catch (_: Throwable) {}
-        return list
-    }
-
-    fun saveNotesSafely(list: List<SmartNoteItem>) {
-        try {
-            val serialized = list.joinToString("||") {
-                "${encodeField(it.title)}::${encodeField(it.body)}::${encodeField(it.date)}"
-            }
-            prefs?.edit()?.putString("pro_smart_notes_v2", serialized)?.apply()
-        } catch (_: Throwable) {}
-    }
-
-    // מפענח מתמטי בטוח ב-100% שמזהה תרגיל מתמטי גם בתוך משפט עברי (למשל "מזגן: 150 + 240 * 2")
-    fun evaluateSmartNoteMathSafely(rawText: String): Pair<Boolean, String> {
-        return try {
-            val lines = rawText.split("\n")
-            var anyCalculated = false
-            val updatedLines = lines.map { line ->
-                val cleanLine = line.substringBefore("=").trim()
-                val mathMatch = Regex("[0-9]+(\\.[0-9]+)?(\\s*[+\\-*/×÷^()]\\s*[0-9().]+)+").find(cleanLine)
-                if (mathMatch != null) {
-                    val expr = mathMatch.value
-                        .replace("×", "*")
-                        .replace("÷", "/")
-                        .replace("−", "-")
-                    val res = Utils.evalMathExpression(expr)
-                    if (!res.isNaN() && !res.isInfinite()) {
-                        anyCalculated = true
-                        val formattedRes = Utils.formatResult(res, calcPrecision)
-                        "$cleanLine = ${BidiFmt.ltr(formattedRes)}"
-                    } else line
-                } else line
-            }
-            anyCalculated to updatedLines.joinToString("\n")
-        } catch (_: Throwable) {
-            false to rawText
-        }
-    }
-
-    fun renderNotesList() {
-        try {
-            notesListContainer.removeAllViews()
-            val notes = loadNotesSafely()
-            val textCol = if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
-            val subCol = if (isMinimalistMode) MinimalistTheme.TEXT_MUTED_GREY else Color.LTGRAY
-
-            if (notes.isEmpty()) {
-                statusTv.text = BidiFmt.rtlParagraph("המחברת ריקה כעת. כתוב פתק למעלה ולחץ על 'שמור פתק חדש במחברת'.")
-                return
-            }
-            statusTv.text = BidiFmt.rtlParagraph("סה״כ פתקים שמורים במחברת: ${BidiFmt.ltr(notes.size)}")
-
-            for ((idx, note) in notes.withIndex()) {
-                val card = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    setPadding(dp(16f), dp(14f), dp(16f), dp(14f))
-                    background = when {
-                        isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProSmartNotesScreen, 18f, 0)
-                        isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProSmartNotesScreen, 18f)
-                        else -> GradientDrawable().apply {
-                            setColor(Utils.lightenColor(bgColor, 0.08f))
-                            cornerRadius = dp(18f).toFloat()
-                            setStroke(dp(1f), MinimalistTheme.resolveBorderStrokeColor(this@createProSmartNotesScreen, primaryColor))
-                        }
-                    }
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).apply { bottomMargin = dp(10f) }
-                }
-
-                val noteTitleTv = TextView(this).apply {
-                    text = "\u200F📌 ${note.title}"
-                    setTextColor(textCol)
-                    textSize = 16.5f
-                    typeface = Typeface.DEFAULT_BOLD
-                    textDirection = View.TEXT_DIRECTION_RTL
-                    gravity = Gravity.RIGHT
-                }
-
-                val noteBodyTv = TextView(this).apply {
-                    text = BidiFmt.rtlParagraph(*note.body.split("\n").toTypedArray())
-                    setTextColor(textCol)
-                    textSize = 15.0f
-                    textDirection = View.TEXT_DIRECTION_RTL
-                    gravity = Gravity.RIGHT
-                    setPadding(0, dp(6f), 0, dp(6f))
-                    setOnClickListener { copyToClipboard(note.body) }
-                }
-
-                val bottomRow = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
-                }
-
-                val delBtn = TextView(this).apply {
-                    text = "🗑️ מחק פתק"
-                    setTextColor(if (isMinimalistMode) MinimalistTheme.ALERT_RED_TEXT else Color.parseColor("#FF5252"))
-                    textSize = 13.5f
-                    typeface = Typeface.DEFAULT_BOLD
-                    setPadding(dp(8f), dp(4f), dp(8f), dp(4f))
-                    setOnClickListener {
-                        feedback(it)
-                        notesListContainer.post {
-                            val currentList = loadNotesSafely()
-                            if (idx in currentList.indices) {
-                                currentList.removeAt(idx)
-                                saveNotesSafely(currentList)
-                                renderNotesList()
-                            }
-                        }
-                    }
-                }
-
-                val editBtn = TextView(this).apply {
-                    text = "✏️ טען לעריכה"
-                    setTextColor(if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else primaryColor)
-                    textSize = 13.5f
-                    setPadding(dp(12f), dp(4f), dp(12f), dp(4f))
-                    setOnClickListener {
-                        feedback(it)
-                        titleIn.setText(note.title)
-                        bodyIn.setText(note.body)
-                    }
-                }
-
-                val dateTv = TextView(this).apply {
-                    text = BidiFmt.ltr(note.date)
-                    setTextColor(subCol)
-                    textSize = 12.5f
-                    gravity = Gravity.RIGHT
-                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                }
-
-                bottomRow.addView(delBtn)
-                bottomRow.addView(editBtn)
-                bottomRow.addView(dateTv)
-
-                card.addView(noteTitleTv)
-                card.addView(noteBodyTv)
-                card.addView(bottomRow)
-                notesListContainer.addView(card)
-            }
-        } catch (_: Throwable) {}
-    }
-
-    val evalMathBtn = createActionBtn("🧮 חשב ביטוי מתמטי או סכום מספרים בפתק", false) {
-        val raw = bodyIn.text.toString().trim()
-        if (raw.isEmpty()) {
-            Toast.makeText(this, "הזן תרגיל או מספרים בתוך תוכן הפתק", Toast.LENGTH_SHORT).show()
-            return@createActionBtn
-        }
-        val (didCalc, updatedText) = evaluateSmartNoteMathSafely(raw)
-        if (didCalc) {
-            bodyIn.setText(updatedText)
-            statusTv.text = BidiFmt.rtlParagraph("✅ התרגיל חושב והתוצאה נוספה לתוך הפתק!")
-        } else {
-            // אם אין תרגיל מפורש, מסכם את כל המספרים המופיעים בפתק!
-            val nums = Regex("-?[0-9]+(\\.[0-9]+)?").findAll(raw).mapNotNull { it.value.toDoubleOrNull() }.toList()
-            if (nums.isNotEmpty()) {
-                val sum = nums.sum()
-                val avg = sum / nums.size
-                statusTv.text = BidiFmt.rtlParagraph(
-                    "📊 סיכום כל המספרים בפתק (${BidiFmt.ltr(nums.size)} פריטים):",
-                    "• סכום כולל (∑): ${BidiFmt.ltr(Utils.formatResult(sum, calcPrecision))}",
-                    "• ממוצע: ${BidiFmt.ltr(Utils.formatResult(avg, 2))}"
-                )
-            } else {
-                Toast.makeText(this, "לא נמצאו מספרים או תרגיל מתמטי בפתק", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    val saveBtn = createActionBtn("💾 שמור פתק חדש במחברת", true) {
-        val t = titleIn.text.toString().trim().ifEmpty { "פתק מהיר" }
-        val b = bodyIn.text.toString().trim()
-        if (b.isEmpty()) {
-            Toast.makeText(this, "נא להזין תוכן לפתק לפני השמירה", Toast.LENGTH_SHORT).show()
-            return@createActionBtn
-        }
-        val (_, evaluatedBody) = evaluateSmartNoteMathSafely(b)
-        val dateStr = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(Date())
-        val list = loadNotesSafely()
-        list.add(0, SmartNoteItem(t, evaluatedBody, dateStr))
-        saveNotesSafely(list)
-        titleIn.setText("")
-        bodyIn.setText("")
-        notesListContainer.post { renderNotesList() }
-        Toast.makeText(this, "✅ הפתק נשמר במחברת!", Toast.LENGTH_SHORT).show()
-    }
-
-    renderNotesList()
-    root.addView(titleIn)
-    root.addView(bodyIn)
-    root.addView(evalMathBtn)
-    root.addView(saveBtn)
-    root.addView(statusTv)
-    root.addView(notesListContainer)
     scroll.addView(root); return scroll
 }
 
@@ -2201,8 +2315,8 @@ fun MainActivity.createProRingSizerScreen(): View {
 
     val screenDiagIn = createInputBox("📱 או הזן גודל מסך הטלפון באינצ׳ים לכיול אוטומטי (למשל 6.5)")
     val calibByInchBtn = createActionBtn("כייל אוטומטית לפי אינצ׳ים של המסך 📐", false) {
-        val diagInches = screenDiagIn.text.toString().toFloatOrNull()
-        if (diagInches != null && diagInches in 3.5f..16.0f) {
+        val diagInches = BidiFmt.evalInputExpr(screenDiagIn, 0.0).toFloat()
+        if (diagInches in 3.5f..16.0f) {
             val realMetrics = DisplayMetrics()
             @Suppress("DEPRECATION")
             windowManager.defaultDisplay.getRealMetrics(realMetrics)
@@ -2234,62 +2348,146 @@ fun MainActivity.createProRingSizerScreen(): View {
 }
 
 // =========================================================================
-// 15. ממיר מידות נעליים, בגדים וכובעים (Shoe, Clothing & Hat Sizer - Tab 80)
+// 15. ממיר מידות נעליים, בגדים וכובעים עם שרטוט פרופורציונלי חי (Shoe/Clothing/Hat - Tab 80)
 // =========================================================================
 fun MainActivity.createProShoeClothingHatSizeScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("👟 ממיר מידות נעליים, בגדים וכובעים", "המרת מידות בינלאומית לנעליים (EU/US/UK/CM), חולצות/מכנסיים והיקף ראש לכובעים"))
+    root.addView(createProCanvaHeader("👟 ממיר מידות נעליים, בגדים וכובעים", "שרטוט הנעל, החולצה והכובע מתעדכן ומשנה גודל בזמן אמת לפי המידות שהוקלדו"))
 
-    val footCmIn = createInputBox("👟 אורך כף רגל בס״מ (למשל 26.5 ס״מ = מידה 42)").apply { setText("26.5") }
+    var curFootCm = 26.5
+    var curChestCm = 98.0
+    var curHeadCm = 58.0
+    var curShoeEu = 42.0
+    var curClothLabel = "M"
+    var curHatLabel = "L"
+
+    val apparelCanvas = object : View(this) {
+        private val p = Paint(Paint.ANTI_ALIAS_FLAG)
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            val d = resources.displayMetrics.density
+            val w = width.toFloat(); val h = height.toFloat()
+            val isMin = isMinimalistMode
+
+            // 1. שרטוט סוליית נעל משמאל (משתנה בגודל לפי curFootCm)
+            val shoeScale = ((curFootCm - 15.0) / 20.0).toFloat().coerceIn(0.45f, 1.15f)
+            val sx = w * 0.20f; val sy = h * 0.46f
+            val shoeW = 48f * d * shoeScale; val shoeH = 22f * d * shoeScale
+            p.style = Paint.Style.FILL
+            p.color = if (isMin) MinimalistTheme.ACCENT_PASTEL_BLUE else Color.argb(65, 0, 229, 255)
+            canvas.drawRoundRect(RectF(sx - shoeW, sy - shoeH, sx + shoeW, sy + shoeH), shoeH, shoeH, p)
+            p.style = Paint.Style.STROKE; p.strokeWidth = 2f * d
+            p.color = if (isMin) MinimalistTheme.TEXT_CHARCOAL else primaryColor
+            canvas.drawRoundRect(RectF(sx - shoeW, sy - shoeH, sx + shoeW, sy + shoeH), shoeH, shoeH, p)
+
+            // 2. שרטוט גזרת חולצה במרכז (משתנה ברוחב לפי curChestCm)
+            val shirtScale = ((curChestCm - 70.0) / 70.0).toFloat().coerceIn(0.55f, 1.25f)
+            val cx = w * 0.52f; val cy = h * 0.46f
+            val sw = 28f * d * shirtScale; val sh = 32f * d
+            val shirtPath = Path().apply {
+                moveTo(cx - sw * 0.5f, cy - sh)
+                lineTo(cx + sw * 0.5f, cy - sh)
+                lineTo(cx + sw * 1.15f, cy - sh * 0.3f)
+                lineTo(cx + sw * 0.8f, cy)
+                lineTo(cx + sw * 0.65f, cy - sh * 0.2f)
+                lineTo(cx + sw * 0.65f, cy + sh)
+                lineTo(cx - sw * 0.65f, cy + sh)
+                lineTo(cx - sw * 0.65f, cy - sh * 0.2f)
+                lineTo(cx - sw * 0.8f, cy)
+                lineTo(cx - sw * 1.15f, cy - sh * 0.3f)
+                close()
+            }
+            p.style = Paint.Style.FILL
+            p.color = if (isMin) MinimalistTheme.ACCENT_MUTED_GREEN else Color.argb(65, 0, 230, 118)
+            canvas.drawPath(shirtPath, p)
+            p.style = Paint.Style.STROKE
+            p.color = if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
+            canvas.drawPath(shirtPath, p)
+
+            // 3. שרטוט כובע מימין (משתנה לפי curHeadCm)
+            val hatScale = ((curHeadCm - 50.0) / 16.0).toFloat().coerceIn(0.65f, 1.20f)
+            val hx = w * 0.82f; val hy = h * 0.50f
+            val hr = 24f * d * hatScale
+            p.style = Paint.Style.FILL
+            p.color = if (isMin) MinimalistTheme.ACCENT_BUTTER_YELLOW else Color.argb(65, 255, 213, 79)
+            canvas.drawArc(RectF(hx - hr, hy - hr, hx + hr, hy + hr * 0.6f), 180f, 180f, true, p)
+            p.style = Paint.Style.STROKE
+            p.color = if (isMin) MinimalistTheme.TEXT_CHARCOAL else primaryColor
+            canvas.drawArc(RectF(hx - hr, hy - hr, hx + hr, hy + hr * 0.6f), 180f, 180f, true, p)
+            canvas.drawLine(hx - hr * 1.35f, hy, hx + hr * 1.35f, hy, p)
+
+            p.style = Paint.Style.FILL; p.textAlign = Paint.Align.CENTER; p.typeface = Typeface.DEFAULT_BOLD
+            p.textSize = 12.5f * d
+            p.color = if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
+            canvas.drawText(BidiFmt.ltr("EU ${Utils.formatResult(curShoeEu, 1)}"), sx, h - 14f * d, p)
+            canvas.drawText(BidiFmt.ltr("Size $curClothLabel"), cx, h - 14f * d, p)
+            canvas.drawText(BidiFmt.ltr("Hat $curHatLabel"), hx, h - 14f * d, p)
+        }
+    }.apply {
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(170f)).apply { bottomMargin = dp(12f) }
+        background = when {
+            isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@createProShoeClothingHatSizeScreen, 20f, 2)
+            isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProShoeClothingHatSizeScreen, 20f)
+            else -> GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(20f).toFloat() }
+        }
+    }
+
+    val footCmIn = createInputBox("👟 אורך כף רגל בס״מ (למשל 26.5 = מידה 42)").apply { setText("26.5") }
     val chestCmIn = createInputBox("👕 היקף חזה בס״מ לבגדים (למשל 98)").apply { setText("98") }
     val headCmIn = createInputBox("🎩 היקף ראש בס״מ לכובע (למשל 58)").apply { setText("58") }
     val resTv = BidiFmt.applyRtlToResultView(createResultTextView().apply { textSize = 15.5f })
 
-    val calcBtn = createActionBtn("חשב מידות נעליים, בגדים וכובע 👟", true) {
-        val footCm = (footCmIn.text.toString().toDoubleOrNull() ?: 26.5).coerceIn(15.0, 35.0)
-        val chestCm = (chestCmIn.text.toString().toDoubleOrNull() ?: 98.0).coerceIn(70.0, 140.0)
-        val headCm = (headCmIn.text.toString().toDoubleOrNull() ?: 58.0).coerceIn(50.0, 66.0)
+    fun updateApparelSizes() {
+        curFootCm = BidiFmt.evalInputExpr(footCmIn, 26.5).coerceIn(15.0, 35.0)
+        curChestCm = BidiFmt.evalInputExpr(chestCmIn, 98.0).coerceIn(70.0, 140.0)
+        curHeadCm = BidiFmt.evalInputExpr(headCmIn, 58.0).coerceIn(50.0, 66.0)
 
-        val shoeEu = ((footCm + 1.5) * 1.5 * 2).roundToInt() / 2.0
-        val shoeUsMen = (shoeEu - 33.0).coerceAtLeast(4.0)
+        curShoeEu = ((curFootCm + 1.5) * 1.5 * 2).roundToInt() / 2.0
+        val shoeUsMen = (curShoeEu - 33.0).coerceAtLeast(4.0)
         val shoeUsWomen = shoeUsMen + 1.5
         val shoeUk = (shoeUsMen - 0.5).coerceAtLeast(3.0)
 
         val (intlCloth, euCloth, usCloth) = when {
-            chestCm < 88 -> Triple("XS", "44", "34")
-            chestCm < 94 -> Triple("S", "46", "36")
-            chestCm < 100 -> Triple("M", "48-50", "38-40")
-            chestCm < 106 -> Triple("L", "52", "42")
-            chestCm < 114 -> Triple("XL", "54-56", "44-46")
+            curChestCm < 88 -> Triple("XS", "44", "34")
+            curChestCm < 94 -> Triple("S", "46", "36")
+            curChestCm < 100 -> Triple("M", "48-50", "38-40")
+            curChestCm < 106 -> Triple("L", "52", "42")
+            curChestCm < 114 -> Triple("XL", "54-56", "44-46")
             else -> Triple("XXL", "58+", "48+")
         }
+        curClothLabel = intlCloth
 
-        val hatInch = headCm / 2.54
-        val hatUs = headCm / PI / 2.54
+        val hatInch = curHeadCm / 2.54
+        val hatUs = curHeadCm / PI / 2.54
         val hatLetter = when {
-            headCm < 55.5 -> "S (Small)"
-            headCm < 57.5 -> "M (Medium)"
-            headCm < 59.5 -> "L (Large)"
-            else -> "XL (Extra Large)"
+            curHeadCm < 55.5 -> "S"
+            curHeadCm < 57.5 -> "M"
+            curHeadCm < 59.5 -> "L"
+            else -> "XL"
         }
+        curHatLabel = hatLetter
+        apparelCanvas.invalidate()
 
         resTv.text = BidiFmt.rtlParagraph(
-            "👟 מידות נעליים (עבור ${BidiFmt.ltr("${Utils.formatResult(footCm, 1)} cm")}):",
-            "• אירופה / ישראל (EU): ${BidiFmt.ltr(Utils.formatResult(shoeEu, 1))}",
+            "👟 מידות נעליים (עבור ${BidiFmt.ltr("${Utils.formatResult(curFootCm, 1)} cm")}):",
+            "• אירופה / ישראל (EU): ${BidiFmt.ltr(Utils.formatResult(curShoeEu, 1))}",
             "• ארה״ב גברים (US M): ${BidiFmt.ltr(Utils.formatResult(shoeUsMen, 1))} | נשים (US W): ${BidiFmt.ltr(Utils.formatResult(shoeUsWomen, 1))}",
             "• בריטניה (UK): ${BidiFmt.ltr(Utils.formatResult(shoeUk, 1))}",
             "",
-            "👕 מידות בגדים (חזה ${BidiFmt.ltr("${Utils.formatResult(chestCm, 0)} cm")}):",
+            "👕 מידות בגדים (חזה ${BidiFmt.ltr("${Utils.formatResult(curChestCm, 0)} cm")}):",
             "• בינלאומי: ${BidiFmt.ltr(intlCloth)}  |  EU: ${BidiFmt.ltr(euCloth)}  |  US/UK: ${BidiFmt.ltr(usCloth)}",
             "",
-            "🎩 מידות כובע (היקף ראש ${BidiFmt.ltr("${Utils.formatResult(headCm, 1)} cm")} / ${BidiFmt.ltr("${Utils.formatResult(hatInch, 1)}\"")}):",
+            "🎩 מידות כובע (היקף ראש ${BidiFmt.ltr("${Utils.formatResult(curHeadCm, 1)} cm")} / ${BidiFmt.ltr("${Utils.formatResult(hatInch, 1)}\"")}):",
             "• מידה: ${BidiFmt.ltr(hatLetter)}  |  US Hat: ${BidiFmt.ltr(Utils.formatResult(hatUs, 2))}"
         )
     }
-    calcBtn.performClick()
 
-    root.addView(footCmIn); root.addView(chestCmIn); root.addView(headCmIn)
+    BidiFmt.bindLiveInputs(footCmIn, chestCmIn, headCmIn) { updateApparelSizes() }
+    val calcBtn = createActionBtn("חשב מידות נעליים, בגדים וכובע 👟", true) { updateApparelSizes() }
+    updateApparelSizes()
+
+    root.addView(apparelCanvas); root.addView(footCmIn); root.addView(chestCmIn); root.addView(headCmIn)
     root.addView(calcBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
     scroll.addView(root); return scroll
 }
