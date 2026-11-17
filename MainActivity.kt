@@ -173,14 +173,33 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         "🧪 ממירי רפואה, כימיה ומעבדה קלינית",    // 62
         "🌌 ממירי תקשורת, טיפוגרפיה, חלל ובישול", // 63
         "💳 מחשבון שכר, שעות נוספות, פנסיה ונטו", // 64
-        "🧮 מטריצות, דטרמיננטה ומערכת משוואות"    // 65
+        "🧮 מטריצות, דטרמיננטה ומערכת משוואות",   // 65
+        // --- 16 כלי ה-Pro החדשים מתוך צילומי המסך (66..81) ---
+        "🧲 גלאי מתכות ושדה מגנטי (EMF)",         // 66
+        "📈 מד רטט וסיסמוגרף חי (Vibrometer)",    // 67
+        "🚨 צופר חירום והתרעה קולית (Siren)",      // 68
+        "🎵 מטרונום מוזיקלי מונפש (BPM)",         // 69
+        "🔢 מונה לחיצות חכם (Tally Counter)",     // 70
+        "🌀 קודי צבע של סלילים (Inductors)",      // 71
+        "🔌 שערים לוגיים וטבלאות אמת",            // 72
+        "🎨 ממיר צבעים HEX / RGB / CMYK",         // 73
+        "🖥️ יחס גובה-רוחב ורזולוציה (PPI)",       // 74
+        "🔋 מוניטור מצב ובריאות הסוללה",          // 75
+        "⚡ מחשבון חשבון חשמל וצריכת אנרגיה",      // 76
+        "🔐 הצפנת טקסט, צפנים ו-Hash",            // 77
+        "📝 פתקים חכמים ורשימות (Smart Notes)",   // 78
+        "📄 סורק ומחולל מסמכי PDF",               // 79
+        "💍 מדידת טבעת מכוילת על המסך",           // 80
+        "👟 מידות נעליים, בגדים וכובעים"          // 81
     )
 
+    // כל 16 הכלים החדשים מרוכזים יחד בקטגוריה 312 כדי שיופיעו מיד בתפריט הצד!
     val drawerSections = listOf(
         Triple(301, "📐 מתמטיקה ומדע", listOf(0, 1, 8, 15, 16, 7, 28, 22)),
         Triple(302, "💳 פיננסים וצרכנות", listOf(2, 24, 3, 17, 29, 9, 25, 10, 23, 13)),
         Triple(303, "🔄 המרות, רכב ודלק", listOf(4, 5, 6, 18, 20, 21)),
         Triple(304, "❤️ בריאות, זמן ותאריכים", listOf(11, 14, 27, 12, 30, 26)),
+        Triple(312, "🛠️ Pro: 16 כלים חדשים (מתכות, סלילים, שערים, טבעת ועוד)", listOf(66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81)),
         Triple(305, "📐 Pro: 87 קטגוריות יחידות לפי תחום", listOf(31, 57, 58, 59, 60, 61, 62, 63)),
         Triple(306, "🔧 Pro: הנדסת אינסטלציה, רפואה ובנייה", listOf(32, 33, 34)),
         Triple(307, "⚡ Pro: מעבדת אלקטרוניקה וחשמל", listOf(35, 36, 37, 38)),
@@ -358,13 +377,15 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 setBackgroundColor(Color.TRANSPARENT)
             }
             sectionDividersMap[secIconCode] = catSep
-            if (secIconCode in 305..311) proSectionDividers[secIconCode] = catSep
+            if (secIconCode in 305..312) proSectionDividers[secIconCode] = catSep
             drawerSeparators.add(catSep)
             drawerMenu?.addView(catSep)
             drawerMenu?.addView(sectionItemsContainer)
         }
 
+        // פתיחה אוטומטית של קטגוריית 16 הכלים החדשים (312) בתפריט הצד כדי שתראה אותם מיד!
         expandedSections.add(301)
+        expandedSections.add(312)
 
         val bottomSpacer = Space(this).apply {
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
@@ -1170,7 +1191,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
             val hasVisibleCalculators = secItemIndices.any { isCalculatorVisibleInDrawer(it) }
 
-            if (secIconCode in 305..311 && !proActive) {
+            if (secIconCode in 305..312 && !proActive) {
                 headerTv.visibility = View.GONE
                 proSectionDividers[secIconCode]?.visibility = View.GONE
                 container.visibility = View.GONE
@@ -1277,7 +1298,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
-    // מלביש לכל שורת הגדרה במסך ההגדרות את הסמל הווקטורי הייחודי שלה (201..214) במצבי הזכוכית וזוהר הצפון!
     private fun applyGlassAndAuroraSettingsIcons(settingsRoot: View?) {
         if (settingsRoot == null || isMinimalistMode || (!isIosGlassMode && !isAuroraMode)) return
         val iconTint = MinimalistTheme.resolveDrawerIconColor(this, isSelected = false, isExpandedHeader = false)
@@ -1469,7 +1489,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         val proActive = ProState.isProEnabled(prefs)
         val availableSections = drawerSections.filter { (secCode, _, _) ->
-            proActive || secCode !in 305..311
+            proActive || secCode !in 305..312
         }
         val allSelectableIndices = availableSections.flatMap { it.third }
         val visibleCount = allSelectableIndices.count { isCalculatorVisibleInDrawer(it) }
@@ -1667,24 +1687,30 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 if (container != null) {
                     for (i in 0 until container.childCount) {
                         val ch = container.getChildAt(i)
-                        if (ch is TextView && ch.text.contains("Pro Mode")) {
+                        if (ch is TextView && (ch.text.contains("Pro Mode") || ch.text.contains("מצב מקצועי"))) {
                             hasProBtn = true
+                            val proEnabled = ProState.isProEnabled(prefs)
+                            ch.text = if (proEnabled) "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-64 כלים): מופעל 🟢"
+                            else "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-64 כלים): כבוי 🔴"
                             break
                         }
                     }
                     if (!hasProBtn) {
                         val proEnabled = ProState.isProEnabled(prefs)
                         val proBtn = createActionBtn(
-                            if (proEnabled) "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-48 כלים): מופעל 🟢"
-                            else "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-48 כלים): כבוי 🔴",
+                            if (proEnabled) "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-64 כלים): מופעל 🟢"
+                            else "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-64 כלים): כבוי 🔴",
                             proEnabled
                         ) {
                             val nextState = !ProState.isProEnabled(prefs)
                             ProState.setProEnabled(prefs, nextState)
-                            if (nextState) expandedSections.add(305)
+                            if (nextState) {
+                                expandedSections.add(312)
+                                expandedSections.add(305)
+                            }
                             Toast.makeText(
                                 this,
-                                if (nextState) "🚀 מצב מקצועי הופעל! קטגוריות ה-Pro נוספו לתפריט הצד" else "מצב מקצועי כובה",
+                                if (nextState) "🚀 מצב מקצועי הופעל! כל 16 הכלים החדשים זמינים בתפריט הצד" else "מצב מקצועי כובה",
                                 Toast.LENGTH_SHORT
                             ).show()
                             applyTheme()
@@ -1729,7 +1755,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             28 -> createHexConverter()
             29 -> createSavingsCalculator()
             30 -> createDateAnniversaryCalculator()
-            // --- כל מסכי ה-Pro המעוצבים בקנבה ---
+            // --- כל מסכי ה-Pro המעוצבים בקנבה (31..81) ---
             31 -> createPro87UnitConverter()
             32 -> createProPlumbingAndFluidsScreen()
             33 -> createProMedicalDosageScreen()
@@ -1765,6 +1791,23 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             63 -> createProDigitalAstroUnitsScreen()
             64 -> createProSalaryAndTaxScreen()
             65 -> createProMatrixAndEquationsScreen()
+            // --- 16 מסכי ה-Pro החדשים מתוך צילומי המסך (66..81) ---
+            66 -> createProMetalDetectorScreen()
+            67 -> createProVibrometerScreen()
+            68 -> createProEmergencySirenScreen()
+            69 -> createProMetronomeScreen()
+            70 -> createProTallyCounterScreen()
+            71 -> createProInductorColorScreen()
+            72 -> createProLogicGatesScreen()
+            73 -> createProHexRgbColorScreen()
+            74 -> createProAspectRatioScreen()
+            75 -> createProBatteryMonitorScreen()
+            76 -> createProElectricityBillScreen()
+            77 -> createProEncryptionLabScreen()
+            78 -> createProSmartNotesScreen()
+            79 -> createProPdfScannerCreatorScreen()
+            80 -> createProRingSizerScreen()
+            81 -> createProShoeClothingHatSizeScreen()
             else -> createBasicCalculator()
         }
 
