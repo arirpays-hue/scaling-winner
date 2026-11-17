@@ -3,12 +3,13 @@ package com.example.calculator
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.text.Editable
 import android.text.InputType
+import android.text.TextWatcher
 import android.util.Base64
 import android.view.Gravity
 import android.view.View
 import android.view.inputmethod.InputMethodManager
-import android.widget.EditText
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -27,13 +28,10 @@ data class SmartNoteEntry(
 )
 
 // =========================================================================
-// מנוע אלגברי ומתמטי אוניברסלי לפתקים חכמים (100% חסין קריסות, ללא Regex מקונן)
-// פותר: אריתמטיקה, פונקציות מדעיות, אחוזים, משתנים רב-שורתיים, משוואות לינאריות,
-// משוואות ריבועיות, משוואות ממעלה שלישית/כלליות, מערכות משוואות (2x2, 3x3) ואי-שוויונות!
+// מנוע אלגברי ומתמטי אוניברסלי לפתקים חכמים (מופעל אך ורק בלחיצה יזומה על "פתור תרגיל")
 // =========================================================================
 object SmartNotesMathEngine {
 
-    // מסיר תווי כיווניות נסתרים ומנרמל סימנים מתמטיים
     fun cleanMathString(raw: String): String {
         val sb = StringBuilder(raw.length)
         var i = 0
@@ -41,7 +39,7 @@ object SmartNotesMathEngine {
             val ch = raw[i]
             when (ch) {
                 '\u200E', '\u200F', '\u202A', '\u202B', '\u202C', '\u202D', '\u202E',
-                '\u2066', '\u2067', '\u2068', '\u2069' -> { /* דילוג על תווי BiDi */ }
+                '\u2066', '\u2067', '\u2068', '\u2069' -> {}
                 '−', '–', '—' -> sb.append('-')
                 '×', '⋅', '∙' -> sb.append('*')
                 '÷' -> sb.append('/')
@@ -56,12 +54,10 @@ object SmartNotesMathEngine {
         return sb.toString()
     }
 
-    // מחלץ את החלק המתמטי מתוך שורה שכוללת גם תיאור בעברית (למשל: "מחיר מזגן: 150 + 240 * 2")
     private fun extractMathPartFromLine(rawLine: String): Pair<String, String> {
         val cleaned = cleanMathString(rawLine).trim()
         if (cleaned.isEmpty()) return "" to ""
 
-        // אם יש נקודתיים אחרי מילה בעברית (למשל "תרגיל 1: 2x + 5 = 15")
         val colonIdx = cleaned.indexOf(':')
         if (colonIdx in 1 until cleaned.length - 1) {
             val prefix = cleaned.substring(0, colonIdx + 1).trim()
@@ -73,7 +69,6 @@ object SmartNotesMathEngine {
         return "" to cleaned
     }
 
-    // מפענח ומחשב ביטוי מתמטי עבור מפת משתנים נתונה (תומך בכפל מרומז כמו 2x, 3(x+1), (x+1)(x-1))
     fun evalWithVars(exprStr: String, vars: Map<String, Double>): Double {
         val s = preprocessImplicitMath(exprStr)
         return Parser(s, vars).parseExpression()
@@ -85,9 +80,7 @@ object SmartNotesMathEngine {
             .replace(" ", "")
         if (s.isEmpty()) return "0"
 
-        // טיפול באחוזים כמו 500+17% או 20%*300
         val pctAdjusted = fixPercentages(s)
-
         val out = StringBuilder()
         var i = 0
         while (i < pctAdjusted.length) {
@@ -98,7 +91,7 @@ object SmartNotesMathEngine {
                 val cIsDigitOrClose = c.isDigit() || c == ')' || c == '!'
                 val cIsVar = isSingleVarChar(c) && !isPartOfFunctionName(pctAdjusted, i)
                 val nextIsOpen = next == '('
-                val nextIsAlpha = next.isLetter() || next in 'א'..'ת'
+                val nextIsAlpha = next in 'a'..'z' || next in 'A'..'Z'
                 val nextIsDigit = next.isDigit()
 
                 if ((cIsDigitOrClose && (nextIsOpen || nextIsAlpha)) ||
@@ -116,20 +109,14 @@ object SmartNotesMathEngine {
     private fun fixPercentages(s: String): String {
         if (!s.contains('%')) return s
         val sb = StringBuilder()
-        var i = 0
-        while (i < s.length) {
-            if (s[i] == '%') {
-                sb.append("*0.01")
-            } else {
-                sb.append(s[i])
-            }
-            i++
+        for (ch in s) {
+            if (ch == '%') sb.append("*0.01") else sb.append(ch)
         }
         return sb.toString()
     }
 
     private fun isSingleVarChar(c: Char): Boolean {
-        return c in 'a'..'z' || c in 'A'..'Z' || c in 'א'..'ת'
+        return c in 'a'..'z' || c in 'A'..'Z'
     }
 
     private fun isPartOfFunctionName(s: String, idx: Int): Boolean {
@@ -262,7 +249,6 @@ object SmartNotesMathEngine {
                     }
                 }
 
-                // אם כתוב sqrt9 ללא סוגריים
                 if (lower.startsWith("sqrt") && lower.length == 4 && pos < input.length && (input[pos].isDigit() || input[pos] == '.')) {
                     val arg = parsePrimary()
                     return if (arg < 0) Double.NaN else sqrt(arg)
@@ -274,8 +260,7 @@ object SmartNotesMathEngine {
                 vars[token]?.let { return it }
                 vars[lower]?.let { return it }
 
-                // פירוק מכפלת משתנים צמודים כמו xy -> x * y
-                if (token.length > 1) {
+                if (token.length > 1 && token.all { it in 'a'..'z' || it in 'A'..'Z' }) {
                     var prod = 1.0
                     for (c in token) {
                         val s = c.toString()
@@ -298,7 +283,7 @@ object SmartNotesMathEngine {
         }
     }
 
-    // מזהה אילו משתנים (נעלמים) מופיעים בביטוי
+    // מזהה נעלמים אלגבריים (אותיות לטיניות כגון x, y, z, a, b, t או משתנים שהוגדרו במפורש)
     private fun detectVariables(s: String, knownVars: Map<String, Double>): List<String> {
         val cleaned = cleanMathString(s)
         val reserved = setOf("sin", "cos", "tan", "asin", "acos", "atan", "sqrt", "cbrt", "log", "ln", "abs", "exp", "pi")
@@ -306,20 +291,16 @@ object SmartNotesMathEngine {
         var i = 0
         while (i < cleaned.length) {
             val c = cleaned[i]
-            if (c.isLetter() || c in 'א'..'ת') {
+            if (c in 'a'..'z' || c in 'A'..'Z') {
                 val start = i
-                while (i < cleaned.length && (cleaned[i].isLetter() || cleaned[i] in 'א'..'ת')) i++
+                while (i < cleaned.length && (cleaned[i] in 'a'..'z' || cleaned[i] in 'A'..'Z')) i++
                 val word = cleaned.substring(start, i)
                 val lower = word.lowercase(Locale.US)
                 if (lower !in reserved) {
-                    if (knownVars.containsKey(word) || (word.any { it in 'א'..'ת' } && word.length > 1)) {
-                        if (!knownVars.containsKey(word)) found.add(word)
-                    } else {
-                        for (ch in word) {
-                            val vName = ch.toString()
-                            if (vName.lowercase(Locale.US) != "e" || !cleaned.contains("e^")) {
-                                if (!knownVars.containsKey(vName)) found.add(vName)
-                            }
+                    for (ch in word) {
+                        val vName = ch.toString()
+                        if (vName.lowercase(Locale.US) != "e" || !cleaned.contains("e^")) {
+                            if (!knownVars.containsKey(vName)) found.add(vName)
                         }
                     }
                 }
@@ -330,7 +311,6 @@ object SmartNotesMathEngine {
         return found.toList()
     }
 
-    // פותר משוואה בנעלם אחד (לינארית, ריבועית, ממעלה שלישית או כללית)
     private fun solveSingleVariableEquation(
         lhsRaw: String,
         rhsRaw: String,
@@ -362,7 +342,6 @@ object SmartNotesMathEngine {
                     abs(fm2 - (4.0 * a - 2.0 * b + c)) < 1e-6
 
             if (isPolyDeg2OrLess) {
-                // 1. משוואה לינארית: b*x + c = 0
                 if (abs(a) < 1e-8) {
                     return if (abs(b) > 1e-9) {
                         val root = -c / b
@@ -375,7 +354,6 @@ object SmartNotesMathEngine {
                     }
                 }
 
-                // 2. משוואה ריבועית: a*x^2 + b*x + c = 0
                 val delta = b * b - 4.0 * a * c
                 return when {
                     abs(delta) < 1e-9 -> {
@@ -400,7 +378,6 @@ object SmartNotesMathEngine {
             }
         }
 
-        // 3. משוואה ממעלה שלישית / שורשים / מעריכית / טריגונומטרית - חיפוש שורשים נומרי רב-מוקדי (Brent / Secant)
         val roots = findNumericalRoots(::f)
         if (roots.isNotEmpty()) {
             val formattedRoots = roots.mapIndexed { idx, r ->
@@ -439,7 +416,7 @@ object SmartNotesMathEngine {
             if (abs(fa) < 1e-9) addUniqueRoot(a)
             if (fa * fb < 0.0) {
                 var lo = a; var hi = b
-                var flo = fa; var fhi = fb
+                var flo = fa
                 for (iter in 0 until 45) {
                     val mid = 0.5 * (lo + hi)
                     val fmid = f(mid)
@@ -447,7 +424,7 @@ object SmartNotesMathEngine {
                         lo = mid; hi = mid; break
                     }
                     if (flo * fmid <= 0.0) {
-                        hi = mid; fhi = fmid
+                        hi = mid
                     } else {
                         lo = mid; flo = fmid
                     }
@@ -459,7 +436,6 @@ object SmartNotesMathEngine {
         return found.take(4)
     }
 
-    // פותר אי-שוויון לינארי או ריבועי (למשל 2x - 6 > 4 או x^2 - 4 <= 0)
     private fun solveInequality(
         line: String,
         knownVars: Map<String, Double>,
@@ -508,7 +484,6 @@ object SmartNotesMathEngine {
         return null
     }
 
-    // פותר מערכת של 2 או 3 משוואות לינאריות ב-2 או 3 נעלמים (למשל x + y = 10, x - y = 2)
     private fun trySolveLinearSystem(
         eqLines: List<Pair<String, String>>,
         varNames: List<String>,
@@ -540,7 +515,6 @@ object SmartNotesMathEngine {
                 matrix[row][col] = fUnit - f0
             }
 
-            // בדיקה שהמשוואה אכן לינארית
             val testMap = varNames.mapIndexed { idx, name -> name to (idx + 2.0) }.toMap()
             val fTest = evalAt(testMap)
             var expected = f0
@@ -548,7 +522,6 @@ object SmartNotesMathEngine {
             if (fTest.isNaN() || abs(fTest - expected) > 1e-5) return null
         }
 
-        // אלימינציית גאוס עם בחירת ציר (Partial Pivoting)
         val a = Array(n) { r -> DoubleArray(n + 1) { c -> if (c < n) matrix[r][c] else rhsVec[r] } }
         for (i in 0 until n) {
             var maxRow = i
@@ -576,7 +549,6 @@ object SmartNotesMathEngine {
         return "פתרון מערכת משוואות: " + BidiFmt.ltr(parts.joinToString(" , "))
     }
 
-    // פונקציית העל: מנתחת טקסט פתק מלא, פותרת כל שורה וכל מערכת משוואות, ומחזירה טקסט מעודכן וסיכום!
     fun analyzeAndSolveNote(rawNoteText: String, precision: Int): Pair<String, String> {
         val rawLines = rawNoteText.lines()
         val assignedVars = mutableMapOf<String, Double>()
@@ -591,7 +563,6 @@ object SmartNotesMathEngine {
                 continue
             }
 
-            // 1. בדיקת אי-שוויון (<, >, <=, >=)
             val ineqRes = solveInequality(mathCandidate, assignedVars, precision)
             if (ineqRes != null) {
                 val cleanBase = cleanMathString(rawLine).trim()
@@ -600,7 +571,6 @@ object SmartNotesMathEngine {
                 continue
             }
 
-            // 2. בדיקה אם השורה מכילה סימן '=' (השמת משתנה, משוואה עם נעלם, או תרגיל עם '=' בסופו)
             if (mathCandidate.contains('=')) {
                 val eqParts = mathCandidate.split('=').map { it.trim() }.filter { it.isNotEmpty() }
                 if (eqParts.isEmpty()) {
@@ -608,14 +578,12 @@ object SmartNotesMathEngine {
                     continue
                 }
 
-                // אם המשתמש כתב "150 + 240 * 2 =" או שורה שכבר חושבה בעבר "150 + 240 * 2 = 630"
                 val lhs = eqParts[0]
-                val rhs = if (eqParts.size >= 2) eqParts[1] else ""
+                val rhs = if (eqParts.size >= 2) eqParts[1].substringBefore("➔").trim() else ""
                 val lhsVars = detectVariables(lhs, assignedVars)
                 val rhsVars = detectVariables(rhs, assignedVars)
                 val allLineVars = (lhsVars + rhsVars).distinct()
 
-                // א. תרגיל מספרי טהור (ללא נעלמים)
                 if (allLineVars.isEmpty()) {
                     val v = evalWithVars(lhs, assignedVars)
                     if (!v.isNaN() && !v.isInfinite()) {
@@ -627,7 +595,6 @@ object SmartNotesMathEngine {
                     }
                 }
 
-                // ב. השמת משתנה ישירה (למשל: "x = 5" או "אורך = 12 + 3")
                 if (lhsVars.size == 1 && lhs == lhsVars[0] && rhs.isNotEmpty() && rhsVars.isEmpty()) {
                     val v = evalWithVars(rhs, assignedVars)
                     if (!v.isNaN() && !v.isInfinite()) {
@@ -640,7 +607,6 @@ object SmartNotesMathEngine {
                     }
                 }
 
-                // ג. משוואה בנעלם יחיד (למשל: "2x + 5 = 17" או "x^2 - 5x + 6 = 0")
                 if (rhs.isNotEmpty() && allLineVars.size == 1) {
                     val varName = allLineVars[0]
                     val eqSol = solveSingleVariableEquation(lhs, rhs, varName, assignedVars, precision)
@@ -652,14 +618,12 @@ object SmartNotesMathEngine {
                     }
                 }
 
-                // ד. משוואה מרובת נעלמים (למשל "2x + y = 10") - נשמור לפתרון מערכת משוואות
                 if (rhs.isNotEmpty() && allLineVars.size in 2..3) {
                     unsolvedEquations.add(lhs to rhs)
                     outLines.add(cleanMathString(rawLine).trim())
                     continue
                 }
             } else {
-                // 3. שורה ללא סימן '=' (למשל: "150 + 240 * 2" או "2x + 3y" אחרי שהוגדרו x ו-y)
                 val lineVars = detectVariables(mathCandidate, assignedVars)
                 if (lineVars.isEmpty()) {
                     val hasOperator = mathCandidate.any { it in listOf('+', '-', '*', '/', '^', '!', '%') } ||
@@ -679,8 +643,7 @@ object SmartNotesMathEngine {
                             continue
                         }
                     }
-                } else if (lineVars.size == 1) {
-                    // אם המשתמש כתב רק פולינום כמו "x^2 - 9" ללא "= 0", נמצא את שורשי הפולינום (= 0)
+                } else if (lineVars.size == 1 && mathCandidate.none { it in 'א'..'ת' }) {
                     val vName = lineVars[0]
                     val eqSol = solveSingleVariableEquation(mathCandidate, "0", vName, assignedVars, precision)
                     if (eqSol != null) {
@@ -691,7 +654,6 @@ object SmartNotesMathEngine {
                 }
             }
 
-            // בדיקה אם יש מספר משוואות מופרדות בפסיק באותה שורה (למשל: "x + y = 10, x - y = 2")
             if (mathCandidate.contains(',') && mathCandidate.count { it == '=' } >= 2) {
                 val subEqs = mathCandidate.split(',').mapNotNull { part ->
                     val sp = part.split('=')
@@ -703,7 +665,6 @@ object SmartNotesMathEngine {
             outLines.add(cleanMathString(rawLine).trim())
         }
 
-        // 4. פתרון מערכת משוואות אם זוהו 2 או 3 משוואות עם 2 או 3 נעלמים
         if (unsolvedEquations.size >= 2) {
             val sysVars = unsolvedEquations
                 .flatMap { (l, r) -> detectVariables("$l - ($r)", assignedVars) }
@@ -715,7 +676,6 @@ object SmartNotesMathEngine {
             }
         }
 
-        // 5. אם לא היו משוואות, נבדוק אם יש רשימת מספרים בפתק ונסכם אותם (סכום, ממוצע, מינימום, מקסימום)
         if (summaryBullets.isEmpty()) {
             val allNums = Regex("-?\\d+(?:\\.\\d+)?")
                 .findAll(cleanMathString(rawNoteText))
@@ -742,35 +702,52 @@ object SmartNotesMathEngine {
 }
 
 // =========================================================================
-// מסך פתקים חכמים ורשימות עם פותר המשוואות המובנה (Smart Notes - Tab 78)
+// מסך פתקים חכמים ורשימות (Smart Notes - Tab 78)
+// אם שומרים פתק מבלי ללחוץ על "פתור תרגיל" - הפתק נשמר כפתק טקסט רגיל לחלוטין!
 // =========================================================================
 fun MainActivity.createProSmartNotesScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply {
+        tag = "SKIP_UNIVERSAL_LIVE"
         orientation = LinearLayout.VERTICAL
         setPadding(dp(20f), dp(12f), dp(20f), dp(24f))
     }
     root.addView(
         createProCanvaHeader(
             "📝 פתקים חכמים ופותר משוואות (Smart Notes)",
-            "מחברת פתקים עם מנוע אלגברי הפותר תרגילים, משוואות עם נעלמים (x, y), משוואות ריבועיות ורשימות"
+            "שמירת פתקים רגילים, או לחיצה על 'פתור תרגיל' לחישוב משוואות ונעלמים (x, y) בתוך הפתק"
         )
     )
 
-    val titleIn = createInputBox("כותרת הפתק (למשל: שיעורי בית / מידות / קניות)").apply {
+    var wasExplicitlySolved = false
+    var currentExplicitSummary = ""
+    var isUpdatingBodyProgrammatically = false
+
+    val titleIn = createInputBox("כותרת הפתק (למשל: רשימת קניות / תזכורת / תרגיל)").apply {
         inputType = InputType.TYPE_CLASS_TEXT
         textDirection = View.TEXT_DIRECTION_RTL
         gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
     }
 
-    val bodyIn = createInputBox("כתוב פתק, תרגיל או משוואה (למשל: 2x + 5 = 17 או x^2 - 5x + 6 = 0)...").apply {
+    val bodyIn = createInputBox("כתוב פתק טקסט רגיל, או הקלד תרגיל ולחץ על 'פתור תרגיל'...").apply {
         inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
         textDirection = View.TEXT_DIRECTION_RTL
         gravity = Gravity.RIGHT or Gravity.TOP
         minLines = 3
     }
 
-    // סרגל סימנים מתמטיים ונעלמים להקלדה מהירה ללא צורך בהחלפת מקלדת
+    // כל הקלדה ידנית של המשתמש בפתק מסמנת אותו כפתק טקסט רגיל עד שילחץ בעצמו על "פתור תרגיל"
+    bodyIn.addTextChangedListener(object : TextWatcher {
+        override fun afterTextChanged(s: Editable?) {
+            if (!isUpdatingBodyProgrammatically) {
+                wasExplicitlySolved = false
+                currentExplicitSummary = ""
+            }
+        }
+        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+    })
+
     val mathTokens = listOf("x", "y", "=", "+", "-", "*", "/", "^2", "√(", "(", ")", "≤", "≥", "π")
     val quickMathScroll = HorizontalScrollView(this).apply {
         isHorizontalScrollBarEnabled = false
@@ -874,7 +851,7 @@ fun MainActivity.createProSmartNotesScreen(): View {
 
             if (notes.isEmpty()) {
                 if (statusTv.text.isNullOrEmpty()) {
-                    statusTv.text = BidiFmt.rtlParagraph("המחברת ריקה כעת. הזן תרגיל, משוואה או פתק למעלה ולחץ על 'שמור פתק חדש במחברת'.")
+                    statusTv.text = BidiFmt.rtlParagraph("המחברת ריקה כעת. כתוב פתק למעלה ולחץ על 'שמור פתק חדש במחברת'.")
                 }
                 return
             }
@@ -908,7 +885,7 @@ fun MainActivity.createProSmartNotesScreen(): View {
                 }
 
                 val noteBodyTv = TextView(this).apply {
-                    text = BidiFmt.rtlParagraph(*note.body.split("\n").toTypedArray())
+                    text = note.body
                     setTextColor(textCol)
                     textSize = 15.0f
                     textDirection = View.TEXT_DIRECTION_RTL
@@ -963,8 +940,12 @@ fun MainActivity.createProSmartNotesScreen(): View {
                     setPadding(dp(12f), dp(4f), dp(12f), dp(4f))
                     setOnClickListener {
                         feedback(it)
+                        isUpdatingBodyProgrammatically = true
                         titleIn.setText(note.title)
                         bodyIn.setText(note.body)
+                        isUpdatingBodyProgrammatically = false
+                        wasExplicitlySolved = note.solutionSummary.isNotBlank()
+                        currentExplicitSummary = note.solutionSummary
                         statusTv.text = note.solutionSummary
                     }
                 }
@@ -994,18 +975,24 @@ fun MainActivity.createProSmartNotesScreen(): View {
         }
         try {
             val (updatedBody, summary) = SmartNotesMathEngine.analyzeAndSolveNote(raw, calcPrecision)
+            isUpdatingBodyProgrammatically = true
             bodyIn.setText(updatedBody)
             bodyIn.setSelection(bodyIn.text.length)
+            isUpdatingBodyProgrammatically = false
+            wasExplicitlySolved = summary.isNotEmpty()
+            currentExplicitSummary = summary
+
             if (summary.isNotEmpty()) {
                 statusTv.text = summary
             } else {
                 statusTv.text = BidiFmt.rtlParagraph("לא זוהה ביטוי מתמטי או משוואה לפתרון.")
             }
-        } catch (e: Throwable) {
+        } catch (_: Throwable) {
             statusTv.text = BidiFmt.rtlParagraph("לא ניתן לפענח את הביטוי המתמטי שהוזן.")
         }
     }
 
+    // שמירת הפתק: אם לא לחצת על "פתור תרגיל", הפתק נשמר כפתק טקסט רגיל לחלוטין כפי שנכתב!
     val saveBtn = createActionBtn("💾 שמור פתק חדש במחברת", true) {
         val rawTitle = titleIn.text.toString().trim()
         val rawBody = bodyIn.text.toString().trim()
@@ -1018,24 +1005,22 @@ fun MainActivity.createProSmartNotesScreen(): View {
             bodyIn.clearFocus()
             titleIn.clearFocus()
 
-            val t = rawTitle.ifEmpty { "פתק מהיר" }
-            val (solvedBody, solutionSummary) = if (rawBody.isNotEmpty()) {
-                SmartNotesMathEngine.analyzeAndSolveNote(rawBody, calcPrecision)
-            } else {
-                "" to ""
-            }
+            val t = rawTitle.ifEmpty { "פתק" }
+            val savedSummary = if (wasExplicitlySolved) currentExplicitSummary else ""
             val dateStr = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(Date())
+
             val list = loadNotesSafely()
-            list.add(0, SmartNoteEntry(t, solvedBody, solutionSummary, dateStr))
+            list.add(0, SmartNoteEntry(t, rawBody, savedSummary, dateStr))
             saveNotesSafely(list)
 
+            isUpdatingBodyProgrammatically = true
             titleIn.setText("")
             bodyIn.setText("")
-            if (solutionSummary.isNotEmpty()) {
-                statusTv.text = solutionSummary
-            } else {
-                statusTv.text = BidiFmt.rtlParagraph("✅ הפתק נשמר במחברת (${BidiFmt.ltr(list.size)} פתקים)")
-            }
+            isUpdatingBodyProgrammatically = false
+            wasExplicitlySolved = false
+            currentExplicitSummary = ""
+
+            statusTv.text = BidiFmt.rtlParagraph("✅ הפתק נשמר במחברת (${BidiFmt.ltr(list.size)} פתקים)")
             renderNotesList()
         } catch (_: Throwable) {
             Toast.makeText(this, "הפתק נשמר", Toast.LENGTH_SHORT).show()
