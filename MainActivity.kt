@@ -174,7 +174,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         "🌌 ממירי תקשורת, טיפוגרפיה, חלל ובישול", // 63
         "💳 מחשבון שכר, שעות נוספות, פנסיה ונטו", // 64
         "🧮 מטריצות, דטרמיננטה ומערכת משוואות",   // 65
-        "🧲 גלאי מתכות ושדה מגנטי (EMF)",         // 66
+        "🧲 גלאי מתכות ותת-קרקע (EMF)",           // 66
         "📈 מד רטט וסיסמוגרף חי (Vibrometer)",    // 67
         "🚨 צופר חירום והתרעה קולית (Siren)",      // 68
         "🎵 מטרונום מוזיקלי מונפש (BPM)",         // 69
@@ -183,13 +183,12 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         "🔌 שערים לוגיים וטבלאות אמת",            // 72
         "🎨 ממיר צבעים HEX / RGB / CMYK",         // 73
         "🖥️ יחס גובה-רוחב ורזולוציה (PPI)",       // 74
-        "🔋 מוניטור מצב ובריאות הסוללה",          // 75
+        "🔋 מרכז טיפול, כיול ובריאות הסוללה",      // 75
         "⚡ מחשבון חשבון חשמל וצריכת אנרגיה",      // 76
         "🔐 הצפנת טקסט, צפנים ו-Hash",            // 77
         "📝 פתקים חכמים ורשימות (Smart Notes)",   // 78
-        "📄 סורק ומחולל מסמכי PDF",               // 79
-        "💍 מדידת טבעת מכוילת על המסך",           // 80
-        "👟 מידות נעליים, בגדים וכובעים"          // 81
+        "💍 מדידת טבעת מכוילת על המסך",           // 79
+        "👟 מידות נעליים, בגדים וכובעים"          // 80
     )
 
     val drawerSections = listOf(
@@ -204,8 +203,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         Triple(309, "🔬 Pro: מדע, אטום, מורס, הצפנה וצבעים", listOf(44, 45, 46, 77, 47, 73, 74)),
         Triple(310, "📊 Pro: השקעות, משכנתא, שכר, זהב ועסקים", listOf(48, 49, 50, 51, 64)),
         Triple(311, "🧮 Pro: סטטיסטיקה, גאומטריה, מטריצות וענן", listOf(52, 53, 54, 65, 55)),
-        Triple(312, "🛠️ Pro: כלי עזר, מטרונום, פתקים ומידות", listOf(69, 70, 78, 79, 80, 81))
+        Triple(312, "🛠️ Pro: כלי עזר, מטרונום, פתקים ומידות", listOf(69, 70, 78, 79, 80))
     )
+
+    // ממפה אוטומטית את אינדקס 79 (מדידת טבעת) לסמל הטבעת (80) ואת 80 (מידות בגדים/נעליים) לסמל הלבוש (81)
+    private fun resolveToolIconCode(tabIndex: Int): Int = if (tabIndex >= 79) tabIndex + 1 else tabIndex
 
     var currentInput = ""; var justCalculated = false
     var expressionView: TextView? = null; var currentView: TextView? = null; var memoryIndicator: TextView? = null
@@ -381,6 +383,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             drawerMenu?.addView(sectionItemsContainer)
         }
 
+        // רק הקטגוריה הראשונה של המחשבון הרגיל פתוחה כברירת מחדל
         expandedSections.add(301)
 
         val bottomSpacer = Space(this).apply {
@@ -769,6 +772,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     setTextColor(MinimalistTheme.ensureReadableTextOnBg(textPrimary, rowBgCol, 2.3))
                     textSize = 16f
                     typeface = Typeface.create("sans-serif", Typeface.NORMAL)
+                    textDirection = View.TEXT_DIRECTION_RTL
                     gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
                     setPadding(dp(16f), dp(13f), dp(16f), dp(13f))
                     background = GradientDrawable().apply {
@@ -1268,10 +1272,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             )
 
             tv.text = IosGlassTheme.cleanCategoryTitle(categories[i], true)
+            val iconCode = resolveToolIconCode(i)
             val icon = if (isMinimalistMode) {
-                MinimalistTheme.createMinimalistVectorIcon(this, i, itemIconCol, 20f)
+                MinimalistTheme.createMinimalistVectorIcon(this, iconCode, itemIconCol, 20f)
             } else {
-                AuroraBorealisTheme.createVectorIcon(this, i, itemIconCol, 20f, isAuroraMode)
+                AuroraBorealisTheme.createVectorIcon(this, iconCode, itemIconCol, 20f, isAuroraMode)
             }
             if (isRightHanded) tv.setCompoundDrawables(null, null, icon, null)
             else tv.setCompoundDrawables(icon, null, null, null)
@@ -1691,8 +1696,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     if (!hasProBtn) {
                         val proEnabled = ProState.isProEnabled(prefs)
                         val proBtn = createActionBtn(
-                            if (proEnabled) "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-64 כלים): מופעל 🟢"
-                            else "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-64 כלים): כבוי 🔴",
+                            if (proEnabled) "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-63 כלים): מופעל 🟢"
+                            else "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-63 כלים): כבוי 🔴",
                             proEnabled
                         ) {
                             val nextState = !ProState.isProEnabled(prefs)
@@ -1744,7 +1749,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             28 -> createHexConverter()
             29 -> createSavingsCalculator()
             30 -> createDateAnniversaryCalculator()
-            // --- כל מסכי ה-Pro המעוצבים בקנבה (31..81) ---
+            // --- כל מסכי ה-Pro המעוצבים בקנבה (31..80) ---
             31 -> createPro87UnitConverter()
             32 -> createProPlumbingAndFluidsScreen()
             33 -> createProMedicalDosageScreen()
@@ -1793,9 +1798,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             76 -> createProElectricityBillScreen()
             77 -> createProEncryptionLabScreen()
             78 -> createProSmartNotesScreen()
-            79 -> createProPdfScannerCreatorScreen()
-            80 -> createProRingSizerScreen()
-            81 -> createProShoeClothingHatSizeScreen()
+            79 -> createProRingSizerScreen()
+            80 -> createProShoeClothingHatSizeScreen()
             else -> createBasicCalculator()
         }
 
@@ -2116,13 +2120,15 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             2.2
         )
         return EditText(this).apply {
-            hint = hintText
+            hint = "\u200F$hintText"
             setHintTextColor(when {
                 isMinimalistMode -> MinimalistTheme.TEXT_MUTED_GREY
                 isCleanGlassActive -> Color.parseColor("#B0BEC5")
                 else -> Color.parseColor("#5C657A")
             })
             setTextColor(boxTextCol)
+            textDirection = View.TEXT_DIRECTION_RTL
+            gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED
             textSize = 17f
             setPadding(dp(18f), dp(18f), dp(18f), dp(18f))
@@ -2175,6 +2181,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         return TextView(this).apply {
             text = if (isMinimalistMode && isSwapBtn) "⇅ החלף כיוון" else cleanText
+            textDirection = View.TEXT_DIRECTION_RTL
             gravity = Gravity.CENTER
             setTextColor(safeBtnTextCol)
             textSize = 15.5f
@@ -2194,11 +2201,38 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
-    fun createResultTextView(): TextView = TextView(this).apply {
+    // מתקן אוטומטית את כיוון הטקסט (RTL/LTR BiDi) בכל תשובות המחשבונים באפליקציה!
+    fun createResultTextView(): TextView = object : TextView(this) {
+        private val tokenRegex = Regex("([+-]?\\d+(?:[.,]\\d+)*(?:\\s*[%°€$₪£¥a-zA-ZµΩ²³/+\\-*×÷=]+)*)")
+
+        override fun setText(text: CharSequence?, type: BufferType?) {
+            val raw = text?.toString() ?: ""
+            if (raw.isEmpty()) {
+                super.setText(text, type)
+                return
+            }
+            // אם הטקסט כבר עוצב ב-BidiFmt, נוודא רק שכל שורה מתחילה ב-RTL mark
+            val formatted = if (raw.contains('\u2066')) {
+                raw.lines().joinToString("\n") { line ->
+                    if (line.startsWith('\u200F')) line else "\u200F$line"
+                }
+            } else {
+                raw.lines().joinToString("\n") { line ->
+                    val cleanLine = line.replace("\u200E", "").replace("\u200F", "")
+                    val isolated = tokenRegex.replace(cleanLine) { m ->
+                        "\u200E\u2066${m.value.trim()}\u2069\u200E"
+                    }
+                    "\u200F$isolated"
+                }
+            }
+            super.setText(formatted, type)
+        }
+    }.apply {
         setTextColor(MinimalistTheme.resolveDisplayTextColor(this@MainActivity))
-        textSize = 20f
-        gravity = Gravity.CENTER
-        setPadding(0, dp(20f), 0, 0)
+        textSize = 18.5f
+        textDirection = View.TEXT_DIRECTION_RTL
+        gravity = Gravity.RIGHT
+        setPadding(dp(8f), dp(18f), dp(8f), dp(8f))
         setOnClickListener { if (text.isNotEmpty()) copyToClipboard(text.toString()) }
     }
 
