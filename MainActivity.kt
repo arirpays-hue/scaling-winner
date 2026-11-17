@@ -186,7 +186,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         "🔋 מרכז טיפול, כיול ובריאות הסוללה",      // 75
         "⚡ מחשבון חשבון חשמל וצריכת אנרגיה",      // 76
         "🔐 הצפנת טקסט, צפנים ו-Hash",            // 77
-        "📝 פתקים חכמים ורשימות (Smart Notes)",   // 78
+        "📝 פתקים חכמים ופותר משוואות (Smart Notes)", // 78
         "💍 מדידת טבעת מכוילת על המסך",           // 79
         "👟 מידות נעליים, בגדים וכובעים"          // 80
     )
@@ -1770,9 +1770,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             48 -> createProCurrenciesAndMetalsHub()
             49 -> createProMortgageSpitzerScreen()
             50 -> createProRoiCagrScreen()
-            51 -> createProBusinessMarginScreen()
+            51 -> createProBusinessMarginLiveScreen()
             52 -> createProStatisticsBellScreen()
-            53 -> createProGeometryBlueprintScreen()
+            53 -> createProGeometryBlueprintLiveScreen()
             54 -> createProNumberTheoryScreen()
             55 -> createProPowerFeaturesCenter()
             56 -> createProFavoritesCenterScreen()
@@ -1805,6 +1805,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         if (isMinimalistMode && index != 0 && index != 1) {
             MinimalistTheme.applyMinimalistStylingToHierarchy(rawView, this)
+        }
+
+        // חיבור אוטומטי של עדכון ויזואלי חי תוך כדי הקלדת מספר או תרגיל בכל המחשבונים
+        if (index != 0 && index != 1 && index != 19 && index != 78) {
+            BidiFmt.attachUniversalLiveVisualizer(rawView)
         }
 
         contentFrame.addView(rawView)
@@ -2203,27 +2208,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     // מתקן אוטומטית את כיוון הטקסט (RTL/LTR BiDi) בכל תשובות המחשבונים באפליקציה!
     fun createResultTextView(): TextView = object : TextView(this) {
-        private val tokenRegex = Regex("([+-]?\\d+(?:[.,]\\d+)*(?:\\s*[%°€$₪£¥a-zA-ZµΩ²³/+\\-*×÷=]+)*)")
-
         override fun setText(text: CharSequence?, type: BufferType?) {
             val raw = text?.toString() ?: ""
             if (raw.isEmpty()) {
                 super.setText(text, type)
                 return
             }
-            // אם הטקסט כבר עוצב ב-BidiFmt, נוודא רק שכל שורה מתחילה ב-RTL mark
-            val formatted = if (raw.contains('\u2066')) {
-                raw.lines().joinToString("\n") { line ->
-                    if (line.startsWith('\u200F')) line else "\u200F$line"
-                }
-            } else {
-                raw.lines().joinToString("\n") { line ->
-                    val cleanLine = line.replace("\u200E", "").replace("\u200F", "")
-                    val isolated = tokenRegex.replace(cleanLine) { m ->
-                        "\u200E\u2066${m.value.trim()}\u2069\u200E"
-                    }
-                    "\u200F$isolated"
-                }
+            val formatted = raw.lines().joinToString("\n") { line ->
+                "\u200F${BidiFmt.fixRtlLineTokens(line)}"
             }
             super.setText(formatted, type)
         }
