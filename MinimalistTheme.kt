@@ -524,29 +524,26 @@ object MinimalistTheme {
     }
 
     private fun getDefaultSlotColors(): IntArray = intArrayOf(
-        DEFAULT_ACCENT_TERRACOTTA,     // 0: SLOT_ACTION_1 (רקע כפתורי פעולה 1)
-        DEFAULT_ACCENT_BUTTER_YELLOW,  // 1: SLOT_ACTION_2 (רקע כפתורי פעולה 2)
-        DEFAULT_DRAWER_HEADER_YELLOW,  // 2: SLOT_LOGO_BG (רקע לוגו)
-        DEFAULT_TEXT_CHARCOAL,         // 3: SLOT_LOGO_TEXT (טקסט וסמל לוגו)
-        DEFAULT_BG_CREAM,              // 4: SLOT_MAIN_BG (רקע ראשי)
-        DEFAULT_CARD_WHITE,            // 5: SLOT_CARDS_INPUTS (כרטיסים ותיבות קלט)
-        DEFAULT_ACCENT_SKY_BLUE,       // 6: SLOT_MEM_CMD_KEYS (רקע מקשי זיכרון ופקודות)
-        DEFAULT_CARD_WHITE,            // 7: SLOT_NUM_KEYS (רקע מקשי מספרים)
-        DEFAULT_ACCENT_SAGE_GREEN,     // 8: SLOT_ACTIVE_PILL (רקע פריט נבחר בתפריט וכותרות)
-        DEFAULT_TEXT_CHARCOAL,         // 9: SLOT_TEXT_ICONS (טקסט כותרות ואייקונים כללי)
-        DEFAULT_TEXT_CHARCOAL,         // 10: SLOT_NUM_TEXT (צבע הספרות עצמן 0-9)
-        DEFAULT_TEXT_CHARCOAL,         // 11: SLOT_OP_TEXT (צבע סימוני הפעולות + - × ÷ =)
-        DEFAULT_TEXT_CHARCOAL,         // 12: SLOT_MEM_CMD_TEXT (צבע כיתוב זיכרון ופקודות)
-        DEFAULT_TEXT_CHARCOAL,         // 13: SLOT_DISPLAY_TEXT (צבע ספרות הצג והתוצאות)
-        DEFAULT_BORDER_SUBTLE,         // 14: SLOT_BORDERS (צבע מסגרות כפתורים וכרטיסים)
-        DEFAULT_TEXT_CHARCOAL,         // 15: SLOT_DRAWER_TEXT (צבע טקסט תפריט הצד)
-        DEFAULT_TEXT_CHARCOAL,         // 16: SLOT_DRAWER_ICONS (צבע סמלים בתפריט הצד ובסרגל)
-        DEFAULT_TEXT_CHARCOAL          // 17: SLOT_ACTIVE_PILL_TEXT (צבע טקסט וסמל בפריט נבחר בתפריט)
+        DEFAULT_ACCENT_TERRACOTTA,     // 0: SLOT_ACTION_1
+        DEFAULT_ACCENT_BUTTER_YELLOW,  // 1: SLOT_ACTION_2
+        DEFAULT_DRAWER_HEADER_YELLOW,  // 2: SLOT_LOGO_BG
+        DEFAULT_TEXT_CHARCOAL,         // 3: SLOT_LOGO_TEXT
+        DEFAULT_BG_CREAM,              // 4: SLOT_MAIN_BG
+        DEFAULT_CARD_WHITE,            // 5: SLOT_CARDS_INPUTS
+        DEFAULT_ACCENT_SKY_BLUE,       // 6: SLOT_MEM_CMD_KEYS
+        DEFAULT_CARD_WHITE,            // 7: SLOT_NUM_KEYS
+        DEFAULT_ACCENT_SAGE_GREEN,     // 8: SLOT_ACTIVE_PILL
+        DEFAULT_TEXT_CHARCOAL,         // 9: SLOT_TEXT_ICONS
+        DEFAULT_TEXT_CHARCOAL,         // 10: SLOT_NUM_TEXT
+        DEFAULT_TEXT_CHARCOAL,         // 11: SLOT_OP_TEXT
+        DEFAULT_TEXT_CHARCOAL,         // 12: SLOT_MEM_CMD_TEXT
+        DEFAULT_TEXT_CHARCOAL,         // 13: SLOT_DISPLAY_TEXT
+        DEFAULT_BORDER_SUBTLE,         // 14: SLOT_BORDERS
+        DEFAULT_TEXT_CHARCOAL,         // 15: SLOT_DRAWER_TEXT
+        DEFAULT_TEXT_CHARCOAL,         // 16: SLOT_DRAWER_ICONS
+        DEFAULT_TEXT_CHARCOAL          // 17: SLOT_ACTIVE_PILL_TEXT
     )
 
-    // =========================================================================
-    // מנוע הגנת ניגודיות חכם (Smart Contrast Guard) - מונע היעלמות במקשים ובתפריט הצד!
-    // =========================================================================
     fun computeLuminance(color: Int): Double {
         fun chan(v: Int): Double {
             val s = v / 255.0
@@ -569,7 +566,6 @@ object MinimalistTheme {
         return if (bgLum > 0.38) Color.parseColor("#14171F") else Color.WHITE
     }
 
-    // מחשב את צבע הרקע האמיתי של תפריט הצד
     fun resolveDrawerBgColor(activity: MainActivity): Int {
         return when {
             activity.isMinimalistMode -> DRAWER_BG
@@ -579,7 +575,6 @@ object MinimalistTheme {
         }
     }
 
-    // מחשב את צבע הרקע האמיתי של קפסולת הפריט הנבחר בתפריט הצד (כדי לבדוק ניגודיות מולו!)
     fun resolveActivePillBgColor(activity: MainActivity): Int {
         return when {
             activity.isMinimalistMode -> ACCENT_SAGE_GREEN
@@ -589,7 +584,6 @@ object MinimalistTheme {
         }
     }
 
-    // מחשב את צבע הטקסט של פריט או קטגוריה בתפריט הצד (נבחר / פתוח / רגיל) עם הגנת ניגודיות מלאה!
     fun resolveDrawerItemTextColor(
         activity: MainActivity,
         isSelected: Boolean,
@@ -627,7 +621,6 @@ object MinimalistTheme {
         return ensureReadableTextOnBg(defaultText, itemBg, minContrast = 2.40)
     }
 
-    // מחשב את צבע הסמל (האייקון) בתפריט הצד עם הגנת ניגודיות מול הקפסולה הפעילה או רקע התפריט!
     fun resolveDrawerIconColor(
         activity: MainActivity,
         isSelected: Boolean,
@@ -689,7 +682,6 @@ object MinimalistTheme {
         }
     }
 
-    // מחשב את צבע הרקע המדויק של מקש במקלדת
     fun resolveKeypadButtonBgColor(activity: MainActivity, symbol: String): Int {
         val isMem = symbol in listOf("MC", "MR", "M+", "M-")
         val isCmd = symbol in listOf("AC", "⌫", "%") || isMem
@@ -862,9 +854,6 @@ object MinimalistTheme {
         activity.applyTheme()
     }
 
-    // =========================================================================
-    // בונה את סרגל הפלטות הדינמי בראש מסך ההגדרות (מותאם אישית לכל ערכת נושא!)
-    // =========================================================================
     fun createThemeMatchedPalettesBar(activity: MainActivity): View {
         val isMin = activity.isMinimalistMode
         val palettes = getPalettesForCurrentTheme(activity)
@@ -1494,7 +1483,7 @@ object MinimalistTheme {
                             val tone = when {
                                 txt.contains("החלף כיוון") || txt.contains("הקפא") || txt.contains("Hold") || txt.contains("הקפה") -> 2
                                 txt.contains("נעץ תוצאה") || txt.contains("רשימת סימון") || txt.contains("PDF") || txt.contains("CSV") || txt.contains("Drive") -> 3
-                                txt.contains("כייל") || txt.contains("Tare") || txt.startsWith("חשב") || txt.startsWith("פתור") || txt.startsWith("נתח") || txt.startsWith("פענח") || txt.startsWith("צור") || txt.startsWith("התחל") || txt.startsWith("▶️") || txt.startsWith("🆘") || txt.startsWith("🔆") -> 1
+                                txt.contains("כייל") || txt.contains("Tare") || txt.startsWith("חשב") || txt.startsWith("פתור") || txt.startsWith("נתח") || txt.startsWith("פענח") || txt.startsWith("צור") || txt.startsWith("התחל") || txt.startsWith("▶️") || txt.startsWith("🆘") || txt.startsWith("🔆") || txt.startsWith("🚨") -> 1
                                 else -> 4
                             }
                             val btnBgCol = when (tone) {
@@ -2007,7 +1996,7 @@ object MinimalistTheme {
     }
 
     // =========================================================================
-    // חבילת 85+ סמלים וקטוריים ייחודיים לערכת הנושא המינימליסטית!
+    // חבילת 105+ סמלים וקטוריים ייחודיים לערכת הנושא המינימליסטית (כולל כלים 66..81 וקטגוריה 312)!
     // =========================================================================
     fun createMinimalistVectorIcon(
         context: Context,
@@ -2619,6 +2608,164 @@ object MinimalistTheme {
                         canvas.drawCircle(cx - r * 0.26f, cy + r * 0.26f, r * 0.10f, dotPaint)
                         canvas.drawCircle(cx + r * 0.26f, cy + r * 0.26f, r * 0.10f, dotPaint)
                     }
+                    // --- 17 הסמלים החדשים עבור כלי ה-Pro הנוספים (66..81 + 312) ---
+                    66 -> { // 66. גלאי מתכות ושדה מגנטי: מגנט פרסה עם קווי שדה
+                        canvas.drawArc(RectF(cx - r * 0.62f, cy - r * 0.15f, cx + r * 0.62f, cy + r * 0.80f), 0f, 180f, false, paint)
+                        canvas.drawLine(cx - r * 0.62f, cy + r * 0.32f, cx - r * 0.62f, cy - r * 0.52f, paint)
+                        canvas.drawLine(cx + r * 0.62f, cy + r * 0.32f, cx + r * 0.62f, cy - r * 0.52f, paint)
+                        canvas.drawArc(RectF(cx - r * 0.40f, cy - r * 0.82f, cx + r * 0.40f, cy - r * 0.35f), 200f, 140f, false, paint)
+                    }
+                    67 -> { // 67. מד רטט וסיסמוגרף: גל רעידה סיסמי חד
+                        val seismo = Path().apply {
+                            moveTo(cx - r * 0.86f, cy)
+                            lineTo(cx - r * 0.48f, cy)
+                            lineTo(cx - r * 0.30f, cy - r * 0.55f)
+                            lineTo(cx - r * 0.10f, cy + r * 0.72f)
+                            lineTo(cx + r * 0.12f, cy - r * 0.82f)
+                            lineTo(cx + r * 0.32f, cy + r * 0.48f)
+                            lineTo(cx + r * 0.50f, cy)
+                            lineTo(cx + r * 0.86f, cy)
+                        }
+                        canvas.drawPath(seismo, paint)
+                    }
+                    68 -> { // 68. צופר חירום: כיפת צ'קלקה עם קרני אור
+                        canvas.drawArc(RectF(cx - r * 0.58f, cy - r * 0.25f, cx + r * 0.58f, cy + r * 0.85f), 180f, 180f, true, paint)
+                        canvas.drawLine(cx - r * 0.76f, cy + r * 0.32f, cx + r * 0.76f, cy + r * 0.32f, paint)
+                        canvas.drawLine(cx, cy - r * 0.48f, cx, cy - r * 0.82f, paint)
+                        canvas.drawLine(cx - r * 0.45f, cy - r * 0.36f, cx - r * 0.72f, cy - r * 0.65f, paint)
+                        canvas.drawLine(cx + r * 0.45f, cy - r * 0.36f, cx + r * 0.72f, cy - r * 0.65f, paint)
+                    }
+                    69 -> { // 69. מטרונום מוזיקלי: תיבה טרפזית עם זרוע מטוטלת
+                        val mBox = Path().apply {
+                            moveTo(cx - r * 0.28f, cy - r * 0.76f)
+                            lineTo(cx + r * 0.28f, cy - r * 0.76f)
+                            lineTo(cx + r * 0.68f, cy + r * 0.76f)
+                            lineTo(cx - r * 0.68f, cy + r * 0.76f)
+                            close()
+                        }
+                        canvas.drawPath(mBox, paint)
+                        canvas.drawLine(cx, cy + r * 0.65f, cx + r * 0.48f, cy - r * 0.55f, paint)
+                        canvas.drawCircle(cx + r * 0.32f, cy - r * 0.18f, r * 0.13f, dotPaint)
+                    }
+                    70 -> { // 70. מונה לחיצות (Tally Counter): מסגרת מונה מפוצלת עם נקודות ספרות
+                        canvas.drawRoundRect(RectF(cx - r * 0.80f, cy - r * 0.52f, cx + r * 0.80f, cy + r * 0.52f), r * 0.16f, r * 0.16f, paint)
+                        canvas.drawLine(cx, cy - r * 0.52f, cx, cy + r * 0.52f, paint)
+                        canvas.drawLine(cx - r * 0.40f, cy - r * 0.24f, cx - r * 0.40f, cy + r * 0.24f, paint)
+                        canvas.drawCircle(cx + r * 0.40f, cy, r * 0.14f, paint)
+                    }
+                    71 -> { // 71. קודי צבע של סלילים: סליל השראות עם 3 קשתות ליפוף
+                        canvas.drawLine(cx - r * 0.88f, cy + r * 0.20f, cx - r * 0.60f, cy + r * 0.20f, paint)
+                        canvas.drawLine(cx + r * 0.60f, cy + r * 0.20f, cx + r * 0.88f, cy + r * 0.20f, paint)
+                        for (i in -1..1) {
+                            val lx = cx + i * r * 0.40f
+                            canvas.drawArc(RectF(lx - r * 0.22f, cy - r * 0.35f, lx + r * 0.22f, cy + r * 0.20f), 180f, 180f, false, paint)
+                        }
+                    }
+                    72 -> { // 72. שערים לוגיים: שער AND תקני עם 2 כניסות ויציאה
+                        val gatePath = Path().apply {
+                            moveTo(cx - r * 0.45f, cy - r * 0.55f)
+                            lineTo(cx, cy - r * 0.55f)
+                            arcTo(RectF(cx - r * 0.45f, cy - r * 0.55f, cx + r * 0.55f, cy + r * 0.55f), -90f, 180f, false)
+                            lineTo(cx - r * 0.45f, cy + r * 0.55f)
+                            close()
+                        }
+                        canvas.drawPath(gatePath, paint)
+                        canvas.drawLine(cx - r * 0.85f, cy - r * 0.26f, cx - r * 0.45f, cy - r * 0.26f, paint)
+                        canvas.drawLine(cx - r * 0.85f, cy + r * 0.26f, cx - r * 0.45f, cy + r * 0.26f, paint)
+                        canvas.drawLine(cx + r * 0.55f, cy, cx + r * 0.88f, cy, paint)
+                    }
+                    73 -> { // 73. ממיר HEX ל-RGB: כרטיס צבע עם תגית <>
+                        canvas.drawRoundRect(RectF(cx - r * 0.78f, cy - r * 0.62f, cx + r * 0.78f, cy + r * 0.62f), r * 0.18f, r * 0.18f, paint)
+                        canvas.drawLine(cx - r * 0.15f, cy - r * 0.24f, cx - r * 0.42f, cy, paint)
+                        canvas.drawLine(cx - r * 0.42f, cy, cx - r * 0.15f, cy + r * 0.24f, paint)
+                        canvas.drawLine(cx + r * 0.15f, cy - r * 0.24f, cx + r * 0.42f, cy, paint)
+                        canvas.drawLine(cx + r * 0.42f, cy, cx + r * 0.15f, cy + r * 0.24f, paint)
+                    }
+                    74 -> { // 74. יחס גובה-רוחב (21:9): מסגרת מסך רחב עם חצי מתיחה פינתיים
+                        canvas.drawRoundRect(RectF(cx - r * 0.84f, cy - r * 0.50f, cx + r * 0.84f, cy + r * 0.50f), r * 0.14f, r * 0.14f, paint)
+                        canvas.drawLine(cx - r * 0.55f, cy - r * 0.24f, cx - r * 0.25f, cy - r * 0.24f, paint)
+                        canvas.drawLine(cx - r * 0.55f, cy - r * 0.24f, cx - r * 0.55f, cy + r * 0.06f, paint)
+                        canvas.drawLine(cx + r * 0.55f, cy + r * 0.24f, cx + r * 0.25f, cy + r * 0.24f, paint)
+                        canvas.drawLine(cx + r * 0.55f, cy + r * 0.24f, cx + r * 0.55f, cy - r * 0.06f, paint)
+                    }
+                    75 -> { // 75. מצב הסוללה: סוללה אנכית עם חיווי טעינה
+                        canvas.drawRoundRect(RectF(cx - r * 0.46f, cy - r * 0.62f, cx + r * 0.46f, cy + r * 0.78f), r * 0.14f, r * 0.14f, paint)
+                        canvas.drawRect(cx - r * 0.20f, cy - r * 0.82f, cx + r * 0.20f, cy - r * 0.62f, paint)
+                        canvas.drawLine(cx - r * 0.22f, cy + r * 0.35f, cx + r * 0.22f, cy + r * 0.35f, paint)
+                        canvas.drawLine(cx - r * 0.22f, cy, cx + r * 0.22f, cy, paint)
+                    }
+                    76 -> { // 76. צריכת אנרגיה וחשבון חשמל: בית עם סמל ברק אנרגיה במרכזו
+                        val house = Path().apply {
+                            moveTo(cx, cy - r * 0.82f)
+                            lineTo(cx + r * 0.78f, cy - r * 0.10f)
+                            lineTo(cx + r * 0.58f, cy - r * 0.10f)
+                            lineTo(cx + r * 0.58f, cy + r * 0.76f)
+                            lineTo(cx - r * 0.58f, cy + r * 0.76f)
+                            lineTo(cx - r * 0.58f, cy - r * 0.10f)
+                            lineTo(cx - r * 0.78f, cy - r * 0.10f)
+                            close()
+                        }
+                        canvas.drawPath(house, paint)
+                        canvas.drawLine(cx + r * 0.08f, cy - r * 0.22f, cx - r * 0.14f, cy + r * 0.12f, paint)
+                        canvas.drawLine(cx - r * 0.14f, cy + r * 0.12f, cx + r * 0.14f, cy + r * 0.12f, paint)
+                        canvas.drawLine(cx + r * 0.14f, cy + r * 0.12f, cx - r * 0.08f, cy + r * 0.46f, paint)
+                    }
+                    77 -> { // 77. הצפנת טקסט ו-Hash: מנעול צופן עם סימן + במרכזו
+                        canvas.drawRoundRect(RectF(cx - r * 0.58f, cy - r * 0.08f, cx + r * 0.58f, cy + r * 0.78f), r * 0.16f, r * 0.16f, paint)
+                        canvas.drawArc(RectF(cx - r * 0.36f, cy - r * 0.76f, cx + r * 0.36f, cy + r * 0.08f), 180f, 180f, false, paint)
+                        canvas.drawLine(cx - r * 0.20f, cy + r * 0.35f, cx + r * 0.20f, cy + r * 0.35f, paint)
+                        canvas.drawLine(cx, cy + r * 0.15f, cx, cy + r * 0.55f, paint)
+                    }
+                    78 -> { // 78. פתקים חכמים: דף פתק עם פינה מקופלת ושורות
+                        val doc = Path().apply {
+                            moveTo(cx - r * 0.62f, cy - r * 0.78f)
+                            lineTo(cx + r * 0.25f, cy - r * 0.78f)
+                            lineTo(cx + r * 0.62f, cy - r * 0.40f)
+                            lineTo(cx + r * 0.62f, cy + r * 0.78f)
+                            lineTo(cx - r * 0.62f, cy + r * 0.78f)
+                            close()
+                        }
+                        canvas.drawPath(doc, paint)
+                        canvas.drawLine(cx - r * 0.35f, cy - r * 0.10f, cx + r * 0.35f, cy - r * 0.10f, paint)
+                        canvas.drawLine(cx - r * 0.35f, cy + r * 0.28f, cx + r * 0.20f, cy + r * 0.28f, paint)
+                    }
+                    79 -> { // 79. סורק ומחולל PDF: מסגרת סריקה עם קו לייזר חוצה
+                        canvas.drawLine(cx - r * 0.76f, cy - r * 0.42f, cx - r * 0.76f, cy - r * 0.76f, paint)
+                        canvas.drawLine(cx - r * 0.76f, cy - r * 0.76f, cx - r * 0.42f, cy - r * 0.76f, paint)
+                        canvas.drawLine(cx + r * 0.76f, cy - r * 0.42f, cx + r * 0.76f, cy - r * 0.76f, paint)
+                        canvas.drawLine(cx + r * 0.76f, cy - r * 0.76f, cx + r * 0.42f, cy - r * 0.76f, paint)
+                        canvas.drawLine(cx - r * 0.76f, cy + r * 0.42f, cx - r * 0.76f, cy + r * 0.76f, paint)
+                        canvas.drawLine(cx - r * 0.76f, cy + r * 0.76f, cx - r * 0.42f, cy + r * 0.76f, paint)
+                        canvas.drawLine(cx + r * 0.76f, cy + r * 0.42f, cx + r * 0.76f, cy + r * 0.76f, paint)
+                        canvas.drawLine(cx + r * 0.76f, cy + r * 0.76f, cx + r * 0.42f, cy + r * 0.76f, paint)
+                        canvas.drawLine(cx - r * 0.84f, cy, cx + r * 0.84f, cy, paint)
+                    }
+                    80 -> { // 80. מדידת טבעת (Ring Sizer): טבעת עם יהלום בראשה
+                        canvas.drawCircle(cx, cy + r * 0.18f, r * 0.56f, paint)
+                        val rGem = Path().apply {
+                            moveTo(cx - r * 0.28f, cy - r * 0.38f)
+                            lineTo(cx, cy - r * 0.80f)
+                            lineTo(cx + r * 0.28f, cy - r * 0.38f)
+                            close()
+                        }
+                        canvas.drawPath(rGem, paint)
+                    }
+                    81 -> { // 81. מידות נעליים, בגדים וכובעים: חולצת טי-שירט משורטטת
+                        val shirt = Path().apply {
+                            moveTo(cx - r * 0.35f, cy - r * 0.72f)
+                            lineTo(cx + r * 0.35f, cy - r * 0.72f)
+                            lineTo(cx + r * 0.82f, cy - r * 0.25f)
+                            lineTo(cx + r * 0.55f, cy + r * 0.05f)
+                            lineTo(cx + r * 0.45f, cy - r * 0.10f)
+                            lineTo(cx + r * 0.45f, cy + r * 0.74f)
+                            lineTo(cx - r * 0.45f, cy + r * 0.74f)
+                            lineTo(cx - r * 0.45f, cy - r * 0.10f)
+                            lineTo(cx - r * 0.55f, cy + r * 0.05f)
+                            lineTo(cx - r * 0.82f, cy - r * 0.25f)
+                            close()
+                        }
+                        canvas.drawPath(shirt, paint)
+                    }
                     100 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.85f, cy - r * 0.80f, cx + r * 0.85f, cy + r * 0.80f), r * 0.22f, r * 0.22f, paint)
                         canvas.drawLine(cx - r * 0.85f, cy - r * 0.35f, cx + r * 0.85f, cy - r * 0.35f, paint)
@@ -2670,6 +2817,12 @@ object MinimalistTheme {
                             close()
                         }
                         canvas.drawPath(heart, paint)
+                    }
+                    312 -> { // 312. קטגוריית Pro כלי עזר, מטרונום, פתקים ומידות: ארגז כלים הנדסי
+                        canvas.drawRoundRect(RectF(cx - r * 0.80f, cy - r * 0.36f, cx + r * 0.80f, cy + r * 0.74f), r * 0.16f, r * 0.16f, paint)
+                        canvas.drawRect(cx - r * 0.32f, cy - r * 0.68f, cx + r * 0.32f, cy - r * 0.36f, paint)
+                        canvas.drawLine(cx - r * 0.80f, cy + r * 0.15f, cx + r * 0.80f, cy + r * 0.15f, paint)
+                        canvas.drawCircle(cx, cy + r * 0.15f, r * 0.12f, dotPaint)
                     }
                     else -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.68f, cy - r * 0.68f, cx + r * 0.68f, cy + r * 0.68f), r * 0.20f, r * 0.20f, paint)
