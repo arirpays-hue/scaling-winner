@@ -1321,6 +1321,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     else v.setCompoundDrawables(aboutIcon, null, null, null)
                     return
                 }
+                if (txt.contains("החלקות במסך")) {
+                    val gIcon = CalculatorGestureManager.createGestureVectorIcon(this, iconTint, 22f, false, isAuroraMode)
+                    v.compoundDrawablePadding = dp(12f)
+                    if (isRightHanded) v.setCompoundDrawables(null, null, gIcon, null)
+                    else v.setCompoundDrawables(gIcon, null, null, null)
+                    return
+                }
                 val settingIconCode: Int? = when {
                     txt.contains("מצב תצוגה") -> 214
                     txt.contains("התאמה אישית") -> 203
@@ -1468,13 +1475,20 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                         t.contains("Pro Mode") ||
                         t.contains("יד דומיננטית") ||
                         t.contains("רשימת סימון") ||
+                        t.contains("החלקות במסך") ||
                         t.contains("אודות") ||
                         t.contains("איפוס הגדרות")
             }
             if (v is ViewGroup) {
                 for (i in 0 until v.childCount) {
                     val sub = v.getChildAt(i)
-                    if (sub is TextView && (sub.text.toString().contains("רשימת סימון") || sub.text.toString().contains("אודות") || sub.text.toString().contains("התאמה אישית"))) {
+                    if (sub is TextView && (
+                                sub.text.toString().contains("רשימת סימון") ||
+                                        sub.text.toString().contains("החלקות במסך") ||
+                                        sub.text.toString().contains("אודות") ||
+                                        sub.text.toString().contains("התאמה אישית")
+                                )
+                    ) {
                         return true
                     }
                     if (!isMinimalistMode && (isIosGlassMode || isAuroraMode)) {
@@ -1760,9 +1774,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             settingsScrollY = 0
             isDrawerChecklistExpanded = false
             isColorCustomizerExpanded = false
+            CalculatorGestureManager.isGestureSectionExpanded = false
         } else {
             isDrawerChecklistExpanded = false
             isColorCustomizerExpanded = false
+            CalculatorGestureManager.isGestureSectionExpanded = false
         }
         if (MiniGameEngine.isActive) MiniGameEngine.stopGame(this)
         currentTabIndex = index
@@ -1826,6 +1842,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 }
                 container?.addView(handBtn)
                 container?.addView(createDrawerCalculatorsChecklistSection())
+
+                // הוספת כפתור "החלקות במסך המחשבון" המתקפל בהגדרות
+                container?.addView(CalculatorGestureManager.createCollapsibleGesturesSettingsSection(this))
 
                 // הוספת כפתור "אודות ומעקב גרסאות ועדכונים" בהגדרות
                 container?.addView(AppVersionTracker.createAboutSettingsButton(this))
@@ -1911,6 +1930,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         if (index == 19) {
             AppVersionTracker.applyAboutButtonIcon(rawView, this)
+            CalculatorGestureManager.applyGestureButtonIcon(rawView, this)
         }
 
         // חיבור אוטומטי של עדכון ויזואלי חי תוך כדי הקלדה (למעט ממיר הצבעים 73 ופתקים 78 שפועלים באופן עצמאי)
@@ -2067,31 +2087,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         displayCard.addView(memoryIndicator); displayCard.addView(expressionView); displayCard.addView(currentView)
         root.addView(displayCard, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, if(isGrid5x7) 0.28f else 0.32f).apply { bottomMargin = dp(12f) })
 
-        var startX = 0f; var startY = 0f
-        displayCard.setOnTouchListener { v, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> { startX = event.x; startY = event.y; true }
-                MotionEvent.ACTION_UP -> {
-                    val dx = event.x - startX; val dy = event.y - startY
-                    if (Math.abs(dx) > 50f && Math.abs(dx) > Math.abs(dy)) {
-                        onEquationButtonClick("⌫")
-                    } else if (dy > 50f && Math.abs(dy) > Math.abs(dx)) {
-                        if (isCleanGlassActive && startY < v.height * 0.42f && historyList.isNotEmpty()) {
-                            showHistoryDialog()
-                        } else {
-                            val textToRead = if(currentInput.isEmpty() || currentInput == "0") "אפס" else currentInput
-                            tts?.speak(textToRead, TextToSpeech.QUEUE_FLUSH, null, null)
-                            Toast.makeText(this@MainActivity, if (isCleanGlassActive) "מקריא תוצאה" else "מקריא... 🔊", Toast.LENGTH_SHORT).show()
-                        }
-                    } else if (dy < -50f && Math.abs(dy) > Math.abs(dx)) {
-                        feedback(v); startVoiceRecognition()
-                    } else if (Math.abs(dx) < 10f && Math.abs(dy) < 10f) {
-                        copyToClipboard(currentInput)
-                    }
-                    true
-                }; else -> false
-            }
-        }
+        // חיבור מנוע ההחלקות והמחוות המותאמות אישית לצג המחשבון הרגיל והמדעי!
+        CalculatorGestureManager.attachToCalculatorDisplay(this, displayCard)
+
         val keypad = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         for (rowSymbols in rows) {
             val rowLayout = LinearLayout(this).apply {
