@@ -28,8 +28,8 @@ data class VersionReleaseNote(
 object AppVersionTracker {
 
     const val DEVELOPER_NAME = "Harry"
-    const val CURRENT_SEMANTIC_VERSION = "5.0.0 Pro"
-    const val CURRENT_BUILD_NUMBER = 50
+        const val CURRENT_SEMANTIC_VERSION = "5.1.0 Pro"
+    const val CURRENT_BUILD_NUMBER = 51
     const val CURRENT_RELEASE_DATE = "18/11/2026"
 
     private const val PREF_LAST_SEEN_BUILD = "app_tracker_last_seen_build"
@@ -39,6 +39,18 @@ object AppVersionTracker {
     private const val PREF_CUSTOM_NOTES = "app_tracker_custom_notes_v1"
 
     val changelogHistory: List<VersionReleaseNote> = listOf(
+                VersionReleaseNote(
+            versionCode = 51,
+            versionName = "v5.1.0 Pro",
+            releaseDate = "18/11/2026",
+            title = "15 כלים פיננסיים ומתמטיים חדשים עם קנבסים חיים",
+            highlights = listOf(
+                "הוספת 15 כלים ומחשבונים חדשים (Tabs 81..95): כלי טקסט חכם, ספרות רומיות עם אבני פירוק, סדרות מספרים עם גרף עמודות דו-כיווני, פרופורציות ויחס עם תרשים עוגה, משוואה לינארית עם מערכת צירים מדויקת",
+                "הוספת מחשבוני יעד חיסכון, זמן הכפלה עם גרף צמיחה דו-שכבתי, ממיר שכר עם מד עומס שעות, הנחות מצטברות ומס שירותים עם מפל מחיר Waterfall",
+                "הוספת תשואת מניות ודיבידנד עם טבעת פילוח תיק, פיקדון קבוע וריבית פשוטה עם גרף 2 עקומות חי, מחשבון SIP ואינפלציה עם עקומת שחיקה",
+                "הוספת הלוואת רכב ו-E.M.I עם עקומת סילוקין, ערך עתידי ונוכחי (FV/PV), אנונה ואנונה נצחית עם קנבס תזרים מזומנים, ומחשבון פרישה וקצבה עם מחזור חיים מלא"
+            )
+        ),
         VersionReleaseNote(
             versionCode = 50,
             versionName = "v5.0.0 Pro",
