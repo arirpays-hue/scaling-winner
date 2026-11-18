@@ -2,7 +2,6 @@ package com.example.calculator
 
 import android.app.Dialog
 import android.content.Context
-import android.content.pm.PackageManager
 import android.graphics.*
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
@@ -11,7 +10,6 @@ import android.os.Build
 import android.text.InputType
 import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
 import android.view.Window
 import android.view.WindowManager
 import android.widget.*
@@ -39,7 +37,6 @@ object AppVersionTracker {
     private const val PREF_INSTALL_LOG = "app_tracker_install_log_v1"
     private const val PREF_CUSTOM_NOTES = "app_tracker_custom_notes_v1"
 
-    // היסטוריית הגרסאות והעדכונים המלאה של האפליקציה
     val changelogHistory: List<VersionReleaseNote> = listOf(
         VersionReleaseNote(
             versionCode = 48,
@@ -123,7 +120,6 @@ object AppVersionTracker {
         )
     )
 
-    // נקרא ב-onCreate של MainActivity כדי לעקוב אחרי התקנות ועדכונים באופן אוטומטי
     fun onAppLaunched(activity: MainActivity) {
         val prefs = activity.prefs ?: return
         val pkgInfo = getSafePackageInfo(activity)
@@ -138,7 +134,6 @@ object AppVersionTracker {
         val nowStr = dateFmt.format(Date(pkgUpdateTime))
 
         if (lastSeenBuild == -1) {
-            // הפעלה ראשונה של מערכת מעקב הגרסאות
             val installDateStr = dateFmt.format(Date(firstInstallTime))
             val initialLog = buildString {
                 append("מותקן: גרסה $CURRENT_SEMANTIC_VERSION (Build #$CURRENT_BUILD_NUMBER) בתאריך $nowStr")
@@ -154,7 +149,6 @@ object AppVersionTracker {
                 .putString(PREF_INSTALL_LOG, initialLog)
                 .apply()
         } else if (CURRENT_BUILD_NUMBER > lastSeenBuild || (lastSavedPkgTime > 0 && pkgUpdateTime > lastSavedPkgTime + 5_000L)) {
-            // זוהה עדכון גרסה או התקנת APK מעודכן!
             updateCount += 1
             val prevLog = prefs.getString(PREF_INSTALL_LOG, "") ?: ""
             val newEntry = "שודרג לגרסה $CURRENT_SEMANTIC_VERSION (Build #$CURRENT_BUILD_NUMBER) בתאריך $nowStr (עדכון #$updateCount)"
@@ -177,7 +171,7 @@ object AppVersionTracker {
     private fun getSafePackageInfo(context: Context): android.content.pm.PackageInfo? {
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                context.packageManager.getPackageInfo(context.packageName, PackageManager.PackageInfoFlags.of(0))
+                context.packageManager.getPackageInfo(context.packageName, android.content.pm.PackageManager.PackageInfoFlags.of(0))
             } else {
                 @Suppress("DEPRECATION")
                 context.packageManager.getPackageInfo(context.packageName, 0)
@@ -205,7 +199,6 @@ object AppVersionTracker {
         }
     }
 
-    // מצמיד סמל וקטורי (ⓘ) לכפתור "אודות" בכל 4 ערכות הנושא
     fun applyAboutButtonIcon(settingsRoot: View?, activity: MainActivity) {
         if (settingsRoot == null) return
         val aboutBtn = settingsRoot.findViewWithTag<TextView>("ABOUT_VERSION_SETTINGS_BTN") ?: return
@@ -216,7 +209,7 @@ object AppVersionTracker {
         val iconDrawable = createAboutVectorIcon(
             context = activity,
             tintColor = iconTint,
-            sizeDp = if (activity.isMinimalistMode) 22f else 22f,
+            sizeDp = 22f,
             isMinimalist = activity.isMinimalistMode,
             isAurora = activity.isAuroraMode
         )
@@ -272,11 +265,8 @@ object AppVersionTracker {
                     canvas.drawCircle(cx, cy, r * 0.92f, badgeFillP)
                 }
 
-                // מעגל חיצוני של סמל האודות (i)
                 canvas.drawCircle(cx, cy, r * 0.78f, strokeP)
-                // נקודה עליונה של ה-i
                 canvas.drawCircle(cx, cy - r * 0.34f, r * 0.11f, dotP)
-                // גוף האות i
                 canvas.drawLine(cx, cy - r * 0.06f, cx, cy + r * 0.42f, strokeP)
                 canvas.drawLine(cx - r * 0.16f, cy + r * 0.42f, cx + r * 0.16f, cy + r * 0.42f, strokeP)
             }
@@ -288,9 +278,6 @@ object AppVersionTracker {
         }.apply { setBounds(0, 0, sizePx, sizePx) }
     }
 
-    // =========================================================================
-    // חלון "אודות ומעקב גרסאות ועדכונים" המלא
-    // =========================================================================
     fun showAboutAndVersionsDialog(activity: MainActivity) {
         val dlg = Dialog(activity)
         dlg.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -325,7 +312,6 @@ object AppVersionTracker {
             background = rootCardBg
         }
 
-        // 1. באנר עליון ויזואלי עם מספר גרסה ו-Build
         val badgeCanvas = object : View(activity) {
             private val p = Paint(Paint.ANTI_ALIAS_FLAG)
             override fun onDraw(canvas: Canvas) {
@@ -365,8 +351,7 @@ object AppVersionTracker {
         }
         outerRoot.addView(badgeCanvas)
 
-        // 2. פסי סינון (טאבים): כל הגרסאות | מה חדש בגרסה זו | היסטוריית עדכונים במכשיר
-        var activeFilterMode = 0 // 0 = All, 1 = Current Version, 2 = Device Update Log
+        var activeFilterMode = 0
         val filterScroll = HorizontalScrollView(activity).apply {
             isHorizontalScrollBarEnabled = false
             layoutParams = LinearLayout.LayoutParams(
@@ -381,7 +366,6 @@ object AppVersionTracker {
         filterScroll.addView(filterRow)
         outerRoot.addView(filterScroll)
 
-        // אזור גלילה מרכזי לתוכן האודות ויומן הגרסאות
         val contentScroll = ScrollView(activity).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -408,7 +392,7 @@ object AppVersionTracker {
             val firstInstallStr = pkgInfo?.firstInstallTime?.let { dateFmt.format(Date(it)) } ?: CURRENT_RELEASE_DATE
             val lastUpdateStr = pkgInfo?.lastUpdateTime?.let { dateFmt.format(Date(it)) } ?: CURRENT_RELEASE_DATE
             val totalUpdates = prefs?.getInt(PREF_UPDATE_COUNT, 1) ?: 1
-            val favCount = ProFavoritesEngine.getFavoriteTabs(prefs).size
+            val favCount = activity.categories.indices.count { ProFavoritesEngine.isFavoriteTab(prefs, it) }
             val histCount = activity.historyList.size
             val themeName = when {
                 activity.isMinimalistMode -> "עיצוב מינימליסטי (Pastel Light)"
@@ -534,7 +518,6 @@ object AppVersionTracker {
         renderContent = {
             contentContainer.removeAllViews()
 
-            // כרטיס פרטים טכניים וטלמטריה בראש הרשימה
             val telemetryLines = buildTelemetrySummaryText().lines().drop(1).map { it.removePrefix("\u200F• ").removePrefix("• ") }
             contentContainer.addView(
                 createVersionCardView(
@@ -602,7 +585,6 @@ object AppVersionTracker {
                         )
                     }
 
-                    // תיבה להוספת הערת מעקב גרסה אישית
                     val noteBox = activity.createInputBox("הוסף הערת מעקב גרסה אישית ליומן...").apply {
                         tag = "HAS_CUSTOM_LIVE_WATCHER"
                         inputType = InputType.TYPE_CLASS_TEXT
@@ -631,7 +613,6 @@ object AppVersionTracker {
         rebuildFilterChips()
         renderContent()
 
-        // 3. שורת כפתורים תחתונה: העתקת דו"ח גרסה + סגירה
         val bottomRow = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             layoutParams = LinearLayout.LayoutParams(
