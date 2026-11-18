@@ -23,7 +23,7 @@ import java.util.*
 import kotlin.math.*
 
 // =========================================================================
-// סמלים וקטוריים מותאמים לכל 4 ערכות הנושא עבור 4 הכלים החיישניים והרשת (Tabs 97..100)
+// סמלים וקטוריים מותאמים לכל 4 ערכות הנושא עבור 4 חיישני הרשת (Tabs 96..99)
 // =========================================================================
 object ProSensorNetworkIcons {
     fun createVectorIcon(
@@ -61,7 +61,7 @@ object ProSensorNetworkIcons {
                 val r = min(bounds.width(), bounds.height()) * 0.40f
 
                 when (tabIndex) {
-                    97 -> { // מד אור (Light Meter)
+                    96 -> { // מד אור (Light Meter)
                         canvas.drawCircle(cx, cy, r * 0.45f, strokeP)
                         for (i in 0 until 8) {
                             val a = Math.toRadians((i * 45).toDouble())
@@ -74,18 +74,18 @@ object ProSensorNetworkIcons {
                             )
                         }
                     }
-                    98 -> { // בדיקת מהירות אינטרנט (Speed Test)
+                    97 -> { // בדיקת מהירות אינטרנט (Speed Test)
                         canvas.drawArc(RectF(cx - r * 0.80f, cy - r * 0.80f, cx + r * 0.80f, cy + r * 0.80f), 140f, 260f, false, strokeP)
                         canvas.drawLine(cx, cy, cx + r * 0.45f, cy + r * 0.35f, strokeP)
                         canvas.drawCircle(cx, cy, r * 0.14f, fillP)
                     }
-                    99 -> { // קלינומטר (Clinometer)
+                    98 -> { // קלינומטר (Clinometer)
                         canvas.drawCircle(cx, cy, r * 0.82f, strokeP)
                         canvas.drawLine(cx - r * 0.72f, cy, cx + r * 0.72f, cy, strokeP)
                         canvas.drawLine(cx, cy - r * 0.42f, cx, cy + r * 0.42f, strokeP)
                         canvas.drawCircle(cx, cy, r * 0.22f, fillP)
                     }
-                    else -> { // 100: פרטי רשת ו-IP (Network Inspector)
+                    else -> { // 99: פרטי רשת ו-IP (Network Inspector)
                         canvas.drawRect(RectF(cx - r * 0.75f, cy - r * 0.75f, cx - r * 0.25f, cy - r * 0.25f), strokeP)
                         canvas.drawRect(RectF(cx + r * 0.25f, cy - r * 0.75f, cx + r * 0.75f, cy - r * 0.25f), strokeP)
                         canvas.drawRect(RectF(cx - r * 0.25f, cy + r * 0.25f, cx + r * 0.25f, cy + r * 0.75f), strokeP)
@@ -172,7 +172,7 @@ private fun Paint.applyAuroraGlow(enabled: Boolean, colorInt: Int, density: Floa
 }
 
 // =========================================================================
-// 97. מד אור באמצעות חיישן סביבתי (Light Meter / Lux Meter - Tab 97)
+// 96. מד אור באמצעות חיישן סביבתי (Light Meter / Lux Meter - Tab 96)
 // =========================================================================
 fun MainActivity.createProLightMeterScreen(): View {
     val scroll = ScrollView(this)
@@ -265,7 +265,7 @@ fun MainActivity.createProLightMeterScreen(): View {
 }
 
 // =========================================================================
-// 98. בדיקת מהירות אינטרנט סימולטור חי (Network Speed Test - Tab 98)
+// 97. בדיקת מהירות אינטרנט סימולטור חי (Network Speed Test - Tab 97)
 // =========================================================================
 fun MainActivity.createProSpeedTestScreen(): View {
     val scroll = ScrollView(this)
