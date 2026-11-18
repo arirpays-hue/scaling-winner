@@ -27,6 +27,7 @@ data class VersionReleaseNote(
 
 object AppVersionTracker {
 
+    const val DEVELOPER_NAME = "Harry"
     const val CURRENT_SEMANTIC_VERSION = "4.8.0 Pro"
     const val CURRENT_BUILD_NUMBER = 48
     const val CURRENT_RELEASE_DATE = "18/11/2026"
@@ -42,9 +43,10 @@ object AppVersionTracker {
             versionCode = 48,
             versionName = "v4.8.0 Pro",
             releaseDate = "18/11/2026",
-            title = "מעקב גרסאות, מנוע משוואות בפתקים וצגים חיים",
+            title = "מעקב גרסאות, תפריט התאמה אישית ומנוע משוואות בפתקים",
             highlights = listOf(
-                "הוספת מערכת מעקב גרסאות, זיהוי עדכונים אוטומטי וחלון 'אודות' בהגדרות",
+                "הוספת מערכת מעקב גרסאות, זיהוי עדכונים אוטומטי וחלון 'אודות' בהגדרות (נבנה על ידי Harry)",
+                "איגוד גלגל הצבעים ו-18 האלמנטים בתוך כפתור 'התאמה אישית' מתקפל עם כפתור 'סיום'",
                 "מנוע מתמטי ואלגברי בפתקים חכמים (SmartNotesMathEngine) הפותר תרגילים, משוואות לינאריות, ריבועיות, מערכות משוואות ואי-שוויונות",
                 "מקלדת מתמטית קבועה ב-3 שורות בפתקים (+, −, ×, ÷, חזקות ונעלמים) ושמירת פתק כטקסט רגיל כאשר לא נלחץ כפתור הפתרון",
                 "שדרוג ממיר הצבעים (HEX / RGB / HSL / HSV / CMYK) עם קוד HEX לצבע המשלים והעתקה בלחיצה",
@@ -201,11 +203,29 @@ object AppVersionTracker {
 
     fun applyAboutButtonIcon(settingsRoot: View?, activity: MainActivity) {
         if (settingsRoot == null) return
-        val aboutBtn = settingsRoot.findViewWithTag<TextView>("ABOUT_VERSION_SETTINGS_BTN") ?: return
         val iconTint = when {
             activity.isMinimalistMode -> MinimalistTheme.TEXT_CHARCOAL
             else -> MinimalistTheme.resolveDrawerIconColor(activity, isSelected = false, isExpandedHeader = false)
         }
+
+        // הצמדת סמל וקטורי לכפתור "התאמה אישית"
+        val customizerBtn = settingsRoot.findViewWithTag<TextView>("PERSONALIZATION_SETTINGS_BTN")
+        if (customizerBtn != null && (activity.isMinimalistMode || activity.isIosGlassMode || activity.isAuroraMode)) {
+            val paletteIcon = if (activity.isMinimalistMode) {
+                MinimalistTheme.createMinimalistVectorIcon(activity, 203, iconTint, 22f)
+            } else {
+                AuroraBorealisTheme.createVectorIcon(activity, 203, iconTint, 22f, activity.isAuroraMode)
+            }
+            customizerBtn.compoundDrawablePadding = activity.dp(12f)
+            if (activity.isRightHanded) {
+                customizerBtn.setCompoundDrawables(null, null, paletteIcon, null)
+            } else {
+                customizerBtn.setCompoundDrawables(paletteIcon, null, null, null)
+            }
+        }
+
+        // הצמדת סמל וקטורי לכפתור "אודות ומעקב גרסאות"
+        val aboutBtn = settingsRoot.findViewWithTag<TextView>("ABOUT_VERSION_SETTINGS_BTN") ?: return
         val iconDrawable = createAboutVectorIcon(
             context = activity,
             tintColor = iconTint,
@@ -312,6 +332,7 @@ object AppVersionTracker {
             background = rootCardBg
         }
 
+        // באנר עליון עם מספר הגרסה וקרדיט בולט ל-Harry
         val badgeCanvas = object : View(activity) {
             private val p = Paint(Paint.ANTI_ALIAS_FLAG)
             override fun onDraw(canvas: Canvas) {
@@ -332,21 +353,25 @@ object AppVersionTracker {
                 val ink = if (isMin) MinimalistTheme.LOGO_TEXT_COLOR else Color.WHITE
                 p.color = MinimalistTheme.ensureReadableTextOnBg(ink, p.color, 2.2)
 
-                p.textSize = 18.5f * d
-                canvas.drawText("אולר שווייצרי Pro fx-991", w / 2f, h * 0.34f, p)
+                p.textSize = 17.5f * d
+                canvas.drawText("אולר שווייצרי Pro fx-991", w / 2f, h * 0.28f, p)
 
-                p.textSize = 14.5f * d
-                val verLine = "\u200Fגרסה ${BidiFmt.ltr("v$CURRENT_SEMANTIC_VERSION")}  •  ${BidiFmt.ltr("Build #$CURRENT_BUILD_NUMBER")}  •  מעודכן ✓"
-                CanvasUiHelper.drawFittedText(canvas, verLine, w / 2f, h * 0.63f, w - 28f * d, 14.5f * d, 10f * d, p)
+                p.textSize = 14.0f * d
+                val creditLine = "\u200Fפותח ונבנה על ידי ${BidiFmt.ltr(DEVELOPER_NAME)} 👨‍💻"
+                CanvasUiHelper.drawFittedText(canvas, creditLine, w / 2f, h * 0.52f, w - 28f * d, 14.0f * d, 10f * d, p)
 
-                p.textSize = 12.0f * d
-                val statsLine = "\u200F${BidiFmt.ltr("80")} מחשבונים וכלים  |  ${BidiFmt.ltr("87")} קטגוריות יחידות  |  ${BidiFmt.ltr("4")} ערכות נושא"
-                CanvasUiHelper.drawFittedText(canvas, statsLine, w / 2f, h * 0.86f, w - 28f * d, 12.0f * d, 9f * d, p)
+                p.textSize = 13.0f * d
+                val verLine = "\u200Fגרסה ${BidiFmt.ltr("v$CURRENT_SEMANTIC_VERSION")}  •  ${BidiFmt.ltr("Build #$CURRENT_BUILD_NUMBER")}  •  ${BidiFmt.ltr("80")} כלים"
+                CanvasUiHelper.drawFittedText(canvas, verLine, w / 2f, h * 0.76f, w - 28f * d, 13.0f * d, 9.5f * d, p)
+
+                p.textSize = 11.5f * d
+                val statsLine = "\u200F${BidiFmt.ltr("87")} קטגוריות יחידות  |  ${BidiFmt.ltr("4")} ערכות נושא  |  מעודכן ✓"
+                CanvasUiHelper.drawFittedText(canvas, statsLine, w / 2f, h * 0.92f, w - 28f * d, 11.5f * d, 8.5f * d, p)
             }
         }.apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                activity.dp(118f)
+                activity.dp(132f)
             ).apply { bottomMargin = activity.dp(10f) }
         }
         outerRoot.addView(badgeCanvas)
@@ -403,6 +428,7 @@ object AppVersionTracker {
 
             return BidiFmt.rtlParagraph(
                 "📱 מידע טכני ומעקב התקנה במכשיר:",
+                "• מפתח ויוצר האפליקציה: ${BidiFmt.ltr(DEVELOPER_NAME)}",
                 "• גרסת מערכת פנימית: ${BidiFmt.ltr("v$CURRENT_SEMANTIC_VERSION (Build #$CURRENT_BUILD_NUMBER)")}",
                 "• גרסת חבילת APK: ${BidiFmt.ltr("v$pkgVerName (Code $pkgVerCode)")} | תאריך שחרור: ${BidiFmt.ltr(CURRENT_RELEASE_DATE)}",
                 "• התקנה ראשונית במכשיר: ${BidiFmt.ltr(firstInstallStr)}",
@@ -517,6 +543,19 @@ object AppVersionTracker {
 
         renderContent = {
             contentContainer.removeAllViews()
+
+            // כרטיס קרדיט בולט ל-Harry בראש החלון
+            contentContainer.addView(
+                createVersionCardView(
+                    title = "👨‍💻 קרדיט ופיתוח: נבנה על ידי $DEVELOPER_NAME",
+                    subHeader = "יוצר ומפתח האפליקציה (Creator & Lead Developer)",
+                    bullets = listOf(
+                        "האפליקציה תוכננה, עוצבה ונבנתה מאפס על ידי $DEVELOPER_NAME",
+                        "כוללת מנועי חישוב מדעיים ואלגבריים, 80+ מחשבונים וכלי Pro, מערכות חיישנים ו-4 ערכות נושא מתקדמות"
+                    ),
+                    isHighlighted = true
+                )
+            )
 
             val telemetryLines = buildTelemetrySummaryText().lines().drop(1).map { it.removePrefix("\u200F• ").removePrefix("• ") }
             contentContainer.addView(
