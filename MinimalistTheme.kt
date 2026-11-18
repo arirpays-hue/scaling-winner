@@ -936,12 +936,22 @@ object MinimalistTheme {
 
     fun getSlotEffectiveColor(slot: Int, fallback: Int = getDefaultSlotColors()[slot]): Int {
         if (slot !in 0 until TOTAL_COLOR_SLOTS || !slotCustomized[slot]) return fallback
-        val allowAlpha = (slot != SLOT_MAIN_BG)
-        return applyBrightnessAndOpacity(
+        val rawCol = applyBrightnessAndOpacity(
             slotBaseColors[slot],
             slotBrightness[slot],
-            if (allowAlpha) slotOpacity[slot] else 1.0f
+            slotOpacity[slot]
         )
+        // עבור צבע רקע ראשי (SLOT_MAIN_BG), חלון אנדרואיד חייב צבע אטום — לכן נמזג את השקיפות (Alpha)
+        // בצורה חיה מול קרם בהיר (#FCF9F5) או לילה כהה (#08090C) כדי שסליידר השקיפות ישפיע מיד גם על הרקע!
+        if (slot == SLOT_MAIN_BG) {
+            val a = Color.alpha(rawCol) / 255f
+            val baseBackdrop = if (activePaletteId.startsWith("min")) DEFAULT_BG_CREAM else Color.parseColor("#08090C")
+            val r = (Color.red(rawCol) * a + Color.red(baseBackdrop) * (1f - a)).roundToInt().coerceIn(0, 255)
+            val g = (Color.green(rawCol) * a + Color.green(baseBackdrop) * (1f - a)).roundToInt().coerceIn(0, 255)
+            val b = (Color.blue(rawCol) * a + Color.blue(baseBackdrop) * (1f - a)).roundToInt().coerceIn(0, 255)
+            return Color.rgb(r, g, b)
+        }
+        return rawCol
     }
 
     val BG_CREAM: Int get() = getSlotEffectiveColor(SLOT_MAIN_BG, DEFAULT_BG_CREAM)
@@ -1549,6 +1559,7 @@ object MinimalistTheme {
 
         val rightDrawable: Drawable? = when {
             isChecklistBtn -> createSettingsBadgeDrawable(activity, 7)
+            clean.contains("החלקות במסך") -> CalculatorGestureManager.createGestureVectorIcon(activity, rowTextCol, 20f, true, false)
             clean.contains("התאמה אישית") -> createMinimalistVectorIcon(activity, 203, rowTextCol, 20f)
             clean.contains("אודות") -> AppVersionTracker.createAboutVectorIcon(activity, rowTextCol, 20f, true, false)
             clean.contains("רטט") || clean.contains("אנימציות") || clean.contains("מצב מקצועי") || clean.contains("מצב תצוגה") ->
@@ -1797,7 +1808,11 @@ object MinimalistTheme {
             selectedElementSlot = slot.coerceIn(0, TOTAL_COLOR_SLOTS - 1)
             updateChipsStyling()
             pickerHost.removeAllViews()
-            val startCol = getSlotEffectiveColor(selectedElementSlot)
+            val startCol = if (slotCustomized[selectedElementSlot]) {
+                slotBaseColors[selectedElementSlot]
+            } else {
+                getDefaultSlotColors()[selectedElementSlot]
+            }
             val wheelStudio = createColorWheelPicker(activity, startCol) { pickedColor ->
                 val s = selectedElementSlot.coerceIn(0, TOTAL_COLOR_SLOTS - 1)
                 slotCustomized[s] = true
@@ -2745,137 +2760,5 @@ object MinimalistTheme {
         }.apply {
             setBounds(0, 0, sizePx, sizePx)
         }
-    }
-}
-
-// =========================================================================
-// רכיב גלגל הצבעים השטוח 2D (Flat 2D Color Wheel) עבור Screen 5
-// =========================================================================
-class Flat2DColorWheelView(
-    context: Context,
-    private val onColorPicked: (Int) -> Unit
-) : View(context) {
-
-    private var currentHue: Float = 36f
-    private var currentSat: Float = 0.90f
-    private val wheelPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val satPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val knobPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
-        style = Paint.Style.STROKE
-        strokeWidth = 2.5f * resources.displayMetrics.density
-    }
-
-    fun setSelectedColor(color: Int) {
-        val hsv = FloatArray(3)
-        Color.colorToHSV(color, hsv)
-        currentHue = hsv[0]
-        currentSat = hsv[1]
-        invalidate()
-    }
-
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_MOVE) {
-            parent?.requestDisallowInterceptTouchEvent(true)
-            val cx = width / 2f
-            val cy = height / 2f
-            val maxR = min(width, height) * 0.44f
-            val dx = event.x - cx
-            val dy = event.y - cy
-            val dist = hypot(dx.toDouble(), dy.toDouble()).toFloat()
-            var angle = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat()
-            if (angle < 0f) angle += 360f
-            currentHue = angle
-            currentSat = (dist / maxR).coerceIn(0f, 1f)
-            val col = Color.HSVToColor(floatArrayOf(currentHue, currentSat, 1f))
-            onColorPicked(col)
-            invalidate()
-            return true
-        }
-        return super.onTouchEvent(event)
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
-        val cx = width / 2f
-        val cy = height / 2f
-        val r = min(width, height) * 0.44f
-        if (r <= 0f) return
-
-        val sweepColors = intArrayOf(
-            Color.RED, Color.YELLOW, Color.GREEN, Color.CYAN, Color.BLUE, Color.MAGENTA, Color.RED
-        )
-        wheelPaint.shader = SweepGradient(cx, cy, sweepColors, null)
-        satPaint.shader = RadialGradient(cx, cy, r, Color.WHITE, Color.TRANSPARENT, Shader.TileMode.CLAMP)
-
-        canvas.drawCircle(cx, cy, r, wheelPaint)
-        canvas.drawCircle(cx, cy, r, satPaint)
-
-        val rad = Math.toRadians(currentHue.toDouble())
-        val kx = (cx + cos(rad) * (currentSat * r)).toFloat()
-        val ky = (cy + sin(rad) * (currentSat * r)).toFloat()
-        val knobR = 11f * resources.displayMetrics.density
-
-        val pickedCol = Color.HSVToColor(floatArrayOf(currentHue, currentSat, 1f))
-        canvas.drawCircle(kx, ky, knobR, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = pickedCol
-            style = Paint.Style.FILL
-        })
-        canvas.drawCircle(kx, ky, knobR, knobPaint)
-    }
-}
-
-// =========================================================================
-// רכיב הסליידר השטוח (Thin #2C2C2C Line + Sky Blue #B1D4F9 Knob) עבור Screen 5
-// =========================================================================
-class MinimalistLineSliderView(
-    context: Context,
-    initialProgress: Float = 0.85f,
-    private val onValueChanged: (Float) -> Unit
-) : View(context) {
-
-    var progress: Float = initialProgress.coerceIn(0f, 1f)
-        set(value) {
-            field = value.coerceIn(0f, 1f)
-            invalidate()
-        }
-
-    private val d = resources.displayMetrics.density
-    private val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(90, 44, 44, 44)
-        strokeWidth = 2.0f * d
-        strokeCap = Paint.Cap.ROUND
-    }
-    private val knobFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = MinimalistTheme.ACCENT_SKY_BLUE
-        style = Paint.Style.FILL
-    }
-    private val knobBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(80, 44, 44, 44)
-        style = Paint.Style.STROKE
-        strokeWidth = 1.2f * d
-    }
-
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_MOVE) {
-            parent?.requestDisallowInterceptTouchEvent(true)
-            val pad = 16f * d
-            val usableW = (width - 2 * pad).coerceAtLeast(1f)
-            progress = ((event.x - pad) / usableW).coerceIn(0f, 1f)
-            onValueChanged(progress)
-            return true
-        }
-        return super.onTouchEvent(event)
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
-        val pad = 16f * d
-        val cy = height / 2f
-        canvas.drawLine(pad, cy, width - pad, cy, trackPaint)
-        val kx = pad + progress * (width - 2 * pad)
-        val kr = 7.5f * d
-        canvas.drawCircle(kx, cy, kr, knobFillPaint)
-        canvas.drawCircle(kx, cy, kr, knobBorderPaint)
     }
 }
