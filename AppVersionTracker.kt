@@ -28,8 +28,8 @@ data class VersionReleaseNote(
 object AppVersionTracker {
 
     const val DEVELOPER_NAME = "Harry"
-    const val CURRENT_SEMANTIC_VERSION = "4.8.0 Pro"
-    const val CURRENT_BUILD_NUMBER = 48
+    const val CURRENT_SEMANTIC_VERSION = "4.9.0 Pro"
+    const val CURRENT_BUILD_NUMBER = 49
     const val CURRENT_RELEASE_DATE = "18/11/2026"
 
     private const val PREF_LAST_SEEN_BUILD = "app_tracker_last_seen_build"
@@ -40,13 +40,25 @@ object AppVersionTracker {
 
     val changelogHistory: List<VersionReleaseNote> = listOf(
         VersionReleaseNote(
+            versionCode = 49,
+            versionName = "v4.9.0 Pro",
+            releaseDate = "18/11/2026",
+            title = "אולפן גלגל צבעים 60fps, 4 סליידרים חיים והרמוניות צבעים",
+            highlights = listOf(
+                "פתיחת טווח הצבעים המלא (16.7 מיליון גוונים מ-0% עד 100%) כולל שחור מוחלט (#000000), לבן טהור (#FFFFFF), גווני אפור, פסטלים וניאון ללא חסימות",
+                "שדרוג ל-4 סליידרים גרפיים חיים ב-60fps (גוון Hue 0°–360°, רוויה Saturation, בהירות Brightness ושקיפות Opacity עם רשת משבצות) וכפתורי -/+ לדיוק של אחוז בודד",
+                "תיקון תגובת הסליידרים וגלגל הצבעים בתוך מסך ההגדרות (נעילת ScrollView בזמן גרירה) והוספת זכוכית מגדלת (Loupe) וכוונת דיוק",
+                "חישוב אוטומטי של 5 הרמוניות צבעים חיות (משלים, סמוכים וטריאדה), גווני קצה מהירים וחלונית להזנה ישירה של קוד HEX",
+                "איגוד מנוע 18 האלמנטים וגלגל הצבעים בתוך כפתור 'התאמה אישית' מתקפל בהגדרות הנסגר בלחיצה על 'סיום'"
+            )
+        ),
+        VersionReleaseNote(
             versionCode = 48,
             versionName = "v4.8.0 Pro",
             releaseDate = "18/11/2026",
-            title = "מעקב גרסאות, תפריט התאמה אישית ומנוע משוואות בפתקים",
+            title = "מעקב גרסאות, מנוע משוואות בפתקים וצגים חיים",
             highlights = listOf(
                 "הוספת מערכת מעקב גרסאות, זיהוי עדכונים אוטומטי וחלון 'אודות' בהגדרות (נבנה על ידי Harry)",
-                "איגוד גלגל הצבעים ו-18 האלמנטים בתוך כפתור 'התאמה אישית' מתקפל עם כפתור 'סיום'",
                 "מנוע מתמטי ואלגברי בפתקים חכמים (SmartNotesMathEngine) הפותר תרגילים, משוואות לינאריות, ריבועיות, מערכות משוואות ואי-שוויונות",
                 "מקלדת מתמטית קבועה ב-3 שורות בפתקים (+, −, ×, ÷, חזקות ונעלמים) ושמירת פתק כטקסט רגיל כאשר לא נלחץ כפתור הפתרון",
                 "שדרוג ממיר הצבעים (HEX / RGB / HSL / HSV / CMYK) עם קוד HEX לצבע המשלים והעתקה בלחיצה",
@@ -208,7 +220,6 @@ object AppVersionTracker {
             else -> MinimalistTheme.resolveDrawerIconColor(activity, isSelected = false, isExpandedHeader = false)
         }
 
-        // הצמדת סמל וקטורי לכפתור "התאמה אישית"
         val customizerBtn = settingsRoot.findViewWithTag<TextView>("PERSONALIZATION_SETTINGS_BTN")
         if (customizerBtn != null && (activity.isMinimalistMode || activity.isIosGlassMode || activity.isAuroraMode)) {
             val paletteIcon = if (activity.isMinimalistMode) {
@@ -224,7 +235,6 @@ object AppVersionTracker {
             }
         }
 
-        // הצמדת סמל וקטורי לכפתור "אודות ומעקב גרסאות"
         val aboutBtn = settingsRoot.findViewWithTag<TextView>("ABOUT_VERSION_SETTINGS_BTN") ?: return
         val iconDrawable = createAboutVectorIcon(
             context = activity,
@@ -332,7 +342,6 @@ object AppVersionTracker {
             background = rootCardBg
         }
 
-        // באנר עליון עם מספר הגרסה וקרדיט בולט ל-Harry
         val badgeCanvas = object : View(activity) {
             private val p = Paint(Paint.ANTI_ALIAS_FLAG)
             override fun onDraw(canvas: Canvas) {
@@ -544,14 +553,13 @@ object AppVersionTracker {
         renderContent = {
             contentContainer.removeAllViews()
 
-            // כרטיס קרדיט בולט ל-Harry בראש החלון
             contentContainer.addView(
                 createVersionCardView(
                     title = "👨‍💻 קרדיט ופיתוח: נבנה על ידי $DEVELOPER_NAME",
                     subHeader = "יוצר ומפתח האפליקציה (Creator & Lead Developer)",
                     bullets = listOf(
                         "האפליקציה תוכננה, עוצבה ונבנתה מאפס על ידי $DEVELOPER_NAME",
-                        "כוללת מנועי חישוב מדעיים ואלגבריים, 80+ מחשבונים וכלי Pro, מערכות חיישנים ו-4 ערכות נושא מתקדמות"
+                        "כוללת מנועי חישוב מדעיים ואלגבריים, 80+ מחשבונים וכלי Pro, מערכות חיישנים, אולפן צבעים ב-60fps ו-4 ערכות נושא מתקדמות"
                     ),
                     isHighlighted = true
                 )
