@@ -19,7 +19,6 @@ import android.os.Looper
 import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
-import android.text.method.DigitsKeyListener
 import android.util.Base64
 import android.util.DisplayMetrics
 import android.view.Gravity
@@ -36,7 +35,7 @@ import java.util.*
 import kotlin.math.*
 
 // =========================================================================
-// מנוע סידור כיוון טקסט דו-כיווני (BiDi RTL/LTR Formatter) + מפענח תרגילים חי לשדות קלט
+// מנוע סידור כיוון טקסט דו-כיווני (BiDi RTL/LTR Formatter) + עדכון ויזואלי חי (ללא הזרקת כפתורים)
 // =========================================================================
 object BidiFmt {
     var isSilentLiveUpdate: Boolean = false
@@ -96,89 +95,10 @@ object BidiFmt {
             et.tag = "HAS_CUSTOM_LIVE_WATCHER"
             et.addTextChangedListener(watcher)
         }
-        if (inputs.isNotEmpty()) {
-            injectQuickMathOperatorBarForInputs(inputs.toList())
-        }
-    }
-
-    // מוסיף סרגל כפתורי כפל, חילוק, חיבור וחיסור (+, −, ×, ÷, (, ), ^, √, ⌫) מעל שדות הקלט במחשבונים
-    private fun injectQuickMathOperatorBarForInputs(editTexts: List<EditText>) {
-        val firstEt = editTexts.firstOrNull { it.inputType and InputType.TYPE_CLASS_NUMBER != 0 } ?: return
-        val parentLayout = firstEt.parent as? LinearLayout ?: return
-        if (parentLayout.findViewWithTag<View>("CALC_INLINE_MATH_BAR") != null) return
-        val activity = firstEt.context as? MainActivity ?: return
-
-        var activeTarget: EditText = firstEt
-        for (et in editTexts) {
-            et.setOnFocusChangeListener { v, hasFocus ->
-                if (hasFocus && v is EditText) activeTarget = v
-            }
-        }
-
-        val ops = listOf("+", "−", "×", "÷", "(", ")", "^", "√(", "⌫")
-        val bar = LinearLayout(activity).apply {
-            tag = "MINIMALIST_CUSTOMIZER_IGNORE"
-            orientation = LinearLayout.HORIZONTAL
-            layoutDirection = View.LAYOUT_DIRECTION_LTR
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = activity.dp(8f) }
-        }
-        val marker = View(activity).apply {
-            tag = "CALC_INLINE_MATH_BAR"
-            layoutParams = LinearLayout.LayoutParams(0, 0)
-        }
-        parentLayout.addView(marker, 0)
-
-        for (op in ops) {
-            val isMin = activity.isMinimalistMode
-            val bgCol = if (isMin) MinimalistTheme.ACCENT_PASTEL_BLUE else Utils.lightenColor(activity.bgColor, 0.14f)
-            val txtCol = if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
-            val btn = TextView(activity).apply {
-                tag = "PRO_STAR_CHIP"
-                text = op
-                textSize = 14f
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(txtCol)
-                gravity = Gravity.CENTER
-                setPadding(activity.dp(2f), activity.dp(7f), activity.dp(2f), activity.dp(7f))
-                background = GradientDrawable().apply {
-                    cornerRadius = activity.dp(10f).toFloat()
-                    setColor(bgCol)
-                    setStroke(activity.dp(1f), if (isMin) MinimalistTheme.ACCENT_SKY_BLUE else activity.primaryColor)
-                }
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    setMargins(activity.dp(2f), 0, activity.dp(2f), 0)
-                }
-                setOnClickListener {
-                    activity.feedback(it)
-                    val target = editTexts.find { it.hasFocus() } ?: activeTarget
-                    if (op != "⌫" && (target.inputType and InputType.TYPE_CLASS_NUMBER != 0)) {
-                        target.keyListener = DigitsKeyListener.getInstance("0123456789.,+-*/×÷−()^√ ")
-                    }
-                    val start = target.selectionStart.coerceAtLeast(0)
-                    val end = target.selectionEnd.coerceAtLeast(0)
-                    val minP = min(start, end)
-                    val maxP = max(start, end)
-                    if (op == "⌫") {
-                        if (minP != maxP) target.text.delete(minP, maxP)
-                        else if (minP > 0) target.text.delete(minP - 1, minP)
-                    } else {
-                        target.text.replace(minP, maxP, op, 0, op.length)
-                    }
-                }
-            }
-            bar.addView(btn)
-        }
-
-        val insertIdx = parentLayout.indexOfChild(firstEt).coerceAtLeast(0)
-        parentLayout.addView(bar, insertIdx)
     }
 
     fun attachUniversalLiveVisualizer(screenRoot: View?) {
         if (screenRoot == null || screenRoot.tag == "SKIP_UNIVERSAL_LIVE") return
-        val allEditTexts = mutableListOf<EditText>()
         val unwatchedEditTexts = mutableListOf<EditText>()
         var primaryCalcButton: TextView? = null
 
@@ -186,7 +106,6 @@ object BidiFmt {
             if (v.tag == "SKIP_UNIVERSAL_LIVE") return
             when (v) {
                 is EditText -> {
-                    allEditTexts.add(v)
                     if (v.tag != "HAS_CUSTOM_LIVE_WATCHER") {
                         unwatchedEditTexts.add(v)
                     }
@@ -205,9 +124,6 @@ object BidiFmt {
             }
         }
         scan(screenRoot)
-        if (allEditTexts.isNotEmpty()) {
-            injectQuickMathOperatorBarForInputs(allEditTexts)
-        }
         val calcBtn = primaryCalcButton ?: return
         if (unwatchedEditTexts.isEmpty()) return
 
@@ -925,7 +841,7 @@ fun MainActivity.createProMetronomeScreen(): View {
         }
     }
 
-    val bpmIn = createInputBox("קצב בפעמות לדקה או תרגיל (למשל 120 או 60*2)").apply { setText("120") }
+    val bpmIn = createInputBox("קצב בפעמות לדקה (BPM 30-240)").apply { setText("120") }
     val resTv = BidiFmt.applyRtlToResultView(createResultTextView()).apply {
         text = BidiFmt.rtlParagraph("קצב נוכחי: ${BidiFmt.ltr("120 BPM")} (${BidiFmt.ltr("0.500")} שניות לפעמה)")
     }
@@ -1066,8 +982,8 @@ fun MainActivity.createProTallyCounterScreen(): View {
         }
     }
 
-    val stepIn = createInputBox("גודל צעד בכל לחיצה (למשל 1 או 5*2)").apply { setText("1") }
-    val targetIn = createInputBox("יעד מנייה (למשל 100 או 50*4)").apply { setText(targetGoal.toString()) }
+    val stepIn = createInputBox("גודל צעד בכל לחיצה (ברירת מחדל 1)").apply { setText("1") }
+    val targetIn = createInputBox("יעד מנייה (למשל 100)").apply { setText(targetGoal.toString()) }
     val resTv = BidiFmt.applyRtlToResultView(createResultTextView())
 
     fun updateCounter(delta: Int) {
@@ -1590,7 +1506,7 @@ fun MainActivity.createProHexRgbColorScreen(): View {
 fun MainActivity.createProAspectRatioScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("🖥️ יחס גובה-רוחב ורזולוציה (Aspect Ratio)", "המלבן הוויזואלי, קו האלכסון וצפיפות ה-PPI מתעדכנים בזמן אמת לפי המספרים או התרגיל שהוקלד"))
+    root.addView(createProCanvaHeader("🖥️ יחס גובה-רוחב ורזולוציה (Aspect Ratio)", "המלבן הוויזואלי, קו האלכסון וצפיפות ה-PPI מתעדכנים בזמן אמת לפי המספרים שהוקלדו"))
 
     var wPx = 1920.0
     var hPx = 1080.0
@@ -1647,8 +1563,8 @@ fun MainActivity.createProAspectRatioScreen(): View {
         }
     }
 
-    val widthIn = createInputBox("רוחב בפיקסלים או תרגיל (למשל 1920 או 1280*2)").apply { setText("1920") }
-    val heightIn = createInputBox("גובה בפיקסלים או תרגיל (למשל 1080)").apply { setText("1080") }
+    val widthIn = createInputBox("רוחב בפיקסלים / ס״מ (למשל 1920)").apply { setText("1920") }
+    val heightIn = createInputBox("גובה בפיקסלים / ס״מ (למשל 1080)").apply { setText("1080") }
     val diagInchIn = createInputBox("אלכסון מסך באינצ'ים לחישוב PPI (למשל 24)").apply { setText("24") }
     val resTv = BidiFmt.applyRtlToResultView(createResultTextView().apply { textSize = 16.0f })
 
@@ -2003,7 +1919,7 @@ fun MainActivity.createProElectricityBillScreen(): View {
         }
     }
 
-    val wattsIn = createInputBox("הספק מכשיר בוואט או תרגיל (למשל 1500 או 750*2)").apply { setText("1500") }
+    val wattsIn = createInputBox("הספק מכשיר בוואט (W - למשל 1500 למזגן/תנור)").apply { setText("1500") }
     val hoursIn = createInputBox("שעות הפעלה ביום (למשל 5)").apply { setText("5") }
     val tariffIn = createInputBox("תעריף לקוט״ש בש״ח (למשל 0.64)").apply { setText("0.64") }
     val resTv = BidiFmt.applyRtlToResultView(createResultTextView().apply { textSize = 16.0f })
