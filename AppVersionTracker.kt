@@ -28,8 +28,8 @@ data class VersionReleaseNote(
 object AppVersionTracker {
 
     const val DEVELOPER_NAME = "Harry"
-    const val CURRENT_SEMANTIC_VERSION = "4.9.0 Pro"
-    const val CURRENT_BUILD_NUMBER = 49
+    const val CURRENT_SEMANTIC_VERSION = "5.0.0 Pro"
+    const val CURRENT_BUILD_NUMBER = 50
     const val CURRENT_RELEASE_DATE = "18/11/2026"
 
     private const val PREF_LAST_SEEN_BUILD = "app_tracker_last_seen_build"
@@ -39,6 +39,18 @@ object AppVersionTracker {
     private const val PREF_CUSTOM_NOTES = "app_tracker_custom_notes_v1"
 
     val changelogHistory: List<VersionReleaseNote> = listOf(
+        VersionReleaseNote(
+            versionCode = 50,
+            versionName = "v5.0.0 Pro",
+            releaseDate = "18/11/2026",
+            title = "מנוע החלקות ומחוות במסך המחשבון וליטוש אולפן הצבעים",
+            highlights = listOf(
+                "הוספת מערכת 'החלקות במסך המחשבון' (CalculatorGestureManager) בהגדרות לתמיכה ב-13 סוגי החלקות ומחוות על צג המחשבון הרגיל והמדעי (4 כיוונים ראשיים, 4 אלכסונים, החלקות ב-2 אצבעות, נקישה בודדת, נקישה כפולה ולחיצה ארוכה)",
+                "קטלוג של 36 פעולות לבחירה לכל החלקה: ניקוי כל המסך (AC), מחיקת ספרה אחרונה (⌫), מחיקת מספר אחרון (CE), חישוב (=), שליפת תוצאה קודמת (Ans), שורש, ריבוע, הוספה/הורדת מע״מ 18%, פעולות זיכרון, הקראה קולית, מעבר למדעי ועוד",
+                "משטח בדיקת החלקות חי (Live Test Pad) בתוך ההגדרות, 3 פרופילים מהירים לבחירה ובקרת רגישות אורך החלקה",
+                "שדרוג אולפן גלגל הצבעים: ייצוב הבורר בתוך גלגל הצבעים כך שלא יזוז בעת הזזת הסליידרים, הוספת סמלים וקטוריים תואמים ל-4 הסליידרים בכל ערכות הנושא, ומיזוג שקיפות חי בעריכת צבע הרקע הראשי"
+            )
+        ),
         VersionReleaseNote(
             versionCode = 49,
             versionName = "v4.9.0 Pro",
@@ -374,7 +386,7 @@ object AppVersionTracker {
                 CanvasUiHelper.drawFittedText(canvas, verLine, w / 2f, h * 0.76f, w - 28f * d, 13.0f * d, 9.5f * d, p)
 
                 p.textSize = 11.5f * d
-                val statsLine = "\u200F${BidiFmt.ltr("87")} קטגוריות יחידות  |  ${BidiFmt.ltr("4")} ערכות נושא  |  מעודכן ✓"
+                val statsLine = "\u200F${BidiFmt.ltr("87")} קטגוריות יחידות  |  ${BidiFmt.ltr("36")} פעולות החלקה  |  מעודכן ✓"
                 CanvasUiHelper.drawFittedText(canvas, statsLine, w / 2f, h * 0.92f, w - 28f * d, 11.5f * d, 8.5f * d, p)
             }
         }.apply {
@@ -559,7 +571,7 @@ object AppVersionTracker {
                     subHeader = "יוצר ומפתח האפליקציה (Creator & Lead Developer)",
                     bullets = listOf(
                         "האפליקציה תוכננה, עוצבה ונבנתה מאפס על ידי $DEVELOPER_NAME",
-                        "כוללת מנועי חישוב מדעיים ואלגבריים, 80+ מחשבונים וכלי Pro, מערכות חיישנים, אולפן צבעים ב-60fps ו-4 ערכות נושא מתקדמות"
+                        "כוללת מנועי חישוב מדעיים ואלגבריים, 80+ מחשבונים וכלי Pro, מנוע מחוות והחלקות חכם, אולפן צבעים ב-60fps ו-4 ערכות נושא מתקדמות"
                     ),
                     isHighlighted = true
                 )
