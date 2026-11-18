@@ -23,34 +23,75 @@ import java.util.*
 import kotlin.math.*
 
 // =========================================================================
-// סמלים וקטוריים מותאמים לכל 4 ערכות הנושא עבור 4 חיישני הרשת (Tabs 96..99)
+// מחלקת צבעי קנבס משותפת לכל כלי ה-Pro (ציבורית לכל הפרויקט)
 // =========================================================================
-object ProSensorNetworkIcons {
-    fun createVectorIcon(
-        context: Context,
-        tabIndex: Int,
-        tintColor: Int,
-        sizeDp: Float = 20f,
-        isMinimalist: Boolean = false,
-        isAurora: Boolean = false
-    ): Drawable {
-        val d = context.resources.displayMetrics.density
-        val sizePx = (sizeDp * d).toInt().coerceAtLeast(22)
-        return object : Drawable() {
-            private val strokeP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = tintColor
-                style = Paint.Style.STROKE
-                strokeWidth = 1.8f * d
-                strokeCap = Paint.Cap.ROUND
-                strokeJoin = Paint.Join.ROUND
-                if (isAurora) {
-                    setShadowLayer(4.5f * d, 0f, 0f, Color.argb(165, Color.red(tintColor), Color.green(tintColor), Color.blue(tintColor)))
-                }
-            }
-            private val fillP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = tintColor
-                style = Paint.Style.FILL
-            }
+data class ProThemeCanvasColors(
+    val isMin: Boolean,
+    val isAurora: Boolean,
+    val ink: Int,
+    val muted: Int,
+    val grid: Int,
+    val accent1: Int,
+    val accent2: Int,
+    val accent3: Int,
+    val positive: Int,
+    val negative: Int,
+    val warning: Int
+)
+
+fun MainActivity.getProCanvasColors(): ProThemeCanvasColors {
+    val isMin = isMinimalistMode
+    val isAur = isAuroraMode
+    return ProThemeCanvasColors(
+        isMin = isMin,
+        isAurora = isAur,
+        ink = if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE,
+        muted = if (isMin) MinimalistTheme.TEXT_MUTED_GREY else Color.parseColor("#B0BEC5"),
+        grid = if (isMin) Color.argb(34, 44, 44, 44) else Color.argb(42, 255, 255, 255),
+        accent1 = when {
+            isMin -> MinimalistTheme.ACCENT_SAGE_GREEN
+            isAur -> AuroraBorealisTheme.AURORA_PRIMARY
+            else -> primaryColor
+        },
+        accent2 = when {
+            isMin -> MinimalistTheme.ACCENT_TERRACOTTA
+            isAur -> AuroraBorealisTheme.AURORA_SECONDARY
+            else -> Color.parseColor("#29B6F6")
+        },
+        accent3 = when {
+            isMin -> MinimalistTheme.ACCENT_SKY_BLUE
+            isAur -> Color.parseColor("#B388FF")
+            else -> Color.parseColor("#AB47BC")
+        },
+        positive = if (isMin) Color.parseColor("#2E7D32") else Color.parseColor("#00E676"),
+        negative = if (isMin) Color.parseColor("#C62828") else Color.parseColor("#FF5252"),
+        warning = if (isMin) Color.parseColor("#EF6C00") else Color.parseColor("#FFB300")
+    )
+}
+
+fun MainActivity.styleProCanvasCard(view: View, heightDp: Float) {
+    view.layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        dp(heightDp)
+    ).apply { bottomMargin = dp(12f) }
+    view.background = when {
+        isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this, 22f, 2)
+        isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this, 22f)
+        else -> GradientDrawable().apply {
+            setColor(Utils.lightenColor(bgColor, 0.06f))
+            cornerRadius = dp(22f).toFloat()
+            setStroke(dp(1.2f), MinimalistTheme.resolveBorderStrokeColor(this@styleProCanvasCard, primaryColor))
+        }
+    }
+}
+
+fun Paint.applyAuroraGlow(enabled: Boolean, colorInt: Int, density: Float) {
+    if (enabled) {
+        setShadowLayer(6f * density, 0f, 0f, Color.argb(145, Color.red(colorInt), Color.green(colorInt), Color.blue(colorInt)))
+    } else {
+        clearShadowLayer()
+    }
+}
 
             override fun getIntrinsicWidth(): Int = sizePx
             override fun getIntrinsicHeight(): Int = sizePx
