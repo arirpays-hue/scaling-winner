@@ -19,6 +19,7 @@ import android.os.Looper
 import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
+import android.text.method.DigitsKeyListener
 import android.util.Base64
 import android.util.DisplayMetrics
 import android.view.Gravity
@@ -35,7 +36,7 @@ import java.util.*
 import kotlin.math.*
 
 // =========================================================================
-// מנוע סידור כיוון טקסט דו-כיווני (BiDi RTL/LTR Formatter) + מפענח תרגילים חי ללא לופים!
+// מנוע סידור כיוון טקסט דו-כיווני (BiDi RTL/LTR Formatter) + מפענח תרגילים חי לשדות קלט
 // =========================================================================
 object BidiFmt {
     var isSilentLiveUpdate: Boolean = false
@@ -93,31 +94,107 @@ object BidiFmt {
         }
         for (et in inputs) {
             et.tag = "HAS_CUSTOM_LIVE_WATCHER"
-            if (et.inputType and InputType.TYPE_CLASS_NUMBER != 0) {
-                et.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-            }
             et.addTextChangedListener(watcher)
+        }
+        if (inputs.isNotEmpty()) {
+            injectQuickMathOperatorBarForInputs(inputs.toList())
         }
     }
 
-    // מחבר עדכון חי אוטומטי רק למחשבונים שאין להם מאזין חי ייעודי, וללא צלילי מקלדת או לופים!
+    // מוסיף סרגל כפתורי כפל, חילוק, חיבור וחיסור (+, −, ×, ÷, (, ), ^, √, ⌫) מעל שדות הקלט במחשבונים
+    private fun injectQuickMathOperatorBarForInputs(editTexts: List<EditText>) {
+        val firstEt = editTexts.firstOrNull { it.inputType and InputType.TYPE_CLASS_NUMBER != 0 } ?: return
+        val parentLayout = firstEt.parent as? LinearLayout ?: return
+        if (parentLayout.findViewWithTag<View>("CALC_INLINE_MATH_BAR") != null) return
+        val activity = firstEt.context as? MainActivity ?: return
+
+        var activeTarget: EditText = firstEt
+        for (et in editTexts) {
+            et.setOnFocusChangeListener { v, hasFocus ->
+                if (hasFocus && v is EditText) activeTarget = v
+            }
+        }
+
+        val ops = listOf("+", "−", "×", "÷", "(", ")", "^", "√(", "⌫")
+        val bar = LinearLayout(activity).apply {
+            tag = "MINIMALIST_CUSTOMIZER_IGNORE"
+            orientation = LinearLayout.HORIZONTAL
+            layoutDirection = View.LAYOUT_DIRECTION_LTR
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = activity.dp(8f) }
+        }
+        val marker = View(activity).apply {
+            tag = "CALC_INLINE_MATH_BAR"
+            layoutParams = LinearLayout.LayoutParams(0, 0)
+        }
+        parentLayout.addView(marker, 0)
+
+        for (op in ops) {
+            val isMin = activity.isMinimalistMode
+            val bgCol = if (isMin) MinimalistTheme.ACCENT_PASTEL_BLUE else Utils.lightenColor(activity.bgColor, 0.14f)
+            val txtCol = if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
+            val btn = TextView(activity).apply {
+                tag = "PRO_STAR_CHIP"
+                text = op
+                textSize = 14f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(txtCol)
+                gravity = Gravity.CENTER
+                setPadding(activity.dp(2f), activity.dp(7f), activity.dp(2f), activity.dp(7f))
+                background = GradientDrawable().apply {
+                    cornerRadius = activity.dp(10f).toFloat()
+                    setColor(bgCol)
+                    setStroke(activity.dp(1f), if (isMin) MinimalistTheme.ACCENT_SKY_BLUE else activity.primaryColor)
+                }
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    setMargins(activity.dp(2f), 0, activity.dp(2f), 0)
+                }
+                setOnClickListener {
+                    activity.feedback(it)
+                    val target = editTexts.find { it.hasFocus() } ?: activeTarget
+                    if (op != "⌫" && (target.inputType and InputType.TYPE_CLASS_NUMBER != 0)) {
+                        target.keyListener = DigitsKeyListener.getInstance("0123456789.,+-*/×÷−()^√ ")
+                    }
+                    val start = target.selectionStart.coerceAtLeast(0)
+                    val end = target.selectionEnd.coerceAtLeast(0)
+                    val minP = min(start, end)
+                    val maxP = max(start, end)
+                    if (op == "⌫") {
+                        if (minP != maxP) target.text.delete(minP, maxP)
+                        else if (minP > 0) target.text.delete(minP - 1, minP)
+                    } else {
+                        target.text.replace(minP, maxP, op, 0, op.length)
+                    }
+                }
+            }
+            bar.addView(btn)
+        }
+
+        val insertIdx = parentLayout.indexOfChild(firstEt).coerceAtLeast(0)
+        parentLayout.addView(bar, insertIdx)
+    }
+
     fun attachUniversalLiveVisualizer(screenRoot: View?) {
         if (screenRoot == null || screenRoot.tag == "SKIP_UNIVERSAL_LIVE") return
-        val editTexts = mutableListOf<EditText>()
+        val allEditTexts = mutableListOf<EditText>()
+        val unwatchedEditTexts = mutableListOf<EditText>()
         var primaryCalcButton: TextView? = null
 
         fun scan(v: View) {
             if (v.tag == "SKIP_UNIVERSAL_LIVE") return
             when (v) {
                 is EditText -> {
+                    allEditTexts.add(v)
                     if (v.tag != "HAS_CUSTOM_LIVE_WATCHER") {
-                        editTexts.add(v)
+                        unwatchedEditTexts.add(v)
                     }
                 }
                 is TextView -> {
                     if (v.isClickable && primaryCalcButton == null) {
                         val t = v.text?.toString() ?: ""
-                        if (t.startsWith("חשב") || t.startsWith("פתור") || t.startsWith("נתח")) {
+                        if (t.startsWith("חשב") || t.startsWith("פתור") || t.startsWith("נתח") || t.startsWith("המר") || t.startsWith("הצפן")) {
                             primaryCalcButton = v
                         }
                     }
@@ -128,8 +205,11 @@ object BidiFmt {
             }
         }
         scan(screenRoot)
+        if (allEditTexts.isNotEmpty()) {
+            injectQuickMathOperatorBarForInputs(allEditTexts)
+        }
         val calcBtn = primaryCalcButton ?: return
-        if (editTexts.isEmpty()) return
+        if (unwatchedEditTexts.isEmpty()) return
 
         val liveWatcher = object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
@@ -145,7 +225,7 @@ object BidiFmt {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         }
-        for (et in editTexts) {
+        for (et in unwatchedEditTexts) {
             et.tag = "HAS_CUSTOM_LIVE_WATCHER"
             et.addTextChangedListener(liveWatcher)
         }
@@ -2113,7 +2193,7 @@ fun MainActivity.createProEncryptionLabScreen(): View {
 }
 
 // =========================================================================
-// 14. מדידת טבעת מכוילת על המסך (Multi-Calibrated Ring Sizer - Tab 79)
+// 13. מדידת טבעת מכוילת על המסך (Multi-Calibrated Ring Sizer - Tab 79)
 // =========================================================================
 fun MainActivity.createProRingSizerScreen(): View {
     val scroll = ScrollView(this)
@@ -2373,7 +2453,7 @@ fun MainActivity.createProRingSizerScreen(): View {
 }
 
 // =========================================================================
-// 15. ממיר מידות נעליים, בגדים וכובעים עם שרטוט פרופורציונלי חי (Shoe/Clothing/Hat - Tab 80)
+// 14. ממיר מידות נעליים, בגדים וכובעים עם שרטוט פרופורציונלי חי (Shoe/Clothing/Hat - Tab 80)
 // =========================================================================
 fun MainActivity.createProShoeClothingHatSizeScreen(): View {
     val scroll = ScrollView(this)
