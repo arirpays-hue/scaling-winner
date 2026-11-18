@@ -216,6 +216,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = getSharedPreferences("CalcProPrefs", Context.MODE_PRIVATE); loadPreferences()
+        AppVersionTracker.onAppLaunched(this)
         tts = TextToSpeech(this, this)
 
         val audioAttributes = android.media.AudioAttributes.Builder()
@@ -1156,7 +1157,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     fun feedback(view: View, symbol: String = "") {
-        // מונע לחלוטין צלילי הקשה ורטט בזמן עדכון ויזואלי חי ברקע!
         if (BidiFmt.isSilentLiveUpdate) return
         if (useHaptic) view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
         if (useSound && !MiniGameEngine.isAnimalParty) {
@@ -1313,6 +1313,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
             if (v is TextView && v.isClickable && v.background != null) {
                 val txt = v.text?.toString() ?: ""
+                if (txt.contains("אודות")) {
+                    val aboutIcon = AppVersionTracker.createAboutVectorIcon(this, iconTint, 22f, false, isAuroraMode)
+                    v.compoundDrawablePadding = dp(12f)
+                    if (isRightHanded) v.setCompoundDrawables(null, null, aboutIcon, null)
+                    else v.setCompoundDrawables(aboutIcon, null, null, null)
+                    return
+                }
                 val settingIconCode: Int? = when {
                     txt.contains("מצב תצוגה") -> 214
                     txt.contains("רטט") -> 204
@@ -1376,12 +1383,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                         t.contains("Pro Mode") ||
                         t.contains("יד דומיננטית") ||
                         t.contains("רשימת סימון") ||
+                        t.contains("אודות") ||
                         t.contains("איפוס הגדרות")
             }
             if (v is ViewGroup) {
                 for (i in 0 until v.childCount) {
                     val sub = v.getChildAt(i)
-                    if (sub is TextView && sub.text.toString().contains("רשימת סימון")) {
+                    if (sub is TextView && (sub.text.toString().contains("רשימת סימון") || sub.text.toString().contains("אודות"))) {
                         return true
                     }
                     if (!isMinimalistMode && (isIosGlassMode || isAuroraMode)) {
@@ -1731,6 +1739,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 container?.addView(handBtn)
                 container?.addView(createDrawerCalculatorsChecklistSection())
 
+                // הוספת כפתור "אודות ומעקב גרסאות ועדכונים" בהגדרות
+                container?.addView(AppVersionTracker.createAboutSettingsButton(this))
+
                 unifyThemeSelectorAndCustomizerInSettings(settingsView)
                 applyGlassAndAuroraSettingsIcons(settingsView)
 
@@ -1809,6 +1820,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         if (isMinimalistMode && index != 0 && index != 1) {
             MinimalistTheme.applyMinimalistStylingToHierarchy(rawView, this)
+        }
+        if (index == 19) {
+            AppVersionTracker.applyAboutButtonIcon(rawView, this)
         }
 
         // חיבור אוטומטי של עדכון ויזואלי חי תוך כדי הקלדה (למעט ממיר הצבעים 73 ופתקים 78 שפועלים באופן עצמאי)
