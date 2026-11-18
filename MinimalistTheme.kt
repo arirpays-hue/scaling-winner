@@ -1010,8 +1010,8 @@ object MinimalistTheme {
         for (i in 0 until TOTAL_COLOR_SLOTS) {
             slotCustomized[i] = prefs.getBoolean("min_slot_cust_$i", false)
             slotBaseColors[i] = prefs.getInt("min_slot_col_$i", defaults[i])
-            slotBrightness[i] = prefs.getFloat("min_slot_brt_$i", 1.0f).coerceIn(0.20f, 1.0f)
-            slotOpacity[i] = prefs.getFloat("min_slot_opc_$i", 1.0f).coerceIn(0.25f, 1.0f)
+            slotBrightness[i] = prefs.getFloat("min_slot_brt_$i", 1.0f).coerceIn(0.0f, 1.0f)
+            slotOpacity[i] = prefs.getFloat("min_slot_opc_$i", 1.0f).coerceIn(0.0f, 1.0f)
         }
     }
 
@@ -1035,8 +1035,15 @@ object MinimalistTheme {
     private fun applyBrightnessAndOpacity(baseColor: Int, brightness: Float, opacity: Float): Int {
         val hsv = FloatArray(3)
         Color.colorToHSV(baseColor, hsv)
-        hsv[2] = (hsv[2] * brightness).coerceIn(0.12f, 1.0f)
-        val alpha = (opacity * 255f).toInt().coerceIn(65, 255)
+        val effectiveV = if (abs(brightness - 1.0f) < 0.001f) {
+            hsv[2].coerceIn(0.0f, 1.0f)
+        } else {
+            brightness.coerceIn(0.0f, 1.0f)
+        }
+        hsv[2] = effectiveV
+        val baseAlphaRatio = Color.alpha(baseColor) / 255f
+        val effectiveAlphaRatio = if (abs(opacity - 1.0f) < 0.001f) baseAlphaRatio else opacity
+        val alpha = (effectiveAlphaRatio * 255f).roundToInt().coerceIn(0, 255)
         return Color.HSVToColor(alpha, hsv)
     }
 
@@ -1542,6 +1549,8 @@ object MinimalistTheme {
 
         val rightDrawable: Drawable? = when {
             isChecklistBtn -> createSettingsBadgeDrawable(activity, 7)
+            clean.contains("התאמה אישית") -> createMinimalistVectorIcon(activity, 203, rowTextCol, 20f)
+            clean.contains("אודות") -> AppVersionTracker.createAboutVectorIcon(activity, rowTextCol, 20f, true, false)
             clean.contains("רטט") || clean.contains("אנימציות") || clean.contains("מצב מקצועי") || clean.contains("מצב תצוגה") ->
                 createSettingsBadgeDrawable(activity, if (clean.contains("כבוי")) 2 else 1)
             clean.contains("צלילי הקשה") -> createSettingsBadgeDrawable(activity, 3)
@@ -1646,7 +1655,7 @@ object MinimalistTheme {
     }
 
     // =========================================================================
-    // SCREEN 5: מנוע התאמת צבעים רב-אלמנטי (18 אלמנטים כולל צבעי תפריט, סמלים, ספרות וסימונים!)
+    // SCREEN 5: מנוע התאמת צבעים רב-אלמנטי (18 אלמנטים + אולפן גלגל צבעים מלא!)
     // =========================================================================
     fun createColorThemeCustomizerSection(activity: MainActivity): View {
         val isMin = activity.isMinimalistMode
@@ -1656,14 +1665,14 @@ object MinimalistTheme {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = activity.dp(10f); bottomMargin = activity.dp(14f) }
+            ).apply { topMargin = activity.dp(6f); bottomMargin = activity.dp(10f) }
         }
 
         val sectionHeaderTv = TextView(activity).apply {
-            text = "🎨 התאמת צבעים ל-18 אלמנטים (כולל תפריט הצד, סמלים, ספרות וסימונים):"
+            text = "🎨 בחר אלמנט לעריכה מתוך 18 רכיבי האפליקציה:"
             setTextColor(if (isMin) TEXT_CHARCOAL else Color.WHITE)
             textSize = 14.5f
-            typeface = if (isMin) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
+            typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.RIGHT
             setPadding(activity.dp(4f), 0, activity.dp(4f), activity.dp(8f))
         }
@@ -1695,7 +1704,7 @@ object MinimalistTheme {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = activity.dp(12f) }
+            ).apply { bottomMargin = activity.dp(10f) }
         }
         val chipsRow = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -1706,12 +1715,23 @@ object MinimalistTheme {
         root.addView(chipsScroll)
 
         val chipViews = mutableMapOf<Int, TextView>()
-        lateinit var hexLabelTv: TextView
-        lateinit var activeSlotTitleTv: TextView
-        lateinit var previewCircleView: View
-        lateinit var colorWheelView: Flat2DColorWheelView
-        lateinit var brightnessSlider: MinimalistLineSliderView
-        lateinit var opacitySlider: MinimalistLineSliderView
+        val activeSlotTitleTv = TextView(activity).apply {
+            setTextColor(if (isMin) DEFAULT_TEXT_CHARCOAL else Color.WHITE)
+            textSize = 14.5f
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.RIGHT
+            setPadding(activity.dp(4f), 0, activity.dp(4f), activity.dp(6f))
+        }
+        root.addView(activeSlotTitleTv)
+
+        val pickerHost = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        root.addView(pickerHost)
 
         fun applyAllCustomColorsLiveToActivity() {
             val effAction1 = getSlotEffectiveColor(SLOT_ACTION_1, if (isMin) DEFAULT_ACCENT_TERRACOTTA else activity.primaryColor)
@@ -1742,23 +1762,12 @@ object MinimalistTheme {
                 activity.mainContent?.setBackgroundColor(activity.bgColor)
             }
             activity.updateLiveDrawerAndHeaderColors()
-
-            saveMinimalistPrefs(activity.prefs)
-            activity.savePreferences()
         }
 
-        fun updatePreviewHeaderAndChips() {
+        fun updateChipsStyling() {
             val slot = selectedElementSlot.coerceIn(0, TOTAL_COLOR_SLOTS - 1)
-            val effCol = getSlotEffectiveColor(slot)
             val specTitle = elementSpecs.find { it.first == slot }?.second ?: ""
-
             activeSlotTitleTv.text = "עורך כעת: $specTitle"
-            hexLabelTv.text = String.format(Locale.US, "#%08X", effCol)
-            previewCircleView.background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(effCol)
-                setStroke(activity.dp(2f), Color.WHITE)
-            }
 
             for ((sIdx, chipTv) in chipViews) {
                 val isSel = (sIdx == slot)
@@ -1769,10 +1778,10 @@ object MinimalistTheme {
                     cornerRadius = activity.dp(999f).toFloat()
                     if (isSel) {
                         setColor(selBg)
-                        setStroke(activity.dp(1.5f), if (isMin) DEFAULT_TEXT_CHARCOAL else Color.WHITE)
+                        setStroke(activity.dp(1.8f), if (isMin) DEFAULT_TEXT_CHARCOAL else Color.WHITE)
                     } else {
                         setColor(unselBg)
-                        setStroke(activity.dp(1.2f), chipDotCol)
+                        setStroke(activity.dp(1.4f), chipDotCol)
                     }
                 }
                 chipTv.setTextColor(
@@ -1786,15 +1795,27 @@ object MinimalistTheme {
 
         fun selectSlot(slot: Int) {
             selectedElementSlot = slot.coerceIn(0, TOTAL_COLOR_SLOTS - 1)
-            colorWheelView.setSelectedColor(slotBaseColors[selectedElementSlot])
-            brightnessSlider.progress = slotBrightness[selectedElementSlot]
-            opacitySlider.progress = slotOpacity[selectedElementSlot]
-            updatePreviewHeaderAndChips()
+            updateChipsStyling()
+            pickerHost.removeAllViews()
+            val startCol = getSlotEffectiveColor(selectedElementSlot)
+            val wheelStudio = createColorWheelPicker(activity, startCol) { pickedColor ->
+                val s = selectedElementSlot.coerceIn(0, TOTAL_COLOR_SLOTS - 1)
+                slotCustomized[s] = true
+                slotBaseColors[s] = pickedColor
+                slotBrightness[s] = 1.0f
+                slotOpacity[s] = 1.0f
+                updateChipsStyling()
+                applyAllCustomColorsLiveToActivity()
+                saveMinimalistPrefs(activity.prefs)
+                activity.savePreferences()
+            }
+            pickerHost.addView(wheelStudio)
             saveMinimalistPrefs(activity.prefs)
         }
 
         for ((slotIdx, label) in elementSpecs) {
             val chip = TextView(activity).apply {
+                tag = "PRO_STAR_CHIP"
                 text = label
                 textSize = 13f
                 gravity = Gravity.CENTER
@@ -1812,135 +1833,22 @@ object MinimalistTheme {
             chipsRow.addView(chip)
         }
 
-        val yellowCard = LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(activity.dp(20f), activity.dp(18f), activity.dp(20f), activity.dp(20f))
-            background = GradientDrawable().apply {
-                cornerRadius = activity.dp(26f).toFloat()
-                if (isMin) {
-                    setColor(DEFAULT_ACCENT_BUTTER_YELLOW)
-                } else {
-                    setColor(Utils.lightenColor(activity.bgColor, 0.10f))
-                    setStroke(activity.dp(1.2f), activity.primaryColor)
-                }
-            }
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        }
-
-        val cardInk = if (isMin) DEFAULT_TEXT_CHARCOAL else Color.WHITE
-
-        activeSlotTitleTv = TextView(activity).apply {
-            text = ""
-            setTextColor(cardInk)
-            textSize = 14.5f
-            typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.RIGHT
-            setPadding(0, 0, 0, activity.dp(8f))
-        }
-        yellowCard.addView(activeSlotTitleTv)
-
-        val hexRow = LinearLayout(activity).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.LEFT or Gravity.CENTER_VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = activity.dp(10f) }
-        }
-
-        previewCircleView = View(activity).apply {
-            layoutParams = LinearLayout.LayoutParams(activity.dp(38f), activity.dp(38f)).apply {
-                rightMargin = activity.dp(10f)
-            }
-        }
-
-        hexLabelTv = TextView(activity).apply {
-            text = "#FFFFA48E"
-            setTextColor(cardInk)
-            textSize = 14.5f
-            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-        }
-
-        hexRow.addView(previewCircleView)
-        hexRow.addView(hexLabelTv)
-        yellowCard.addView(hexRow)
-
-        colorWheelView = Flat2DColorWheelView(activity) { pickedColor ->
-            val s = selectedElementSlot.coerceIn(0, TOTAL_COLOR_SLOTS - 1)
-            slotCustomized[s] = true
-            slotBaseColors[s] = pickedColor
-            updatePreviewHeaderAndChips()
-            applyAllCustomColorsLiveToActivity()
-        }.apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                activity.dp(220f)
-            ).apply { bottomMargin = activity.dp(14f) }
-        }
-        yellowCard.addView(colorWheelView)
-
-        val brightLabel = TextView(activity).apply {
-            text = "☀️ בהירות"
-            setTextColor(cardInk)
-            textSize = 13.5f
-            gravity = Gravity.RIGHT
-            setPadding(0, activity.dp(2f), 0, activity.dp(2f))
-        }
-        brightnessSlider = MinimalistLineSliderView(activity, slotBrightness[selectedElementSlot]) { newVal ->
-            val s = selectedElementSlot.coerceIn(0, TOTAL_COLOR_SLOTS - 1)
-            slotCustomized[s] = true
-            slotBrightness[s] = newVal.coerceIn(0.20f, 1.0f)
-            updatePreviewHeaderAndChips()
-            applyAllCustomColorsLiveToActivity()
-        }.apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                activity.dp(34f)
-            ).apply { bottomMargin = activity.dp(8f) }
-        }
-        yellowCard.addView(brightLabel)
-        yellowCard.addView(brightnessSlider)
-
-        val opacityLabel = TextView(activity).apply {
-            text = "💧 שקיפות"
-            setTextColor(cardInk)
-            textSize = 13.5f
-            gravity = Gravity.RIGHT
-            setPadding(0, activity.dp(2f), 0, activity.dp(2f))
-        }
-        opacitySlider = MinimalistLineSliderView(activity, slotOpacity[selectedElementSlot]) { newVal ->
-            val s = selectedElementSlot.coerceIn(0, TOTAL_COLOR_SLOTS - 1)
-            slotCustomized[s] = true
-            slotOpacity[s] = newVal.coerceIn(0.25f, 1.0f)
-            updatePreviewHeaderAndChips()
-            applyAllCustomColorsLiveToActivity()
-        }.apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                activity.dp(34f)
-            ).apply { bottomMargin = activity.dp(12f) }
-        }
-        yellowCard.addView(opacityLabel)
-        yellowCard.addView(opacitySlider)
-
         val resetRow = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            )
+            ).apply { topMargin = activity.dp(10f) }
         }
 
         val resetCurrentSlotBtn = TextView(activity).apply {
+            tag = "PRO_STAR_CHIP"
             text = "↺ אפס אלמנט זה"
             setTextColor(DEFAULT_TEXT_CHARCOAL)
             textSize = 13f
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
-            setPadding(activity.dp(10f), activity.dp(10f), activity.dp(10f), activity.dp(10f))
+            setPadding(activity.dp(10f), activity.dp(11f), activity.dp(10f), activity.dp(11f))
             background = GradientDrawable().apply {
                 cornerRadius = activity.dp(999f).toFloat()
                 setColor(DEFAULT_NEUTRAL_SECONDARY_BG)
@@ -1961,12 +1869,13 @@ object MinimalistTheme {
         }
 
         val resetAllPastelBtn = TextView(activity).apply {
+            tag = "PRO_STAR_CHIP"
             text = "↺ אפס לפלטת ברירת המחדל"
             setTextColor(DEFAULT_TEXT_CHARCOAL)
             textSize = 13f
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
-            setPadding(activity.dp(10f), activity.dp(10f), activity.dp(10f), activity.dp(10f))
+            setPadding(activity.dp(10f), activity.dp(11f), activity.dp(10f), activity.dp(11f))
             background = GradientDrawable().apply {
                 cornerRadius = activity.dp(999f).toFloat()
                 setColor(DEFAULT_CARD_WHITE)
@@ -1988,9 +1897,8 @@ object MinimalistTheme {
 
         resetRow.addView(resetCurrentSlotBtn)
         resetRow.addView(resetAllPastelBtn)
-        yellowCard.addView(resetRow)
+        root.addView(resetRow)
 
-        root.addView(yellowCard)
         selectSlot(selectedElementSlot)
         return root
     }
@@ -2608,14 +2516,13 @@ object MinimalistTheme {
                         canvas.drawCircle(cx - r * 0.26f, cy + r * 0.26f, r * 0.10f, dotPaint)
                         canvas.drawCircle(cx + r * 0.26f, cy + r * 0.26f, r * 0.10f, dotPaint)
                     }
-                    // --- 17 הסמלים החדשים עבור כלי ה-Pro הנוספים (66..81 + 312) ---
-                    66 -> { // 66. גלאי מתכות ושדה מגנטי: מגנט פרסה עם קווי שדה
+                    66 -> {
                         canvas.drawArc(RectF(cx - r * 0.62f, cy - r * 0.15f, cx + r * 0.62f, cy + r * 0.80f), 0f, 180f, false, paint)
                         canvas.drawLine(cx - r * 0.62f, cy + r * 0.32f, cx - r * 0.62f, cy - r * 0.52f, paint)
                         canvas.drawLine(cx + r * 0.62f, cy + r * 0.32f, cx + r * 0.62f, cy - r * 0.52f, paint)
                         canvas.drawArc(RectF(cx - r * 0.40f, cy - r * 0.82f, cx + r * 0.40f, cy - r * 0.35f), 200f, 140f, false, paint)
                     }
-                    67 -> { // 67. מד רטט וסיסמוגרף: גל רעידה סיסמי חד
+                    67 -> {
                         val seismo = Path().apply {
                             moveTo(cx - r * 0.86f, cy)
                             lineTo(cx - r * 0.48f, cy)
@@ -2628,14 +2535,14 @@ object MinimalistTheme {
                         }
                         canvas.drawPath(seismo, paint)
                     }
-                    68 -> { // 68. צופר חירום: כיפת צ'קלקה עם קרני אור
+                    68 -> {
                         canvas.drawArc(RectF(cx - r * 0.58f, cy - r * 0.25f, cx + r * 0.58f, cy + r * 0.85f), 180f, 180f, true, paint)
                         canvas.drawLine(cx - r * 0.76f, cy + r * 0.32f, cx + r * 0.76f, cy + r * 0.32f, paint)
                         canvas.drawLine(cx, cy - r * 0.48f, cx, cy - r * 0.82f, paint)
                         canvas.drawLine(cx - r * 0.45f, cy - r * 0.36f, cx - r * 0.72f, cy - r * 0.65f, paint)
                         canvas.drawLine(cx + r * 0.45f, cy - r * 0.36f, cx + r * 0.72f, cy - r * 0.65f, paint)
                     }
-                    69 -> { // 69. מטרונום מוזיקלי: תיבה טרפזית עם זרוע מטוטלת
+                    69 -> {
                         val mBox = Path().apply {
                             moveTo(cx - r * 0.28f, cy - r * 0.76f)
                             lineTo(cx + r * 0.28f, cy - r * 0.76f)
@@ -2647,13 +2554,13 @@ object MinimalistTheme {
                         canvas.drawLine(cx, cy + r * 0.65f, cx + r * 0.48f, cy - r * 0.55f, paint)
                         canvas.drawCircle(cx + r * 0.32f, cy - r * 0.18f, r * 0.13f, dotPaint)
                     }
-                    70 -> { // 70. מונה לחיצות (Tally Counter): מסגרת מונה מפוצלת עם נקודות ספרות
+                    70 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.80f, cy - r * 0.52f, cx + r * 0.80f, cy + r * 0.52f), r * 0.16f, r * 0.16f, paint)
                         canvas.drawLine(cx, cy - r * 0.52f, cx, cy + r * 0.52f, paint)
                         canvas.drawLine(cx - r * 0.40f, cy - r * 0.24f, cx - r * 0.40f, cy + r * 0.24f, paint)
                         canvas.drawCircle(cx + r * 0.40f, cy, r * 0.14f, paint)
                     }
-                    71 -> { // 71. קודי צבע של סלילים: סליל השראות עם 3 קשתות ליפוף
+                    71 -> {
                         canvas.drawLine(cx - r * 0.88f, cy + r * 0.20f, cx - r * 0.60f, cy + r * 0.20f, paint)
                         canvas.drawLine(cx + r * 0.60f, cy + r * 0.20f, cx + r * 0.88f, cy + r * 0.20f, paint)
                         for (i in -1..1) {
@@ -2661,7 +2568,7 @@ object MinimalistTheme {
                             canvas.drawArc(RectF(lx - r * 0.22f, cy - r * 0.35f, lx + r * 0.22f, cy + r * 0.20f), 180f, 180f, false, paint)
                         }
                     }
-                    72 -> { // 72. שערים לוגיים: שער AND תקני עם 2 כניסות ויציאה
+                    72 -> {
                         val gatePath = Path().apply {
                             moveTo(cx - r * 0.45f, cy - r * 0.55f)
                             lineTo(cx, cy - r * 0.55f)
@@ -2674,27 +2581,27 @@ object MinimalistTheme {
                         canvas.drawLine(cx - r * 0.85f, cy + r * 0.26f, cx - r * 0.45f, cy + r * 0.26f, paint)
                         canvas.drawLine(cx + r * 0.55f, cy, cx + r * 0.88f, cy, paint)
                     }
-                    73 -> { // 73. ממיר HEX ל-RGB: כרטיס צבע עם תגית <>
+                    73 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.78f, cy - r * 0.62f, cx + r * 0.78f, cy + r * 0.62f), r * 0.18f, r * 0.18f, paint)
                         canvas.drawLine(cx - r * 0.15f, cy - r * 0.24f, cx - r * 0.42f, cy, paint)
                         canvas.drawLine(cx - r * 0.42f, cy, cx - r * 0.15f, cy + r * 0.24f, paint)
                         canvas.drawLine(cx + r * 0.15f, cy - r * 0.24f, cx + r * 0.42f, cy, paint)
                         canvas.drawLine(cx + r * 0.42f, cy, cx + r * 0.15f, cy + r * 0.24f, paint)
                     }
-                    74 -> { // 74. יחס גובה-רוחב (21:9): מסגרת מסך רחב עם חצי מתיחה פינתיים
+                    74 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.84f, cy - r * 0.50f, cx + r * 0.84f, cy + r * 0.50f), r * 0.14f, r * 0.14f, paint)
                         canvas.drawLine(cx - r * 0.55f, cy - r * 0.24f, cx - r * 0.25f, cy - r * 0.24f, paint)
                         canvas.drawLine(cx - r * 0.55f, cy - r * 0.24f, cx - r * 0.55f, cy + r * 0.06f, paint)
                         canvas.drawLine(cx + r * 0.55f, cy + r * 0.24f, cx + r * 0.25f, cy + r * 0.24f, paint)
                         canvas.drawLine(cx + r * 0.55f, cy + r * 0.24f, cx + r * 0.55f, cy - r * 0.06f, paint)
                     }
-                    75 -> { // 75. מצב הסוללה: סוללה אנכית עם חיווי טעינה
+                    75 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.46f, cy - r * 0.62f, cx + r * 0.46f, cy + r * 0.78f), r * 0.14f, r * 0.14f, paint)
                         canvas.drawRect(cx - r * 0.20f, cy - r * 0.82f, cx + r * 0.20f, cy - r * 0.62f, paint)
                         canvas.drawLine(cx - r * 0.22f, cy + r * 0.35f, cx + r * 0.22f, cy + r * 0.35f, paint)
                         canvas.drawLine(cx - r * 0.22f, cy, cx + r * 0.22f, cy, paint)
                     }
-                    76 -> { // 76. צריכת אנרגיה וחשבון חשמל: בית עם סמל ברק אנרגיה במרכזו
+                    76 -> {
                         val house = Path().apply {
                             moveTo(cx, cy - r * 0.82f)
                             lineTo(cx + r * 0.78f, cy - r * 0.10f)
@@ -2710,13 +2617,13 @@ object MinimalistTheme {
                         canvas.drawLine(cx - r * 0.14f, cy + r * 0.12f, cx + r * 0.14f, cy + r * 0.12f, paint)
                         canvas.drawLine(cx + r * 0.14f, cy + r * 0.12f, cx - r * 0.08f, cy + r * 0.46f, paint)
                     }
-                    77 -> { // 77. הצפנת טקסט ו-Hash: מנעול צופן עם סימן + במרכזו
+                    77 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.58f, cy - r * 0.08f, cx + r * 0.58f, cy + r * 0.78f), r * 0.16f, r * 0.16f, paint)
                         canvas.drawArc(RectF(cx - r * 0.36f, cy - r * 0.76f, cx + r * 0.36f, cy + r * 0.08f), 180f, 180f, false, paint)
                         canvas.drawLine(cx - r * 0.20f, cy + r * 0.35f, cx + r * 0.20f, cy + r * 0.35f, paint)
                         canvas.drawLine(cx, cy + r * 0.15f, cx, cy + r * 0.55f, paint)
                     }
-                    78 -> { // 78. פתקים חכמים: דף פתק עם פינה מקופלת ושורות
+                    78 -> {
                         val doc = Path().apply {
                             moveTo(cx - r * 0.62f, cy - r * 0.78f)
                             lineTo(cx + r * 0.25f, cy - r * 0.78f)
@@ -2729,7 +2636,7 @@ object MinimalistTheme {
                         canvas.drawLine(cx - r * 0.35f, cy - r * 0.10f, cx + r * 0.35f, cy - r * 0.10f, paint)
                         canvas.drawLine(cx - r * 0.35f, cy + r * 0.28f, cx + r * 0.20f, cy + r * 0.28f, paint)
                     }
-                    79 -> { // 79. סורק ומחולל PDF: מסגרת סריקה עם קו לייזר חוצה
+                    79 -> {
                         canvas.drawLine(cx - r * 0.76f, cy - r * 0.42f, cx - r * 0.76f, cy - r * 0.76f, paint)
                         canvas.drawLine(cx - r * 0.76f, cy - r * 0.76f, cx - r * 0.42f, cy - r * 0.76f, paint)
                         canvas.drawLine(cx + r * 0.76f, cy - r * 0.42f, cx + r * 0.76f, cy - r * 0.76f, paint)
@@ -2740,7 +2647,7 @@ object MinimalistTheme {
                         canvas.drawLine(cx + r * 0.76f, cy + r * 0.76f, cx + r * 0.42f, cy + r * 0.76f, paint)
                         canvas.drawLine(cx - r * 0.84f, cy, cx + r * 0.84f, cy, paint)
                     }
-                    80 -> { // 80. מדידת טבעת (Ring Sizer): טבעת עם יהלום בראשה
+                    80 -> {
                         canvas.drawCircle(cx, cy + r * 0.18f, r * 0.56f, paint)
                         val rGem = Path().apply {
                             moveTo(cx - r * 0.28f, cy - r * 0.38f)
@@ -2750,7 +2657,7 @@ object MinimalistTheme {
                         }
                         canvas.drawPath(rGem, paint)
                     }
-                    81 -> { // 81. מידות נעליים, בגדים וכובעים: חולצת טי-שירט משורטטת
+                    81 -> {
                         val shirt = Path().apply {
                             moveTo(cx - r * 0.35f, cy - r * 0.72f)
                             lineTo(cx + r * 0.35f, cy - r * 0.72f)
@@ -2818,7 +2725,7 @@ object MinimalistTheme {
                         }
                         canvas.drawPath(heart, paint)
                     }
-                    312 -> { // 312. קטגוריית Pro כלי עזר, מטרונום, פתקים ומידות: ארגז כלים הנדסי
+                    312 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.80f, cy - r * 0.36f, cx + r * 0.80f, cy + r * 0.74f), r * 0.16f, r * 0.16f, paint)
                         canvas.drawRect(cx - r * 0.32f, cy - r * 0.68f, cx + r * 0.32f, cy - r * 0.36f, paint)
                         canvas.drawLine(cx - r * 0.80f, cy + r * 0.15f, cx + r * 0.80f, cy + r * 0.15f, paint)
