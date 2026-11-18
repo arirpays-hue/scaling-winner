@@ -189,7 +189,23 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         "🔐 הצפנת טקסט, צפנים ו-Hash",            // 77
         "📝 פתקים חכמים ופותר משוואות (Smart Notes)", // 78
         "💍 מדידת טבעת מכוילת על המסך",           // 79
-        "👟 מידות נעליים, בגדים וכובעים"          // 80
+        "👟 מידות נעליים, בגדים וכובעים",         // 80
+        "🔤 כלי טקסט ועיבוד מחרוזות",             // 81
+        "🏛️ ספרות רומיות (Roman Numerals)",       // 82
+        "🔢 סדרת מספרים (חשבונית/הנדסית)",        // 83
+        "⚖️ פרופורציות ויחס (A:B = C:X)",          // 84
+        "📈 משוואה לינארית וגרף ישר",             // 85
+        "🎯 יעד חיסכון וזמן הכפלה (Rule 72)",     // 86
+        "💼 ממיר שכר (שעתי/יומי/חודשי/שנתי)",     // 87
+        "🏷️ הנחות מצטברות ומס שירותים",           // 88
+        "📈 תשואת מניות ודיבידנד (Dividend)",     // 89
+        "🏦 פיקדון קבוע, תעודת פיקדון וריבית פשוטה", // 90
+        "🌱 מחשבון SIP ושחיקת אינפלציה",          // 91
+        "🚗 הלוואת רכב והחזר E.M.I",              // 92
+        "⏳ ערך עתידי וערך נוכחי (FV / PV)",      // 93
+        "♾️ אנונה ואנונה נצחית (Annuity)",        // 94
+        "🏖️ מחשבון פרישה וקצבה חודשית"            // 95
+        
     )
 
     val drawerSections = listOf(
@@ -201,10 +217,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         Triple(306, "🔧 Pro: הנדסת אינסטלציה, רפואה ובנייה", listOf(32, 33, 34)),
         Triple(307, "⚡ Pro: מעבדת אלקטרוניקה, סלילים ושערים", listOf(35, 36, 71, 37, 38, 72, 76)),
         Triple(308, "🧭 Pro: חיישנים, פלס, מצפן, מתכות ורטט", listOf(39, 40, 41, 66, 67, 42, 43, 68, 75)),
-        Triple(309, "🔬 Pro: מדע, אטום, מורס, הצפנה וצבעים", listOf(44, 45, 46, 77, 47, 73, 74)),
-        Triple(310, "📊 Pro: השקעות, משכנתא, שכר, זהב ועסקים", listOf(48, 49, 50, 51, 64)),
-        Triple(311, "🧮 Pro: סטטיסטיקה, גאומטריה, מטריצות וענן", listOf(52, 53, 54, 65, 55)),
+        Triple(309, "🔬 Pro: מדע, אטום, מורס, הצפנה, טקסט וצבעים", listOf(44, 45, 46, 77, 47, 81, 73, 74)),
+        Triple(310, "📊 Pro: השקעות, משכנתא, פיקדונות, מניות ופרישה", listOf(48, 49, 50, 51, 64, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95)),
+        Triple(311, "🧮 Pro: אלגברה, סדרות, פרופורציות, גאומטריה וענן", listOf(52, 53, 54, 65, 82, 83, 84, 85, 55)),
         Triple(312, "🛠️ Pro: כלי עזר, מטרונום, פתקים ומידות", listOf(69, 70, 78, 79, 80))
+        
     )
 
     // ממפה אוטומטית את אינדקס 79 (מדידת טבעת) לסמל הטבעת (80) ואת 80 (מידות בגדים/נעליים) לסמל הלבוש (81)
@@ -1278,11 +1295,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
             tv.text = IosGlassTheme.cleanCategoryTitle(categories[i], true)
             val iconCode = resolveToolIconCode(i)
-            val icon = if (isMinimalistMode) {
-                MinimalistTheme.createMinimalistVectorIcon(this, iconCode, itemIconCol, 20f)
+                        val icon = if (i in 81..95) {
+                ProFinancialAndMathIcons.createVectorIcon(this, i, itemIconCol, 20f, isMinimalistMode, isAuroraMode)
+            } else if (isMinimalistMode) {
+                MinimalistTheme.createMinimalistVectorIcon(this, resolveToolIconCode(i), itemIconCol, 20f)
             } else {
-                AuroraBorealisTheme.createVectorIcon(this, iconCode, itemIconCol, 20f, isAuroraMode)
-            }
+                AuroraBorealisTheme.createVectorIcon(this, resolveToolIconCode(i), itemIconCol, 20f, isAuroraMode)
+                        }
             if (isRightHanded) tv.setCompoundDrawables(null, null, icon, null)
             else tv.setCompoundDrawables(icon, null, null, null)
 
@@ -1921,7 +1940,22 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             77 -> createProEncryptionLabScreen()
             78 -> createProSmartNotesScreen()
             79 -> createProRingSizerScreen()
-            80 -> createProShoeClothingHatSizeScreen()
+                        80 -> createProShoeClothingHatSizeScreen()
+            81 -> createProTextToolsStudioScreen()
+            82 -> createProRomanNumeralsScreen()
+            83 -> createProNumberSeriesScreen()
+            84 -> createProProportionsAndRatioScreen()
+            85 -> createProLinearEquationScreen()
+            86 -> createProSavingsGoalAndDoublingScreen()
+            87 -> createProSalaryPeriodConverterScreen()
+            88 -> createProStackedDiscountsScreen()
+            89 -> createProStockAndDividendScreen()
+            90 -> createProFixedDepositAndSimpleInterestScreen()
+            91 -> createProSipAndInflationScreen()
+            92 -> createProCarLoanAndEmiScreen()
+            93 -> createProFutureAndPresentValueScreen()
+            94 -> createProAnnuityAndPerpetuityScreen()
+            95 -> createProRetirementPlannerScreen()
             else -> createBasicCalculator()
         }
 
