@@ -3,18 +3,16 @@ package com.example.calculator
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.text.Editable
 import android.text.InputType
-import android.text.TextWatcher
 import android.util.Base64
 import android.view.Gravity
 import android.view.View
 import android.view.inputmethod.InputMethodManager
-import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import org.json.JSONArray
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -28,7 +26,7 @@ data class SmartNoteEntry(
 )
 
 // =========================================================================
-// מנוע אלגברי ומתמטי אוניברסלי לפתקים חכמים (מופעל אך ורק בלחיצה יזומה על "פתור תרגיל")
+// מנוע אלגברי ומתמטי אוניברסלי לפתקים חכמים (תומך בנעלמים באנגלית ובעברית, כפל, חזקות ומשוואות)
 // =========================================================================
 object SmartNotesMathEngine {
 
@@ -41,7 +39,7 @@ object SmartNotesMathEngine {
                 '\u200E', '\u200F', '\u202A', '\u202B', '\u202C', '\u202D', '\u202E',
                 '\u2066', '\u2067', '\u2068', '\u2069' -> {}
                 '−', '–', '—' -> sb.append('-')
-                '×', '⋅', '∙' -> sb.append('*')
+                '×', '⋅', '∙', '✕', '✖' -> sb.append('*')
                 '÷' -> sb.append('/')
                 '²' -> sb.append("^2")
                 '³' -> sb.append("^3")
@@ -91,7 +89,7 @@ object SmartNotesMathEngine {
                 val cIsDigitOrClose = c.isDigit() || c == ')' || c == '!'
                 val cIsVar = isSingleVarChar(c) && !isPartOfFunctionName(pctAdjusted, i)
                 val nextIsOpen = next == '('
-                val nextIsAlpha = next in 'a'..'z' || next in 'A'..'Z'
+                val nextIsAlpha = next.isLetter() || next in 'א'..'ת'
                 val nextIsDigit = next.isDigit()
 
                 if ((cIsDigitOrClose && (nextIsOpen || nextIsAlpha)) ||
@@ -116,7 +114,7 @@ object SmartNotesMathEngine {
     }
 
     private fun isSingleVarChar(c: Char): Boolean {
-        return c in 'a'..'z' || c in 'A'..'Z'
+        return c in 'a'..'z' || c in 'A'..'Z' || c in 'א'..'ת'
     }
 
     private fun isPartOfFunctionName(s: String, idx: Int): Boolean {
@@ -260,7 +258,7 @@ object SmartNotesMathEngine {
                 vars[token]?.let { return it }
                 vars[lower]?.let { return it }
 
-                if (token.length > 1 && token.all { it in 'a'..'z' || it in 'A'..'Z' }) {
+                if (token.length > 1) {
                     var prod = 1.0
                     for (c in token) {
                         val s = c.toString()
@@ -283,7 +281,6 @@ object SmartNotesMathEngine {
         }
     }
 
-    // מזהה נעלמים אלגבריים (אותיות לטיניות כגון x, y, z, a, b, t או משתנים שהוגדרו במפורש)
     private fun detectVariables(s: String, knownVars: Map<String, Double>): List<String> {
         val cleaned = cleanMathString(s)
         val reserved = setOf("sin", "cos", "tan", "asin", "acos", "atan", "sqrt", "cbrt", "log", "ln", "abs", "exp", "pi")
@@ -291,16 +288,20 @@ object SmartNotesMathEngine {
         var i = 0
         while (i < cleaned.length) {
             val c = cleaned[i]
-            if (c in 'a'..'z' || c in 'A'..'Z') {
+            if (c.isLetter() || c in 'א'..'ת') {
                 val start = i
-                while (i < cleaned.length && (cleaned[i] in 'a'..'z' || cleaned[i] in 'A'..'Z')) i++
+                while (i < cleaned.length && (cleaned[i].isLetter() || cleaned[i] in 'א'..'ת')) i++
                 val word = cleaned.substring(start, i)
                 val lower = word.lowercase(Locale.US)
                 if (lower !in reserved) {
-                    for (ch in word) {
-                        val vName = ch.toString()
-                        if (vName.lowercase(Locale.US) != "e" || !cleaned.contains("e^")) {
-                            if (!knownVars.containsKey(vName)) found.add(vName)
+                    if (knownVars.containsKey(word) || (word.any { it in 'א'..'ת' } && word.length > 1)) {
+                        if (!knownVars.containsKey(word)) found.add(word)
+                    } else {
+                        for (ch in word) {
+                            val vName = ch.toString()
+                            if (vName.lowercase(Locale.US) != "e" || !cleaned.contains("e^")) {
+                                if (!knownVars.containsKey(vName)) found.add(vName)
+                            }
                         }
                     }
                 }
@@ -643,7 +644,7 @@ object SmartNotesMathEngine {
                             continue
                         }
                     }
-                } else if (lineVars.size == 1 && mathCandidate.none { it in 'א'..'ת' }) {
+                } else if (lineVars.size == 1 && mathCandidate.any { it in listOf('+', '-', '*', '/', '^') }) {
                     val vName = lineVars[0]
                     val eqSol = solveSingleVariableEquation(mathCandidate, "0", vName, assignedVars, precision)
                     if (eqSol != null) {
@@ -703,7 +704,7 @@ object SmartNotesMathEngine {
 
 // =========================================================================
 // מסך פתקים חכמים ורשימות (Smart Notes - Tab 78)
-// אם שומרים פתק מבלי ללחוץ על "פתור תרגיל" - הפתק נשמר כפתק טקסט רגיל לחלוטין!
+// כולל מקלדת כפל, חילוק, חיבור, חיסור ונעלמים גלויה ב-3 שורות קבועות + כפתור נעיצה במועדפים!
 // =========================================================================
 fun MainActivity.createProSmartNotesScreen(): View {
     val scroll = ScrollView(this)
@@ -715,79 +716,101 @@ fun MainActivity.createProSmartNotesScreen(): View {
     root.addView(
         createProCanvaHeader(
             "📝 פתקים חכמים ופותר משוואות (Smart Notes)",
-            "שמירת פתקים רגילים, או לחיצה על 'פתור תרגיל' לחישוב משוואות ונעלמים (x, y) בתוך הפתק"
+            "שמירת פתקים רגילים, או לחיצה על 'חשב ביטוי מתמטי' לחישוב תרגילים, כפל ומשוואות עם נעלמים (x, y)"
         )
     )
 
-    var wasExplicitlySolved = false
-    var currentExplicitSummary = ""
-    var isUpdatingBodyProgrammatically = false
+    var lastSolvedBodySnapshot: String? = null
+    var lastSolvedSummary: String = ""
 
-    val titleIn = createInputBox("כותרת הפתק (למשל: רשימת קניות / תזכורת / תרגיל)").apply {
+    val titleIn = createInputBox("כותרת הפתק (למשל: רשימת קניות / מידות חדר / תרגיל)").apply {
         inputType = InputType.TYPE_CLASS_TEXT
         textDirection = View.TEXT_DIRECTION_RTL
         gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
     }
 
-    val bodyIn = createInputBox("כתוב פתק טקסט רגיל, או הקלד תרגיל ולחץ על 'פתור תרגיל'...").apply {
+    val bodyIn = createInputBox("תוכן הפתק או תרגיל (למשל: ${BidiFmt.ltr("150 + 240 × 2")} או ${BidiFmt.ltr("2x + 5 = 17")})...").apply {
         inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
         textDirection = View.TEXT_DIRECTION_RTL
         gravity = Gravity.RIGHT or Gravity.TOP
         minLines = 3
     }
 
-    // כל הקלדה ידנית של המשתמש בפתק מסמנת אותו כפתק טקסט רגיל עד שילחץ בעצמו על "פתור תרגיל"
-    bodyIn.addTextChangedListener(object : TextWatcher {
-        override fun afterTextChanged(s: Editable?) {
-            if (!isUpdatingBodyProgrammatically) {
-                wasExplicitlySolved = false
-                currentExplicitSummary = ""
-            }
-        }
-        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-    })
+    val mathKeypadRows = listOf(
+        listOf("+", "−", "×", "÷", "=", "%", "(", ")"),
+        listOf("x", "y", "z", "^2", "^3", "^", "√(", "π"),
+        listOf("<", ">", "≤", "≥", "sin(", "cos(", "log(", "⌫")
+    )
 
-    val mathTokens = listOf("x", "y", "=", "+", "-", "*", "/", "^2", "√(", "(", ")", "≤", "≥", "π")
-    val quickMathScroll = HorizontalScrollView(this).apply {
-        isHorizontalScrollBarEnabled = false
+    val mathKeypadContainer = LinearLayout(this).apply {
+        tag = "MINIMALIST_CUSTOMIZER_IGNORE"
+        orientation = LinearLayout.VERTICAL
         layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.WRAP_CONTENT
         ).apply { bottomMargin = dp(10f) }
     }
-    val quickMathRow = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-    }
-    for (tok in mathTokens) {
-        val chip = TextView(this).apply {
-            tag = "PRO_STAR_CHIP"
-            text = tok
-            textSize = 14.5f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE)
-            gravity = Gravity.CENTER
-            setPadding(dp(14f), dp(8f), dp(14f), dp(8f))
-            background = GradientDrawable().apply {
-                cornerRadius = dp(999f).toFloat()
-                setColor(if (isMinimalistMode) MinimalistTheme.ACCENT_PASTEL_BLUE else Utils.lightenColor(bgColor, 0.14f))
-                setStroke(dp(1f), if (isMinimalistMode) MinimalistTheme.ACCENT_SKY_BLUE else primaryColor)
-            }
+
+    for ((rowIdx, rowTokens) in mathKeypadRows.withIndex()) {
+        val rowLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutDirection = View.LAYOUT_DIRECTION_LTR
             layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(dp(3f), dp(2f), dp(3f), dp(2f)) }
-            setOnClickListener {
-                feedback(it)
-                val start = bodyIn.selectionStart.coerceAtLeast(0)
-                val end = bodyIn.selectionEnd.coerceAtLeast(0)
-                bodyIn.text.replace(min(start, end), max(start, end), tok, 0, tok.length)
-            }
+            ).apply { bottomMargin = dp(4f) }
         }
-        quickMathRow.addView(chip)
+        for (tok in rowTokens) {
+            val isOp = tok in listOf("+", "−", "×", "÷", "=", "⌫")
+            val btnBgCol = when {
+                isMinimalistMode && isOp -> MinimalistTheme.ACCENT_BUTTER_YELLOW
+                isMinimalistMode && rowIdx == 1 -> MinimalistTheme.ACCENT_PASTEL_BLUE
+                isMinimalistMode -> MinimalistTheme.NEUTRAL_SECONDARY_BG
+                isOp -> Color.argb(85, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor))
+                else -> Utils.lightenColor(bgColor, 0.14f)
+            }
+            val btnTxtCol = MinimalistTheme.ensureReadableTextOnBg(
+                if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE,
+                btnBgCol,
+                2.3
+            )
+            val keyBtn = TextView(this).apply {
+                tag = "PRO_STAR_CHIP"
+                text = tok
+                textSize = 14.5f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(btnTxtCol)
+                gravity = Gravity.CENTER
+                setPadding(dp(2f), dp(9f), dp(2f), dp(9f))
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(12f).toFloat()
+                    setColor(btnBgCol)
+                    setStroke(dp(1f), if (isMinimalistMode) MinimalistTheme.ACCENT_SKY_BLUE else Color.argb(95, 255, 255, 255))
+                }
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    setMargins(dp(2f), 0, dp(2f), 0)
+                }
+                setOnClickListener {
+                    feedback(it)
+                    val start = bodyIn.selectionStart.coerceAtLeast(0)
+                    val end = bodyIn.selectionEnd.coerceAtLeast(0)
+                    val minPos = min(start, end)
+                    val maxPos = max(start, end)
+                    if (tok == "⌫") {
+                        if (minPos != maxPos) {
+                            bodyIn.text.delete(minPos, maxPos)
+                        } else if (minPos > 0) {
+                            bodyIn.text.delete(minPos - 1, minPos)
+                        }
+                    } else {
+                        bodyIn.text.replace(minPos, maxPos, tok, 0, tok.length)
+                    }
+                }
+            }
+            rowLayout.addView(keyBtn)
+        }
+        mathKeypadContainer.addView(rowLayout)
     }
-    quickMathScroll.addView(quickMathRow)
 
     val statusTv = BidiFmt.applyRtlToResultView(createResultTextView().apply {
         textSize = 15.5f
@@ -807,8 +830,8 @@ fun MainActivity.createProSmartNotesScreen(): View {
         val list = mutableListOf<SmartNoteEntry>()
         try {
             val raw = prefs?.getString("pro_smart_notes_v3", null)
-                ?: prefs?.getString("pro_smart_notes_v2", "") ?: ""
-            if (raw.isNotBlank()) {
+                ?: prefs?.getString("pro_smart_notes_v2", null)
+            if (!raw.isNullOrBlank()) {
                 for (entry in raw.split("||")) {
                     val parts = entry.split("::")
                     if (parts.size >= 3) {
@@ -819,6 +842,22 @@ fun MainActivity.createProSmartNotesScreen(): View {
                         if (t.isNotEmpty() || b.isNotEmpty()) {
                             list.add(SmartNoteEntry(t, b, s, d))
                         }
+                    }
+                }
+            } else {
+                val legacyJson = prefs?.getString("pro_smart_notes_json", "") ?: ""
+                if (legacyJson.isNotBlank()) {
+                    val arr = JSONArray(legacyJson)
+                    for (i in 0 until arr.length()) {
+                        val obj = arr.getJSONObject(i)
+                        list.add(
+                            SmartNoteEntry(
+                                obj.optString("title", "פתק"),
+                                obj.optString("body", ""),
+                                "",
+                                obj.optString("date", "")
+                            )
+                        )
                     }
                 }
             }
@@ -858,6 +897,7 @@ fun MainActivity.createProSmartNotesScreen(): View {
 
             for ((idx, note) in notes.withIndex()) {
                 val card = LinearLayout(this).apply {
+                    tag = "MINIMALIST_CUSTOMIZER_IGNORE"
                     orientation = LinearLayout.VERTICAL
                     setPadding(dp(16f), dp(14f), dp(16f), dp(14f))
                     background = when {
@@ -885,7 +925,7 @@ fun MainActivity.createProSmartNotesScreen(): View {
                 }
 
                 val noteBodyTv = TextView(this).apply {
-                    text = note.body
+                    text = BidiFmt.rtlParagraph(*note.body.split("\n").toTypedArray())
                     setTextColor(textCol)
                     textSize = 15.0f
                     textDirection = View.TEXT_DIRECTION_RTL
@@ -917,11 +957,11 @@ fun MainActivity.createProSmartNotesScreen(): View {
                 }
 
                 val delBtn = TextView(this).apply {
-                    text = "🗑️ מחק פתק"
+                    text = "🗑️ מחק"
                     setTextColor(if (isMinimalistMode) MinimalistTheme.ALERT_RED_TEXT else Color.parseColor("#FF5252"))
-                    textSize = 13.5f
+                    textSize = 13.0f
                     typeface = Typeface.DEFAULT_BOLD
-                    setPadding(dp(8f), dp(4f), dp(8f), dp(4f))
+                    setPadding(dp(6f), dp(4f), dp(6f), dp(4f))
                     setOnClickListener {
                         feedback(it)
                         val currentList = loadNotesSafely()
@@ -934,32 +974,47 @@ fun MainActivity.createProSmartNotesScreen(): View {
                 }
 
                 val editBtn = TextView(this).apply {
-                    text = "✏️ טען לעריכה"
+                    text = "✏️ ערוך"
                     setTextColor(if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else primaryColor)
-                    textSize = 13.5f
-                    setPadding(dp(12f), dp(4f), dp(12f), dp(4f))
+                    textSize = 13.0f
+                    typeface = Typeface.DEFAULT_BOLD
+                    setPadding(dp(8f), dp(4f), dp(8f), dp(4f))
                     setOnClickListener {
                         feedback(it)
-                        isUpdatingBodyProgrammatically = true
                         titleIn.setText(note.title)
                         bodyIn.setText(note.body)
-                        isUpdatingBodyProgrammatically = false
-                        wasExplicitlySolved = note.solutionSummary.isNotBlank()
-                        currentExplicitSummary = note.solutionSummary
+                        lastSolvedBodySnapshot = if (note.solutionSummary.isNotBlank()) note.body.trim() else null
+                        lastSolvedSummary = note.solutionSummary
                         statusTv.text = note.solutionSummary
+                    }
+                }
+
+                val dupBtn = TextView(this).apply {
+                    text = "📄 שכפל"
+                    setTextColor(if (isMinimalistMode) MinimalistTheme.TEXT_CHARCOAL else Color.LTGRAY)
+                    textSize = 13.0f
+                    setPadding(dp(8f), dp(4f), dp(8f), dp(4f))
+                    setOnClickListener {
+                        feedback(it)
+                        val currentList = loadNotesSafely()
+                        val dateStr = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(Date())
+                        currentList.add(0, note.copy(title = "${note.title} (עותק)", date = dateStr))
+                        saveNotesSafely(currentList)
+                        renderNotesList()
                     }
                 }
 
                 val dateTv = TextView(this).apply {
                     text = BidiFmt.ltr(note.date)
                     setTextColor(subCol)
-                    textSize = 12.5f
+                    textSize = 12.0f
                     gravity = Gravity.RIGHT
                     layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 }
 
                 bottomRow.addView(delBtn)
                 bottomRow.addView(editBtn)
+                bottomRow.addView(dupBtn)
                 bottomRow.addView(dateTv)
                 card.addView(bottomRow)
                 notesListContainer.addView(card)
@@ -967,7 +1022,7 @@ fun MainActivity.createProSmartNotesScreen(): View {
         } catch (_: Throwable) {}
     }
 
-    val evalMathBtn = createActionBtn("🧮 פתור תרגיל, משוואה או נעלמים בפתק", false) {
+    val evalMathBtn = createActionBtn("🧮 חשב ביטוי מתמטי או משוואה שכתובים בפתק", true) {
         val raw = bodyIn.text.toString().trim()
         if (raw.isEmpty()) {
             Toast.makeText(this, "הזן תרגיל או משוואה בתוך תוכן הפתק", Toast.LENGTH_SHORT).show()
@@ -975,12 +1030,10 @@ fun MainActivity.createProSmartNotesScreen(): View {
         }
         try {
             val (updatedBody, summary) = SmartNotesMathEngine.analyzeAndSolveNote(raw, calcPrecision)
-            isUpdatingBodyProgrammatically = true
             bodyIn.setText(updatedBody)
             bodyIn.setSelection(bodyIn.text.length)
-            isUpdatingBodyProgrammatically = false
-            wasExplicitlySolved = summary.isNotEmpty()
-            currentExplicitSummary = summary
+            lastSolvedBodySnapshot = updatedBody.trim()
+            lastSolvedSummary = summary
 
             if (summary.isNotEmpty()) {
                 statusTv.text = summary
@@ -992,8 +1045,7 @@ fun MainActivity.createProSmartNotesScreen(): View {
         }
     }
 
-    // שמירת הפתק: אם לא לחצת על "פתור תרגיל", הפתק נשמר כפתק טקסט רגיל לחלוטין כפי שנכתב!
-    val saveBtn = createActionBtn("💾 שמור פתק חדש במחברת", true) {
+    val saveBtn = createActionBtn("💾 שמור פתק חדש במחברת", false) {
         val rawTitle = titleIn.text.toString().trim()
         val rawBody = bodyIn.text.toString().trim()
         if (rawBody.isEmpty() && rawTitle.isEmpty()) {
@@ -1006,19 +1058,21 @@ fun MainActivity.createProSmartNotesScreen(): View {
             titleIn.clearFocus()
 
             val t = rawTitle.ifEmpty { "פתק" }
-            val savedSummary = if (wasExplicitlySolved) currentExplicitSummary else ""
+            val savedSummary = if (lastSolvedBodySnapshot != null && rawBody == lastSolvedBodySnapshot) {
+                lastSolvedSummary
+            } else {
+                ""
+            }
             val dateStr = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(Date())
 
             val list = loadNotesSafely()
             list.add(0, SmartNoteEntry(t, rawBody, savedSummary, dateStr))
             saveNotesSafely(list)
 
-            isUpdatingBodyProgrammatically = true
             titleIn.setText("")
             bodyIn.setText("")
-            isUpdatingBodyProgrammatically = false
-            wasExplicitlySolved = false
-            currentExplicitSummary = ""
+            lastSolvedBodySnapshot = null
+            lastSolvedSummary = ""
 
             statusTv.text = BidiFmt.rtlParagraph("✅ הפתק נשמר במחברת (${BidiFmt.ltr(list.size)} פתקים)")
             renderNotesList()
@@ -1030,9 +1084,10 @@ fun MainActivity.createProSmartNotesScreen(): View {
     renderNotesList()
     root.addView(titleIn)
     root.addView(bodyIn)
-    root.addView(quickMathScroll)
+    root.addView(mathKeypadContainer)
     root.addView(evalMathBtn)
     root.addView(saveBtn)
+    root.addView(createPinResultButton(statusTv))
     root.addView(statusTv)
     root.addView(notesListContainer)
     scroll.addView(root)
