@@ -220,7 +220,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         Triple(305, "📐 Pro: 87 קטגוריות יחידות לפי תחום", listOf(31, 57, 58, 59, 60, 61, 62, 63)),
         Triple(306, "🔧 Pro: הנדסת אינסטלציה, רפואה ובנייה", listOf(32, 33, 34)),
         Triple(307, "⚡ Pro: מעבדת אלקטרוניקה, סלילים ושערים", listOf(35, 36, 71, 37, 38, 72, 76)),
-        Triple(308, "🧭 Pro: חיישנים, פלס, מצפן, מתכות ורטט", listOf(39, 40, 41, 66, 67, 42, 43, 68, 75)),
+        Triple(308, "🧭 Pro: חיישנים, פלס, מצפן, מתכות, רטט, אור ורשת", listOf(39, 40, 41, 66, 67, 42, 43, 68, 75, 96, 97, 98, 99)),
         Triple(309, "🔬 Pro: מדע, אטום, מורס, הצפנה, טקסט וצבעים", listOf(44, 45, 46, 77, 47, 81, 73, 74)),
         Triple(310, "📊 Pro: השקעות, משכנתא, פיקדונות, מניות ופרישה", listOf(48, 49, 50, 51, 64, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95)),
         Triple(311, "🧮 Pro: אלגברה, סדרות, פרופורציות, גאומטריה וענן", listOf(52, 53, 54, 65, 82, 83, 84, 85, 55)),
@@ -1960,6 +1960,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             93 -> createProFutureAndPresentValueScreen()
             94 -> createProAnnuityAndPerpetuityScreen()
             95 -> createProRetirementPlannerScreen()
+            96 -> createProLightMeterScreen()
+            97 -> createProSpeedTestScreen()
+            98 -> createProClinometerScreen()
+            99 -> createProNetworkInspectorScreen()
             else -> createBasicCalculator()
         }
 
