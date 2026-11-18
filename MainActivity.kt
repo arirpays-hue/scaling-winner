@@ -83,6 +83,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     private val hiddenDrawerTabs = mutableSetOf<Int>()
     private var isDrawerChecklistExpanded = false
+    private var isColorCustomizerExpanded = false
 
     var settingsScrollY = 0
     var currentSettingsScroll: ScrollView? = null
@@ -1322,6 +1323,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 }
                 val settingIconCode: Int? = when {
                     txt.contains("מצב תצוגה") -> 214
+                    txt.contains("התאמה אישית") -> 203
                     txt.contains("רטט") -> 204
                     txt.contains("צלילי הקשה") -> 201
                     txt.contains("סוג צליל") -> 205
@@ -1352,6 +1354,89 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
         }
         traverse(settingsRoot)
+    }
+
+    // עוטף את תפריט גלגל הצבעים ו-18 האלמנטים בתוך כפתור "התאמה אישית" שנפתח בלחיצה ונסגר בכפתור "סיום"
+    private fun createCollapsibleColorCustomizerSection(): View {
+        val wrapper = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = dp(4f) }
+        }
+
+        lateinit var openCustomizerBtn: TextView
+        lateinit var customizerContainer: LinearLayout
+
+        fun getOpenBtnLabel(): String {
+            val activeSlots = MinimalistTheme.slotCustomized.count { it }
+            val suffix = if (activeSlots > 0) " ($activeSlots אלמנטים מותאמים)" else ""
+            return "🎨 התאמה אישית$suffix"
+        }
+
+        fun closeCustomizer() {
+            isColorCustomizerExpanded = false
+            customizerContainer.visibility = View.GONE
+            openCustomizerBtn.visibility = View.VISIBLE
+            openCustomizerBtn.text = IosGlassTheme.cleanCategoryTitle(getOpenBtnLabel(), isCleanGlassActive)
+            AppVersionTracker.applyAboutButtonIcon(wrapper, this)
+            savePreferences()
+        }
+
+        openCustomizerBtn = createActionBtn(getOpenBtnLabel(), false) {
+            isColorCustomizerExpanded = true
+            openCustomizerBtn.visibility = View.GONE
+            customizerContainer.visibility = View.VISIBLE
+            if (useAnimations) {
+                customizerContainer.alpha = 0f
+                customizerContainer.animate().alpha(1f).setDuration(200).start()
+            }
+        }.apply {
+            tag = "PERSONALIZATION_SETTINGS_BTN"
+            visibility = if (isColorCustomizerExpanded) View.GONE else View.VISIBLE
+        }
+
+        customizerContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = if (isColorCustomizerExpanded) View.VISIBLE else View.GONE
+            setPadding(dp(12f), dp(12f), dp(12f), dp(12f))
+            background = when {
+                isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this@MainActivity, 22f, 0)
+                isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@MainActivity, 22f)
+                else -> GradientDrawable().apply {
+                    setColor(Utils.lightenColor(bgColor, 0.05f))
+                    cornerRadius = dp(22f).toFloat()
+                    setStroke(dp(1f), MinimalistTheme.resolveBorderStrokeColor(this@MainActivity, Utils.lightenColor(bgColor, 0.16f)))
+                }
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = dp(10f) }
+        }
+
+        val topDoneBtn = createActionBtn("סיום ✔️", true) {
+            closeCustomizer()
+        }
+        customizerContainer.addView(topDoneBtn)
+
+        val wheelAndSlotsView = MinimalistTheme.createColorThemeCustomizerSection(this)
+        customizerContainer.addView(wheelAndSlotsView)
+
+        val bottomDoneBtn = createActionBtn("סיום ✔️", true) {
+            closeCustomizer()
+        }.apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(10f) }
+        }
+        customizerContainer.addView(bottomDoneBtn)
+
+        wrapper.addView(openCustomizerBtn)
+        wrapper.addView(customizerContainer)
+        return wrapper
     }
 
     private fun unifyThemeSelectorAndCustomizerInSettings(settingsRoot: View?) {
@@ -1389,7 +1474,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             if (v is ViewGroup) {
                 for (i in 0 until v.childCount) {
                     val sub = v.getChildAt(i)
-                    if (sub is TextView && (sub.text.toString().contains("רשימת סימון") || sub.text.toString().contains("אודות"))) {
+                    if (sub is TextView && (sub.text.toString().contains("רשימת סימון") || sub.text.toString().contains("אודות") || sub.text.toString().contains("התאמה אישית"))) {
                         return true
                     }
                     if (!isMinimalistMode && (isIosGlassMode || isAuroraMode)) {
@@ -1417,8 +1502,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         mainContainer.addView(displayModeBtn, 1)
 
-        val customizerPanel = MinimalistTheme.createColorThemeCustomizerSection(this)
-        mainContainer.addView(customizerPanel, 2)
+        // הוספת כפתור "התאמה אישית" המתקפל (עם גלגל הצבעים ו-18 האלמנטים)
+        val collapsibleCustomizer = createCollapsibleColorCustomizerSection()
+        mainContainer.addView(collapsibleCustomizer, 2)
     }
 
     private fun applyButtonShapeVisibilityAndInsertAcSoundSetting(root: View?) {
@@ -1673,8 +1759,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         } else if (index != 19) {
             settingsScrollY = 0
             isDrawerChecklistExpanded = false
+            isColorCustomizerExpanded = false
         } else {
             isDrawerChecklistExpanded = false
+            isColorCustomizerExpanded = false
         }
         if (MiniGameEngine.isActive) MiniGameEngine.stopGame(this)
         currentTabIndex = index
