@@ -11,13 +11,11 @@ import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
 import android.os.Build
 import android.view.Gravity
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import android.view.WindowManager
 import android.widget.*
-import java.util.Locale
 import kotlin.math.*
 
 data class ThemePalettePreset(
@@ -60,7 +58,7 @@ object MinimalistTheme {
     private val DEFAULT_BORDER_SUBTLE = Color.parseColor("#E3DFD9")
 
     // =========================================================================
-    // מערכת 18 ערוצי צבע מותאמים אישית לכל אלמנט, ספרה, תפריט וסמל באפליקציה!
+    // מערכת 18 ערוצי צבע מותאמים אישית לכל אלמנט, ספרה, תפריט וסמל באפליקציה
     // =========================================================================
     const val SLOT_ACTION_1 = 0          // 0: רקע כפתורי פעולה 1 (÷ − + וכפתורים ראשיים)
     const val SLOT_ACTION_2 = 1          // 1: רקע כפתורי פעולה 2 (= × וכפתורים משניים)
@@ -941,8 +939,6 @@ object MinimalistTheme {
             slotBrightness[slot],
             slotOpacity[slot]
         )
-        // עבור צבע רקע ראשי (SLOT_MAIN_BG), חלון אנדרואיד חייב צבע אטום — לכן נמזג את השקיפות (Alpha)
-        // בצורה חיה מול קרם בהיר (#FCF9F5) או לילה כהה (#08090C) כדי שסליידר השקיפות ישפיע מיד גם על הרקע!
         if (slot == SLOT_MAIN_BG) {
             val a = Color.alpha(rawCol) / 255f
             val baseBackdrop = if (activePaletteId.startsWith("min")) DEFAULT_BG_CREAM else Color.parseColor("#08090C")
@@ -1543,7 +1539,7 @@ object MinimalistTheme {
     private fun styleSettingsRowView(tv: TextView, rawText: String, activity: MainActivity) {
         val clean = IosGlassTheme.cleanCategoryTitle(rawText, true)
         tv.text = clean
-        tv.gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
+        tv.gravity = (if (activity.isRightHanded) Gravity.RIGHT else Gravity.LEFT) or Gravity.CENTER_VERTICAL
         tv.setPadding(activity.dp(18f), activity.dp(15f), activity.dp(18f), activity.dp(15f))
         tv.compoundDrawablePadding = activity.dp(12f)
 
@@ -1557,112 +1553,30 @@ object MinimalistTheme {
             pillTone = if (isChecklistBtn) 3 else 5
         )
 
-        val rightDrawable: Drawable? = when {
-            isChecklistBtn -> createSettingsBadgeDrawable(activity, 7)
-            clean.contains("החלקות במסך") -> CalculatorGestureManager.createGestureVectorIcon(activity, rowTextCol, 20f, true, false)
-            clean.contains("התאמה אישית") -> createMinimalistVectorIcon(activity, 203, rowTextCol, 20f)
-            clean.contains("אודות") -> AppVersionTracker.createAboutVectorIcon(activity, rowTextCol, 20f, true, false)
-            clean.contains("רטט") || clean.contains("אנימציות") || clean.contains("מצב מקצועי") || clean.contains("מצב תצוגה") ->
-                createSettingsBadgeDrawable(activity, if (clean.contains("כבוי")) 2 else 1)
-            clean.contains("צלילי הקשה") -> createSettingsBadgeDrawable(activity, 3)
-            clean.contains("סוג צליל") -> createSettingsBadgeDrawable(activity, 4)
-            clean.contains("צליל AC") -> createSettingsBadgeDrawable(activity, 8)
-            clean.contains("מסך תמיד דולק") -> createSettingsBadgeDrawable(activity, 5)
-            clean.contains("צורת כפתורים") -> createSettingsBadgeDrawable(activity, 6)
-            clean.contains("דיוק עשרוני") || clean.contains("הגדרות") -> createMinimalistVectorIcon(activity, 19, rowTextCol, 20f)
-            clean.contains("יד דומיננטית") -> createSettingsBadgeDrawable(activity, 9)
+        val iconDrawable: Drawable? = when {
+            isChecklistBtn -> ProUnifiedThemeIcons.createSettingsIcon(activity, "checklist", rowTextCol, 22f, true, false, false)
+            clean.contains("החלקות במסך") -> CalculatorGestureManager.createGestureVectorIcon(activity, rowTextCol, 22f, true, false)
+            clean.contains("התאמה אישית") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "customize", rowTextCol, 22f, true, false, false)
+            clean.contains("אודות") -> AppVersionTracker.createAboutVectorIcon(activity, rowTextCol, 22f, true, false)
+            clean.contains("מצב תצוגה") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "display", rowTextCol, 22f, true, false, false)
+            clean.contains("מצב מקצועי") || clean.contains("Pro Mode") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "pro_mode", rowTextCol, 22f, true, false, false)
+            clean.contains("רטט") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "haptic", rowTextCol, 22f, true, false, false)
+            clean.contains("אנימציות") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "animations", rowTextCol, 22f, true, false, false)
+            clean.contains("צלילי הקשה") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "sound_toggle", rowTextCol, 22f, true, false, false)
+            clean.contains("סוג צליל") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "sound_type", rowTextCol, 22f, true, false, false)
+            clean.contains("צליל AC") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "ac_sound", rowTextCol, 22f, true, false, false)
+            clean.contains("מסך תמיד דולק") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "keep_screen", rowTextCol, 22f, true, false, false)
+            clean.contains("צורת כפתורים") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "btn_shape", rowTextCol, 22f, true, false, false)
+            clean.contains("דיוק עשרוני") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "precision", rowTextCol, 22f, true, false, false)
+            clean.contains("יד דומיננטית") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "handedness", rowTextCol, 22f, true, false, false)
+            clean.contains("איפוס") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "reset", rowTextCol, 22f, true, false, false)
             else -> null
         }
-        tv.setCompoundDrawables(null, null, rightDrawable, null)
-    }
-
-    private fun createSettingsBadgeDrawable(context: Context, badgeType: Int): Drawable {
-        val sizePx = (22f * context.resources.displayMetrics.density).toInt().coerceAtLeast(24)
-        return object : Drawable() {
-            private val d = context.resources.displayMetrics.density
-            private val strokeP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = TEXT_CHARCOAL
-                style = Paint.Style.STROKE
-                strokeWidth = 1.7f * d
-                strokeCap = Paint.Cap.ROUND
-                strokeJoin = Paint.Join.ROUND
-            }
-            private val fillP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                style = Paint.Style.FILL
-            }
-
-            override fun getIntrinsicWidth(): Int = sizePx
-            override fun getIntrinsicHeight(): Int = sizePx
-
-            override fun draw(canvas: Canvas) {
-                val cx = bounds.exactCenterX()
-                val cy = bounds.exactCenterY()
-                val r = Math.min(bounds.width(), bounds.height()) * 0.38f
-
-                when (badgeType) {
-                    1 -> {
-                        fillP.color = ACCENT_SAGE_GREEN
-                        canvas.drawCircle(cx, cy, r * 0.85f, fillP)
-                    }
-                    2 -> {
-                        fillP.color = NEUTRAL_SECONDARY_BG
-                        canvas.drawCircle(cx, cy, r * 0.85f, fillP)
-                        canvas.drawCircle(cx, cy, r * 0.85f, strokeP)
-                    }
-                    3 -> {
-                        val p = Path().apply {
-                            moveTo(cx - r * 0.65f, cy - r * 0.3f)
-                            lineTo(cx - r * 0.25f, cy - r * 0.3f)
-                            lineTo(cx + r * 0.25f, cy - r * 0.7f)
-                            lineTo(cx + r * 0.25f, cy + r * 0.7f)
-                            lineTo(cx - r * 0.25f, cy + r * 0.3f)
-                            lineTo(cx - r * 0.65f, cy + r * 0.3f)
-                            close()
-                        }
-                        canvas.drawPath(p, strokeP)
-                        canvas.drawArc(RectF(cx + r * 0.1f, cy - r * 0.45f, cx + r * 0.7f, cy + r * 0.45f), -50f, 100f, false, strokeP)
-                    }
-                    4 -> {
-                        canvas.drawArc(RectF(cx - r * 0.7f, cy - r * 0.7f, cx + r * 0.7f, cy + r * 0.7f), 20f, 115f, false, strokeP)
-                        canvas.drawCircle(cx - r * 0.45f, cy - r * 0.35f, r * 0.22f, strokeP)
-                        canvas.drawCircle(cx + r * 0.45f, cy + r * 0.35f, r * 0.22f, strokeP)
-                    }
-                    5 -> {
-                        val moon = Path().apply {
-                            addArc(RectF(cx - r * 0.7f, cy - r * 0.7f, cx + r * 0.7f, cy + r * 0.7f), 40f, 250f)
-                        }
-                        canvas.drawPath(moon, strokeP)
-                    }
-                    6 -> {
-                        canvas.drawRoundRect(RectF(cx - r * 0.68f, cy - r * 0.68f, cx + r * 0.68f, cy + r * 0.68f), r * 0.22f, r * 0.22f, strokeP)
-                    }
-                    7 -> {
-                        canvas.drawLine(cx - r * 0.55f, cy + r * 0.05f, cx - r * 0.1f, cy + r * 0.5f, strokeP)
-                        canvas.drawLine(cx - r * 0.1f, cy + r * 0.5f, cx + r * 0.65f, cy - r * 0.45f, strokeP)
-                    }
-                    8 -> {
-                        val tp = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                            color = TEXT_CHARCOAL
-                            textSize = 11.5f * d
-                            textAlign = Paint.Align.CENTER
-                            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-                        }
-                        canvas.drawText("AC", cx, cy + 4f * d, tp)
-                    }
-                    9 -> {
-                        canvas.drawRoundRect(RectF(cx - r * 0.5f, cy - r * 0.1f, cx + r * 0.5f, cy + r * 0.75f), r * 0.25f, r * 0.25f, strokeP)
-                        for (ox in listOf(-0.35f, -0.12f, 0.12f, 0.35f)) {
-                            canvas.drawLine(cx + r * ox, cy - r * 0.1f, cx + r * ox, cy - r * 0.7f, strokeP)
-                        }
-                    }
-                }
-            }
-
-            override fun setAlpha(alpha: Int) { strokeP.alpha = alpha }
-            override fun setColorFilter(colorFilter: ColorFilter?) { strokeP.colorFilter = colorFilter }
-            @Deprecated("Deprecated in Java")
-            override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
-        }.apply { setBounds(0, 0, sizePx, sizePx) }
+        if (activity.isRightHanded) {
+            tv.setCompoundDrawables(null, null, iconDrawable, null)
+        } else {
+            tv.setCompoundDrawables(iconDrawable, null, null, null)
+        }
     }
 
     // =========================================================================
@@ -1919,7 +1833,7 @@ object MinimalistTheme {
     }
 
     // =========================================================================
-    // חבילת 105+ סמלים וקטוריים ייחודיים לערכת הנושא המינימליסטית (כולל כלים 66..81 וקטגוריה 312)!
+    // חבילת 105+ סמלים וקטוריים ייחודיים לערכת הנושא המינימליסטית (קו דק ונקי)
     // =========================================================================
     fun createMinimalistVectorIcon(
         context: Context,
@@ -1949,7 +1863,7 @@ object MinimalistTheme {
                 val b = bounds
                 val cx = b.exactCenterX()
                 val cy = b.exactCenterY()
-                val r = Math.min(b.width(), b.height()) * 0.40f
+                val r = min(b.width(), b.height()) * 0.40f
 
                 when (iconCode) {
                     0 -> {
@@ -2596,12 +2510,11 @@ object MinimalistTheme {
                         canvas.drawLine(cx - r * 0.85f, cy + r * 0.26f, cx - r * 0.45f, cy + r * 0.26f, paint)
                         canvas.drawLine(cx + r * 0.55f, cy, cx + r * 0.88f, cy, paint)
                     }
-                    73 -> {
-                        canvas.drawRoundRect(RectF(cx - r * 0.78f, cy - r * 0.62f, cx + r * 0.78f, cy + r * 0.62f), r * 0.18f, r * 0.18f, paint)
-                        canvas.drawLine(cx - r * 0.15f, cy - r * 0.24f, cx - r * 0.42f, cy, paint)
-                        canvas.drawLine(cx - r * 0.42f, cy, cx - r * 0.15f, cy + r * 0.24f, paint)
-                        canvas.drawLine(cx + r * 0.15f, cy - r * 0.24f, cx + r * 0.42f, cy, paint)
-                        canvas.drawLine(cx + r * 0.42f, cy, cx + r * 0.15f, cy + r * 0.24f, paint)
+                    73 -> { // ממיר צבעים RGB
+                        canvas.drawCircle(cx, cy - r * 0.30f, r * 0.42f, paint)
+                        canvas.drawCircle(cx - r * 0.32f, cy + r * 0.24f, r * 0.42f, paint)
+                        canvas.drawCircle(cx + r * 0.32f, cy + r * 0.24f, r * 0.42f, paint)
+                        canvas.drawCircle(cx, cy + r * 0.06f, r * 0.11f, dotPaint)
                     }
                     74 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.84f, cy - r * 0.50f, cx + r * 0.84f, cy + r * 0.50f), r * 0.14f, r * 0.14f, paint)
@@ -2753,8 +2666,8 @@ object MinimalistTheme {
                 }
             }
 
-            override fun setAlpha(alpha: Int) { paint.alpha = alpha }
-            override fun setColorFilter(colorFilter: ColorFilter?) { paint.colorFilter = colorFilter }
+            override fun setAlpha(alpha: Int) { paint.alpha = alpha; dotPaint.alpha = alpha }
+            override fun setColorFilter(colorFilter: ColorFilter?) { paint.colorFilter = colorFilter; dotPaint.colorFilter = colorFilter }
             @Deprecated("Deprecated in Java")
             override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
         }.apply {
