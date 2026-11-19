@@ -28,7 +28,7 @@ data class VersionReleaseNote(
 object AppVersionTracker {
 
     const val DEVELOPER_NAME = "Harry"
-            const val CURRENT_SEMANTIC_VERSION = "5.2.0 Pro"
+    const val CURRENT_SEMANTIC_VERSION = "5.2.0 Pro"
     const val CURRENT_BUILD_NUMBER = 52
     const val CURRENT_RELEASE_DATE = "19/11/2026"
 
@@ -39,28 +39,27 @@ object AppVersionTracker {
     private const val PREF_CUSTOM_NOTES = "app_tracker_custom_notes_v1"
 
     val changelogHistory: List<VersionReleaseNote> = listOf(
-                VersionReleaseNote(
+        VersionReleaseNote(
             versionCode = 52,
             versionName = "v5.2.0 Pro",
             releaseDate = "19/11/2026",
-            title = "מנוע כלי טקסט מהיר (120,000+ תווים) ושדרוג מלא לכלי פרטי רשת ו-IP",
+            title = "מנוע כלי טקסט מהיר (130,000+ תווים), שדרוג פרטי רשת ו-4 שפות אייקונים",
             highlights = listOf(
-                "בניית קובץ ייעודי ומואץ לכלי הטקסט (ProTextToolsStudio.kt) המבצע ספירה וטרנספורמציות ברקע (Background Thread) ללא תקיעות גם על מאות אלפי תווים ואלפי שורות",
-                "הוספת 12 תכונות חדשות לכלי הטקסט מעבר ל-11 הפעולות הקיימות: בטל/חזור (Undo/Redo), הדבקה מהלוח, סרגל חיפוש והחלפה, מיון ת-א ולפי אורך, ערבוב שורות, מספור שורות, הסרת ניקוד עברי, חילוץ קישורים/אימיילים/מספרים והמרת שורות לפסיקים",
-                "שדרוג מנוע 'פרטי רשת וכתובת IP' (Tab 99) באמצעות ConnectivityManager.LinkProperties לעבודה מלאה גם ברשת סלולרית (4G/5G) וגם ב-Wi-Fi[span_4](start_span)[span_4](end_span)[span_5](start_span)[span_5](end_span)",
-                "הוספת שליפה חיה של כתובת IP חיצונית (Public IP), IPv4 ו-IPv6 מקומי, Gateway, מסכת רשת, שרתי DNS פעילים, ספק אינטרנט (ISP), מיקום משוער וזמן תגובה (Ping)"
+                "בניית מנוע כלי טקסט מואץ בקובץ ייעודי (ProTextToolsStudio.kt) עם עיבוד אסינכרוני ברקע ל-130,000+ תווים ללא תקיעות, הצגת כל 11 כלי הבסיס ו-13 כלי ה-Pro ברשת RTL גלויה, בטל/חזור, הדבקה וחיפוש והחלפה",
+                "תיקון מיון וערבוב שורות כך ששורות ריקות עוברות תמיד לסוף ואינן גורמות למסך ריק בראש התיבה",
+                "שדרוג מנוע 'פרטי רשת וכתובת IP' (Tab 99) באמצעות LinkProperties לעבודה מלאה גם ברשת סלולרית (4G/5G) וגם ב-Wi-Fi עם שליפה חיה של IP חיצוני, IPv4/IPv6 מקומי, Gateway, Subnet, DNS, ספק אינטרנט ו-Ping",
+                "בניית 4 שפות סמלים וקטוריים נפרדות ומובחנות לכל 100 הכלים ו-14 ההגדרות (ProUnifiedThemeIcons.kt): קו דק ונקי במינימליסטי, תגיות Material צבעוניות בקלאסי, אריחי זכוכית iOS ב-Liquid Glass והילת ניאון ב-Aurora"
             )
         ),
         VersionReleaseNote(
             versionCode = 51,
             versionName = "v5.1.0 Pro",
             releaseDate = "18/11/2026",
-            title = "15 כלים פיננסיים ומתמטיים חדשים עם קנבסים חיים",
+            title = "19 כלים פיננסיים, מתמטיים, חיישנים ורשת חדשים עם קנבסים חיים",
             highlights = listOf(
-                "הוספת 15 כלים ומחשבונים חדשים (Tabs 81..95): כלי טקסט חכם, ספרות רומיות עם אבני פירוק, סדרות מספרים עם גרף עמודות דו-כיווני, פרופורציות ויחס עם תרשים עוגה, משוואה לינארית עם מערכת צירים מדויקת",
-                "הוספת מחשבוני יעד חיסכון, זמן הכפלה עם גרף צמיחה דו-שכבתי, ממיר שכר עם מד עומס שעות, הנחות מצטברות ומס שירותים עם מפל מחיר Waterfall",
-                "הוספת תשואת מניות ודיבידנד עם טבעת פילוח תיק, פיקדון קבוע וריבית פשוטה עם גרף 2 עקומות חי, מחשבון SIP ואינפלציה עם עקומת שחיקה",
-                "הוספת הלוואת רכב ו-E.M.I עם עקומת סילוקין, ערך עתידי ונוכחי (FV/PV), אנונה ואנונה נצחית עם קנבס תזרים מזומנים, ומחשבון פרישה וקצבה עם מחזור חיים מלא"
+                "הוספת 15 כלים פיננסיים ומתמטיים חדשים (Tabs 81..95): כלי טקסט, ספרות רומיות עם אבני פירוק, סדרות מספרים עם גרף דו-כיווני, פרופורציות ויחס עם תרשים עוגה ומשוואה לינארית עם מערכת צירים מדויקת",
+                "הוספת מחשבוני יעד חיסכון וזמן הכפלה, ממיר שכר, הנחות מצטברות ומס שירותים (Waterfall), תשואת מניות ודיבידנד, פיקדון קבוע וריבית פשוטה, SIP ואינפלציה, הלוואת רכב ו-E.M.I, ערך עתידי/נוכחי, אנונה ומחשבון פרישה",
+                "הוספת 4 כלי חיישנים ורשת חדשים (Tabs 96..99): מד אור סביבתי (Lux), בדיקת מהירות אינטרנט מונפשת, קלינומטר ומד שיפוע עם כיול Tare ופרטי רשת וכתובת IP"
             )
         ),
         VersionReleaseNote(
@@ -257,12 +256,16 @@ object AppVersionTracker {
         }
 
         val customizerBtn = settingsRoot.findViewWithTag<TextView>("PERSONALIZATION_SETTINGS_BTN")
-        if (customizerBtn != null && (activity.isMinimalistMode || activity.isIosGlassMode || activity.isAuroraMode)) {
-            val paletteIcon = if (activity.isMinimalistMode) {
-                MinimalistTheme.createMinimalistVectorIcon(activity, 203, iconTint, 22f)
-            } else {
-                AuroraBorealisTheme.createVectorIcon(activity, 203, iconTint, 22f, activity.isAuroraMode)
-            }
+        if (customizerBtn != null) {
+            val paletteIcon = ProUnifiedThemeIcons.createSettingsIcon(
+                context = activity,
+                settingKey = "customize",
+                tintColor = iconTint,
+                sizeDp = 22f,
+                isMinimalist = activity.isMinimalistMode,
+                isGlass = activity.isIosGlassMode,
+                isAurora = activity.isAuroraMode
+            )
             customizerBtn.compoundDrawablePadding = activity.dp(12f)
             if (activity.isRightHanded) {
                 customizerBtn.setCompoundDrawables(null, null, paletteIcon, null)
@@ -272,18 +275,24 @@ object AppVersionTracker {
         }
 
         val aboutBtn = settingsRoot.findViewWithTag<TextView>("ABOUT_VERSION_SETTINGS_BTN") ?: return
-        val iconDrawable = createAboutVectorIcon(
+        val baseAboutIcon = createAboutVectorIcon(
             context = activity,
-            tintColor = iconTint,
-            sizeDp = 22f,
+            tintColor = if (!activity.isMinimalistMode && !activity.isAuroraMode) Color.WHITE else iconTint,
+            sizeDp = if (!activity.isMinimalistMode && !activity.isAuroraMode) 15f else 22f,
             isMinimalist = activity.isMinimalistMode,
             isAurora = activity.isAuroraMode
         )
+        val finalAboutIcon = when {
+            activity.isMinimalistMode -> baseAboutIcon
+            activity.isAuroraMode -> baseAboutIcon
+            activity.isIosGlassMode -> ProUnifiedThemeIcons.wrapForLiquidGlass(activity, baseAboutIcon, iconTint, 25f)
+            else -> ProUnifiedThemeIcons.wrapForClassicBadge(activity, baseAboutIcon, 901, 25f)
+        }
         aboutBtn.compoundDrawablePadding = activity.dp(12f)
         if (activity.isRightHanded) {
-            aboutBtn.setCompoundDrawables(null, null, iconDrawable, null)
+            aboutBtn.setCompoundDrawables(null, null, finalAboutIcon, null)
         } else {
-            aboutBtn.setCompoundDrawables(iconDrawable, null, null, null)
+            aboutBtn.setCompoundDrawables(finalAboutIcon, null, null, null)
         }
     }
 
@@ -294,13 +303,13 @@ object AppVersionTracker {
         isMinimalist: Boolean = false,
         isAurora: Boolean = false
     ): Drawable {
-        val sizePx = (sizeDp * context.resources.displayMetrics.density).toInt().coerceAtLeast(24)
+        val sizePx = (sizeDp * context.resources.displayMetrics.density).toInt().coerceAtLeast(22)
         return object : Drawable() {
             private val d = context.resources.displayMetrics.density
             private val strokeP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = tintColor
                 style = Paint.Style.STROKE
-                strokeWidth = 1.85f * d
+                strokeWidth = (if (isMinimalist) 1.70f else 1.85f) * d
                 strokeCap = Paint.Cap.ROUND
                 strokeJoin = Paint.Join.ROUND
                 if (isAurora) {
@@ -311,10 +320,6 @@ object AppVersionTracker {
                 color = tintColor
                 style = Paint.Style.FILL
             }
-            private val badgeFillP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = if (isMinimalist) MinimalistTheme.ACCENT_PASTEL_BLUE else Color.argb(40, Color.red(tintColor), Color.green(tintColor), Color.blue(tintColor))
-                style = Paint.Style.FILL
-            }
 
             override fun getIntrinsicWidth(): Int = sizePx
             override fun getIntrinsicHeight(): Int = sizePx
@@ -322,23 +327,30 @@ object AppVersionTracker {
             override fun draw(canvas: Canvas) {
                 val cx = bounds.exactCenterX()
                 val cy = bounds.exactCenterY()
-                val r = min(bounds.width(), bounds.height()) * 0.39f
+                val r = min(bounds.width(), bounds.height()) * 0.40f
 
-                if (!isMinimalist) {
-                    val sq = RectF(cx - r * 1.12f, cy - r * 1.12f, cx + r * 1.12f, cy + r * 1.12f)
-                    canvas.drawRoundRect(sq, r * 0.45f, r * 0.45f, badgeFillP)
-                } else {
-                    canvas.drawCircle(cx, cy, r * 0.92f, badgeFillP)
+                if (isAurora) {
+                    val haloP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        style = Paint.Style.FILL
+                        shader = RadialGradient(
+                            cx, cy, (r * 1.15f).coerceAtLeast(1f),
+                            Color.argb(65, Color.red(tintColor), Color.green(tintColor), Color.blue(tintColor)),
+                            Color.TRANSPARENT,
+                            Shader.TileMode.CLAMP
+                        )
+                    }
+                    canvas.drawCircle(cx, cy, r * 1.15f, haloP)
                 }
 
-                canvas.drawCircle(cx, cy, r * 0.78f, strokeP)
+                // קו מתאר נקי בלבד — ללא עיגול רקע מאחור במינימליסטי!
+                canvas.drawCircle(cx, cy, r * 0.80f, strokeP)
                 canvas.drawCircle(cx, cy - r * 0.34f, r * 0.11f, dotP)
                 canvas.drawLine(cx, cy - r * 0.06f, cx, cy + r * 0.42f, strokeP)
                 canvas.drawLine(cx - r * 0.16f, cy + r * 0.42f, cx + r * 0.16f, cy + r * 0.42f, strokeP)
             }
 
-            override fun setAlpha(alpha: Int) { strokeP.alpha = alpha }
-            override fun setColorFilter(colorFilter: ColorFilter?) { strokeP.colorFilter = colorFilter }
+            override fun setAlpha(alpha: Int) { strokeP.alpha = alpha; dotP.alpha = alpha }
+            override fun setColorFilter(colorFilter: ColorFilter?) { strokeP.colorFilter = colorFilter; dotP.colorFilter = colorFilter }
             @Deprecated("Deprecated in Java")
             override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
         }.apply { setBounds(0, 0, sizePx, sizePx) }
@@ -406,11 +418,11 @@ object AppVersionTracker {
                 CanvasUiHelper.drawFittedText(canvas, creditLine, w / 2f, h * 0.52f, w - 28f * d, 14.0f * d, 10f * d, p)
 
                 p.textSize = 13.0f * d
-                val verLine = "\u200Fגרסה ${BidiFmt.ltr("v$CURRENT_SEMANTIC_VERSION")}  •  ${BidiFmt.ltr("Build #$CURRENT_BUILD_NUMBER")}  •  ${BidiFmt.ltr("80")} כלים"
+                val verLine = "\u200Fגרסה ${BidiFmt.ltr("v$CURRENT_SEMANTIC_VERSION")}  •  ${BidiFmt.ltr("Build #$CURRENT_BUILD_NUMBER")}  •  ${BidiFmt.ltr("100")} כלים"
                 CanvasUiHelper.drawFittedText(canvas, verLine, w / 2f, h * 0.76f, w - 28f * d, 13.0f * d, 9.5f * d, p)
 
                 p.textSize = 11.5f * d
-                val statsLine = "\u200F${BidiFmt.ltr("87")} קטגוריות יחידות  |  ${BidiFmt.ltr("36")} פעולות החלקה  |  מעודכן ✓"
+                val statsLine = "\u200F${BidiFmt.ltr("87")} קטגוריות יחידות  |  ${BidiFmt.ltr("4")} שפות אייקונים  |  מעודכן ✓"
                 CanvasUiHelper.drawFittedText(canvas, statsLine, w / 2f, h * 0.92f, w - 28f * d, 11.5f * d, 8.5f * d, p)
             }
         }.apply {
@@ -595,7 +607,7 @@ object AppVersionTracker {
                     subHeader = "יוצר ומפתח האפליקציה (Creator & Lead Developer)",
                     bullets = listOf(
                         "האפליקציה תוכננה, עוצבה ונבנתה מאפס על ידי $DEVELOPER_NAME",
-                        "כוללת מנועי חישוב מדעיים ואלגבריים, 80+ מחשבונים וכלי Pro, מנוע מחוות והחלקות חכם, אולפן צבעים ב-60fps ו-4 ערכות נושא מתקדמות"
+                        "כוללת מנועי חישוב מדעיים ואלגבריים, 100 מחשבונים וכלי Pro, מנוע עריכת טקסטים מהיר, מחוות והחלקות, אולפן צבעים ב-60fps ו-4 שפות עיצוב ואייקונים"
                     ),
                     isHighlighted = true
                 )
@@ -722,8 +734,8 @@ object AppVersionTracker {
             setOnClickListener {
                 activity.feedback(it)
                 val fullReport = buildTelemetrySummaryText() + "\n\n" +
-                        "✨ חידושי גרסה $CURRENT_SEMANTIC_VERSION (Build #$CURRENT_BUILD_NUMBER):\n" +
-                        changelogHistory.first().highlights.joinToString("\n") { "• $it" }
+                    "✨ חידושי גרסה $CURRENT_SEMANTIC_VERSION (Build #$CURRENT_BUILD_NUMBER):\n" +
+                    changelogHistory.first().highlights.joinToString("\n") { "• $it" }
                 activity.copyToClipboard(fullReport)
             }
         }
