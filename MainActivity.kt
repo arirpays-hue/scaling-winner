@@ -108,108 +108,109 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     )
 
     val categories = listOf(
-        "🧮 מחשבון רגיל",                        // 0
-        "🔬 מחשבון מדעי",                        // 1
-        "🧾 מחשבון מע״מ",                        // 2
-        "🏦 מחשבון הלוואה",                      // 3
-        "📏 המרת מרחקים",                        // 4
-        "⚖️ המרת משקלים",                        // 5
-        "🌡️ המרת טמפ׳",                         // 6
-        "💻 מחשבון מתכנתים",                     // 7
-        "📊 חישוב אחוזים",                       // 8
-        "🏷️ חישוב הנחות",                        // 9
-        "💰 חלוקת טיפים",                        // 10
-        "🏃 מדד BMI",                           // 11
-        "🎂 חישוב גיל",                          // 12
-        "💵 מטבעות לייב",                        // 13
-        "🔥 מחשבון BMR",                         // 14
-        "➗ משוואות ריבועיות",                   // 15
-        "⅟ מחשבון שברים",                       // 16
-        "📈 ריבית דריבית",                       // 17
-        "🚀 המרת מהירות",                        // 18
-        "⚙️ הגדרות",                            // 19
-        "⛽ מחשבון עלות דלק",                    // 20
-        "🚘 יעילות שריפת דלק",                   // 21
-        "🎓 ממוצע ציונים",                       // 22
-        "🍽️ מחשבון תשר מתקדם",                   // 23
-        "🛍️ מחשבון מס מכירות",                   // 24
-        "🏷️ מחשבון מחיר יחידתי",                 // 25
-        "🌍 ממיר שעון עולמי",                    // 26
-        "🌸 מחשבון ביוץ",                        // 27
-        "🔢 ממיר הקסדצימלי",                     // 28
-        "💎 מחשבון חסכונות",                     // 29
-        "📅 מחשבון תאריך",                       // 30
+        "🧮 מחשבון רגיל",                           // 0
+        "🔬 מחשבון מדעי",                           // 1
+        "🧾 מחשבון מע״מ",                           // 2
+        "🏦 מחשבון הלוואה",                         // 3
+        "📏 המרת מרחקים",                           // 4
+        "⚖️ המרת משקלים",                           // 5
+        "🌡️ המרת טמפ׳",                            // 6
+        "💻 מחשבון מתכנתים",                        // 7
+        "📊 חישוב אחוזים",                          // 8
+        "🏷️ חישוב הנחות",                           // 9
+        "💰 חלוקת טיפים",                           // 10
+        "🏃 מדד BMI",                              // 11
+        "🎂 חישוב גיל",                             // 12
+        "💵 מטבעות לייב",                           // 13
+        "🔥 מחשבון BMR",                            // 14
+        "➗ משוואות ריבועיות",                      // 15
+        "⅟ מחשבון שברים",                          // 16
+        "📈 ריבית דריבית",                          // 17
+        "🚀 המרת מהירות",                           // 18
+        "⚙️ הגדרות",                                // 19
+        "⛽ מחשבון עלות דלק",                       // 20
+        "🚘 יעילות שריפת דלק",                      // 21
+        "🎓 ממוצע ציונים",                          // 22
+        "🍽️ מחשבון תשר מתקדם",                      // 23
+        "🛍️ מחשבון מס מכירות",                      // 24
+        "🏷️ מחשבון מחיר יחידתי",                    // 25
+        "🌍 ממיר שעון עולמי",                       // 26
+        "🌸 מחשבון ביוץ",                           // 27
+        "🔢 ממיר הקסדצימלי",                        // 28
+        "💎 מחשבון חסכונות",                        // 29
+        "📅 מחשבון תאריך",                          // 30
         // --- מחשבונים וכלים אישיים של מצב מקצועי (Pro Mode) ---
-        "📐 כל 87 קטגוריות היחידות והמרה מרובה",   // 31
-        "🚰 אינסטלציה, צנרת, ספיקה ולחץ",         // 32
-        "🩺 מינון תרופות, עירוי IV וסוכר",        // 33
-        "🏗️ בנייה, בטון, ריצוף ומיזוג BTU",       // 34
-        "🎨 קודי צבע של נגדים (4/5 פסים)",        // 35
-        "🔋 מפענח קודי קבלים, היגב ואנרגיה",      // 36
-        "🔌 עוביי חוטים AWG/SWG ומפל מתח",        // 37
-        "⚡ מעבדת חוק אוהם, מחלק מתח וסוללה",     // 38
-        "🟢 פלס בנאים דו-צירי עם בועות וכיול",    // 39
-        "🧭 מצפן 3D מכויל, מד אמינות ושדה µT",    // 40
-        "📏 מד-זווית דו-זרועי וסרגל מכויל פיזית", // 41
-        "⏱️ שעון עצר כרונוגרף דו-טבעתי והקפות",   // 42
-        "🔦 פנס LED פיזי, מסך מלא ואיתות SOS",    // 43
-        "⚛️ הטבלה המחזורית, אטום ומסה מולרית",    // 44
-        "📡 מתרגם ומשדר קוד מורס דו-כיווני",      // 45
-        "🔐 מחולל סיסמאות ומד אנטרופיה",          // 46
-        "🔠 גימטריה, אתב״ש, רומית וטקסט",         // 47
-        "🥇 מתכות יקרות (24K-14K), מטבעות וגרפים",// 48
-        "🏠 משכנתא, שפיצר מול קרן שווה וסילוקין", // 49
-        "📈 תשואת ROI, צמיחה CAGR ואינפלציה",     // 50
-        "💼 מרווח רווח, גרף נקודת איזון ותקציב",  // 51
-        "📊 סטטיסטיקה, Z-Score ועקומת פעמון",     // 52
-        "📐 גאומטריה 2D/3D, פיתגורס ושרטוט",      // 53
-        "🔢 תורת המספרים, GCD/LCM וקומבינטוריקה", // 54
-        "☁️ ייצוא PDF/CSV, גיבוי Drive והיסטוריה",// 55
-        "⭐ מרכז המועדפים וחישובים נעוצים",        // 56 (נגיש בלחיצה ארוכה על הכוכב בסרגל העליון)
-        "⚙️ ממירי מכניקה, כוח, מומנט ותאוצה",     // 57
-        "💧 ממירי זורמים, צמיגות, ספיקה וצנרת",   // 58
-        "🔥 ממירי תרמודינמיקה, חום ומיזוג",       // 59
-        "⚡ ממירי חשמל, מגנטיות, שדה והשראות",    // 60
-        "☀️ ממירי אופטיקה, אקוסטיקה וקרינה",      // 61
-        "🧪 ממירי רפואה, כימיה ומעבדה קלינית",    // 62
-        "🌌 ממירי תקשורת, טיפוגרפיה, חלל ובישול", // 63
-        "💳 מחשבון שכר, שעות נוספות, פנסיה ונטו", // 64
-        "🧮 מטריצות, דטרמיננטה ומערכת משוואות",   // 65
-        "🧲 גלאי מתכות ותת-קרקע (EMF)",           // 66
-        "📈 מד רטט וסיסמוגרף חי (Vibrometer)",    // 67
-        "🚨 צופר חירום והתרעה קולית (Siren)",      // 68
-        "🎵 מטרונום מוזיקלי מונפש (BPM)",         // 69
-        "🔢 מונה לחיצות חכם (Tally Counter)",     // 70
-        "🌀 קודי צבע של סלילים (Inductors)",      // 71
-        "🔌 שערים לוגיים וטבלאות אמת",            // 72
-        "🎨 ממיר צבעים HEX / RGB / CMYK",         // 73
-        "🖥️ יחס גובה-רוחב ורזולוציה (PPI)",       // 74
-        "🔋 מרכז טיפול, כיול ובריאות הסוללה",      // 75
-        "⚡ מחשבון חשבון חשמל וצריכת אנרגיה",      // 76
-        "🔐 הצפנת טקסט, צפנים ו-Hash",            // 77
+        "📐 כל 87 קטגוריות היחידות והמרה מרובה",      // 31
+        "🚰 אינסטלציה, צנרת, ספיקה ולחץ",            // 32
+        "🩺 מינון תרופות, עירוי IV וסוכר",           // 33
+        "🏗️ בנייה, בטון, ריצוף ומיזוג BTU",          // 34
+        "🎨 קודי צבע של נגדים (4/5 פסים)",           // 35
+        "🔋 מפענח קודי קבלים, היגב ואנרגיה",         // 36
+        "🔌 עוביי חוטים AWG/SWG ומפל מתח",           // 37
+        "⚡ מעבדת חוק אוהם, מחלק מתח וסוללה",        // 38
+        "🟢 פלס בנאים דו-צירי עם בועות וכיול",       // 39
+        "🧭 מצפן 3D מכויל, מד אמינות ושדה µT",       // 40
+        "📏 מד-זווית דו-זרועי וסרגל מכויל פיזית",    // 41
+        "⏱️ שעון עצר כרונוגרף דו-טבעתי והקפות",      // 42
+        "🔦 פנס LED פיזי, מסך מלא ואיתות SOS",       // 43
+        "⚛️ הטבלה המחזורית, אטום ומסה מולרית",       // 44
+        "📡 מתרגם ומשדר קוד מורס דו-כיווני",         // 45
+        "🔐 מחולל סיסמאות ומד אנטרופיה",             // 46
+        "🔠 גימטריה, אתב״ש, רומית וטקסט",            // 47
+        "🥇 מתכות יקרות (24K-14K), מטבעות וגרפים",   // 48
+        "🏠 משכנתא, שפיצר מול קרן שווה וסילוקין",    // 49
+        "📈 תשואת ROI, צמיחה CAGR ואינפלציה",        // 50
+        "💼 מרווח רווח, גרף נקודת איזון ותקציב",     // 51
+        "📊 סטטיסטיקה, Z-Score ועקומת פעמון",        // 52
+        "📐 גאומטריה 2D/3D, פיתגורס ושרטוט",         // 53
+        "🔢 תורת המספרים, GCD/LCM וקומבינטוריקה",    // 54
+        "☁️ ייצוא PDF/CSV, גיבוי Drive והיסטוריה",   // 55
+        "⭐ מרכז המועדפים וחישובים נעוצים",           // 56
+        "⚙️ ממירי מכניקה, כוח, מומנט ותאוצה",        // 57
+        "💧 ממירי זורמים, צמיגות, ספיקה וצנרת",      // 58
+        "🔥 ממירי תרמודינמיקה, חום ומיזוג",          // 59
+        "⚡ ממירי חשמל, מגנטיות, שדה והשראות",       // 60
+        "☀️ ממירי אופטיקה, אקוסטיקה וקרינה",         // 61
+        "🧪 ממירי רפואה, כימיה ומעבדה קלינית",       // 62
+        "🌌 ממירי תקשורת, טיפוגרפיה, חלל ובישול",    // 63
+        "💳 מחשבון שכר, שעות נוספות, פנסיה ונטו",    // 64
+        "🧮 מטריצות, דטרמיננטה ומערכת משוואות",      // 65
+        "🧲 גלאי מתכות ותת-קרקע (EMF)",              // 66
+        "📈 מד רטט וסיסמוגרף חי (Vibrometer)",       // 67
+        "🚨 צופר חירום והתרעה קולית (Siren)",         // 68
+        "🎵 מטרונום מוזיקלי מונפש (BPM)",            // 69
+        "🔢 מונה לחיצות חכם (Tally Counter)",        // 70
+        "🌀 קודי צבע של סלילים (Inductors)",         // 71
+        "🔌 שערים לוגיים וטבלאות אמת",               // 72
+        "🎨 ממיר צבעים HEX / RGB / CMYK",            // 73
+        "🖥️ יחס גובה-רוחב ורזולוציה (PPI)",          // 74
+        "🔋 מרכז טיפול, כיול ובריאות הסוללה",         // 75
+        "⚡ מחשבון חשבון חשמל וצריכת אנרגיה",         // 76
+        "🔐 הצפנת טקסט, צפנים ו-Hash",               // 77
         "📝 פתקים חכמים ופותר משוואות (Smart Notes)", // 78
-        "💍 מדידת טבעת מכוילת על המסך",           // 79
-        "👟 מידות נעליים, בגדים וכובעים",         // 80
-        "🔤 כלי טקסט ועיבוד מחרוזות",             // 81
-        "🏛️ ספרות רומיות (Roman Numerals)",       // 82
-        "🔢 סדרת מספרים (חשבונית/הנדסית)",        // 83
-        "⚖️ פרופורציות ויחס (A:B = C:X)",          // 84
-        "📈 משוואה לינארית וגרף ישר",             // 85
-        "🎯 יעד חיסכון וזמן הכפלה (Rule 72)",     // 86
-        "💼 ממיר שכר (שעתי/יומי/חודשי/שנתי)",     // 87
-        "🏷️ הנחות מצטברות ומס שירותים",           // 88
-        "📈 תשואת מניות ודיבידנד (Dividend)",     // 89
+        "💍 מדידת טבעת מכוילת על המסך",              // 79
+        "👟 מידות נעליים, בגדים וכובעים",            // 80
+        // --- 15 כלים פיננסיים ומתמטיים מתקדמים (Tabs 81..95) ---
+        "🔤 כלי טקסט ועיבוד מחרוזות",                // 81
+        "🏛️ ספרות רומיות (Roman Numerals)",          // 82
+        "🔢 סדרת מספרים (חשבונית/הנדסית)",           // 83
+        "⚖️ פרופורציות ויחס (A:B = C:X)",             // 84
+        "📈 משוואה לינארית וגרף ישר",                // 85
+        "🎯 יעד חיסכון וזמן הכפלה (Rule 72)",        // 86
+        "💼 ממיר שכר (שעתי/יומי/חודשי/שנתי)",        // 87
+        "🏷️ הנחות מצטברות ומס שירותים",              // 88
+        "📈 תשואת מניות ודיבידנד (Dividend)",        // 89
         "🏦 פיקדון קבוע, תעודת פיקדון וריבית פשוטה", // 90
-        "🌱 מחשבון SIP ושחיקת אינפלציה",          // 91
-        "🚗 הלוואת רכב והחזר E.M.I",              // 92
-        "⏳ ערך עתידי וערך נוכחי (FV / PV)",      // 93
-        "♾️ אנונה ואנונה נצחית (Annuity)",        // 94
-        "🏖️ מחשבון פרישה וקצבה חודשית"            // 95
-        "☀️ מד אור סביבתי (Light Meter)",       // 96
-        "📶 בדיקת מהירות אינטרנט (Speed Test)", // 97
-        "📐 קלינומטר ומד שיפוע דיגיטלי",          // 98 
-        "🌐 פרטי רשת וכתובת IP (Network)"       // 99
-        
+        "🌱 מחשבון SIP ושחיקת אינפלציה",             // 91
+        "🚗 הלוואת רכב והחזר E.M.I",                 // 92
+        "⏳ ערך עתידי וערך נוכחי (FV / PV)",         // 93
+        "♾️ אנונה ואנונה נצחית (Annuity)",           // 94
+        "🏖️ מחשבון פרישה וקצבה חודשית",              // 95
+        // --- 4 כלי חיישנים ורשת (Tabs 96..99) ---
+        "☀️ מד אור סביבתי (Light Meter)",            // 96
+        "📶 בדיקת מהירות אינטרנט (Speed Test)",      // 97
+        "📐 קלינומטר ומד שיפוע דיגיטלי",             // 98
+        "🌐 פרטי רשת וכתובת IP (Network)"            // 99
     )
 
     val drawerSections = listOf(
@@ -225,11 +226,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         Triple(310, "📊 Pro: השקעות, משכנתא, פיקדונות, מניות ופרישה", listOf(48, 49, 50, 51, 64, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95)),
         Triple(311, "🧮 Pro: אלגברה, סדרות, פרופורציות, גאומטריה וענן", listOf(52, 53, 54, 65, 82, 83, 84, 85, 55)),
         Triple(312, "🛠️ Pro: כלי עזר, מטרונום, פתקים ומידות", listOf(69, 70, 78, 79, 80))
-        
     )
 
     // ממפה אוטומטית את אינדקס 79 (מדידת טבעת) לסמל הטבעת (80) ואת 80 (מידות בגדים/נעליים) לסמל הלבוש (81)
-    private fun resolveToolIconCode(tabIndex: Int): Int = if (tabIndex >= 79) tabIndex + 1 else tabIndex
+    private fun resolveToolIconCode(tabIndex: Int): Int = if (tabIndex in 79..80) tabIndex + 1 else tabIndex
 
     var currentInput = ""; var justCalculated = false
     var expressionView: TextView? = null; var currentView: TextView? = null; var memoryIndicator: TextView? = null
@@ -1298,14 +1298,15 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             )
 
             tv.text = IosGlassTheme.cleanCategoryTitle(categories[i], true)
-            val iconCode = resolveToolIconCode(i)
-                        val icon = if (i in 81..95) {
-                ProFinancialAndMathIcons.createVectorIcon(this, i, itemIconCol, 20f, isMinimalistMode, isAuroraMode)
-            } else if (isMinimalistMode) {
-                MinimalistTheme.createMinimalistVectorIcon(this, resolveToolIconCode(i), itemIconCol, 20f)
-            } else {
-                AuroraBorealisTheme.createVectorIcon(this, resolveToolIconCode(i), itemIconCol, 20f, isAuroraMode)
-                        }
+            val icon = when (i) {
+                in 81..95 -> ProFinancialAndMathIcons.createVectorIcon(this, i, itemIconCol, 20f, isMinimalistMode, isAuroraMode)
+                in 96..99 -> ProSensorNetworkIcons.createVectorIcon(this, i, itemIconCol, 20f, isMinimalistMode, isAuroraMode)
+                else -> if (isMinimalistMode) {
+                    MinimalistTheme.createMinimalistVectorIcon(this, resolveToolIconCode(i), itemIconCol, 20f)
+                } else {
+                    AuroraBorealisTheme.createVectorIcon(this, resolveToolIconCode(i), itemIconCol, 20f, isAuroraMode)
+                }
+            }
             if (isRightHanded) tv.setCompoundDrawables(null, null, icon, null)
             else tv.setCompoundDrawables(icon, null, null, null)
 
@@ -1386,7 +1387,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         traverse(settingsRoot)
     }
 
-    // עוטף את תפריט גלגל הצבעים ו-18 האלמנטים בתוך כפתור "התאמה אישית" שנפתח בלחיצה ונסגר בכפתור "סיום"
     private fun createCollapsibleColorCustomizerSection(): View {
         val wrapper = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -1487,30 +1487,30 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             if (v is TextView) {
                 val t = v.text?.toString() ?: ""
                 return t.contains("רטט") ||
-                        t.contains("צלילי הקשה") ||
-                        t.contains("סוג צליל") ||
-                        t.contains("צליל AC") ||
-                        t.contains("אנימציות") ||
-                        t.contains("מסך תמיד דולק") ||
-                        t.contains("צורת כפתורים") ||
-                        t.contains("דיוק עשרוני") ||
-                        t.contains("מצב מקצועי") ||
-                        t.contains("Pro Mode") ||
-                        t.contains("יד דומיננטית") ||
-                        t.contains("רשימת סימון") ||
-                        t.contains("החלקות במסך") ||
-                        t.contains("אודות") ||
-                        t.contains("איפוס הגדרות")
+                    t.contains("צלילי הקשה") ||
+                    t.contains("סוג צליל") ||
+                    t.contains("צליל AC") ||
+                    t.contains("אנימציות") ||
+                    t.contains("מסך תמיד דולק") ||
+                    t.contains("צורת כפתורים") ||
+                    t.contains("דיוק עשרוני") ||
+                    t.contains("מצב מקצועי") ||
+                    t.contains("Pro Mode") ||
+                    t.contains("יד דומיננטית") ||
+                    t.contains("רשימת סימון") ||
+                    t.contains("החלקות במסך") ||
+                    t.contains("אודות") ||
+                    t.contains("איפוס הגדרות")
             }
             if (v is ViewGroup) {
                 for (i in 0 until v.childCount) {
                     val sub = v.getChildAt(i)
                     if (sub is TextView && (
-                                sub.text.toString().contains("רשימת סימון") ||
-                                        sub.text.toString().contains("החלקות במסך") ||
-                                        sub.text.toString().contains("אודות") ||
-                                        sub.text.toString().contains("התאמה אישית")
-                                )
+                        sub.text.toString().contains("רשימת סימון") ||
+                            sub.text.toString().contains("החלקות במסך") ||
+                            sub.text.toString().contains("אודות") ||
+                            sub.text.toString().contains("התאמה אישית")
+                        )
                     ) {
                         return true
                     }
@@ -1539,7 +1539,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         mainContainer.addView(displayModeBtn, 1)
 
-        // הוספת כפתור "התאמה אישית" המתקפל (עם גלגל הצבעים ו-18 האלמנטים)
         val collapsibleCustomizer = createCollapsibleColorCustomizerSection()
         mainContainer.addView(collapsibleCustomizer, 2)
     }
@@ -1835,8 +1834,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     if (!hasProBtn) {
                         val proEnabled = ProState.isProEnabled(prefs)
                         val proBtn = createActionBtn(
-                            if (proEnabled) "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-63 כלים): מופעל 🟢"
-                            else "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-63 כלים): כבוי 🔴",
+                            if (proEnabled) "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-100 כלים): מופעל 🟢"
+                            else "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-100 כלים): כבוי 🔴",
                             proEnabled
                         ) {
                             val nextState = !ProState.isProEnabled(prefs)
@@ -1865,11 +1864,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 }
                 container?.addView(handBtn)
                 container?.addView(createDrawerCalculatorsChecklistSection())
-
-                // הוספת כפתור "החלקות במסך המחשבון" המתקפל בהגדרות
                 container?.addView(CalculatorGestureManager.createCollapsibleGesturesSettingsSection(this))
-
-                // הוספת כפתור "אודות ומעקב גרסאות ועדכונים" בהגדרות
                 container?.addView(AppVersionTracker.createAboutSettingsButton(this))
 
                 unifyThemeSelectorAndCustomizerInSettings(settingsView)
@@ -1894,7 +1889,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             28 -> createHexConverter()
             29 -> createSavingsCalculator()
             30 -> createDateAnniversaryCalculator()
-            // --- כל מסכי ה-Pro המעוצבים בקנבה (31..80) ---
+            // --- כל מסכי ה-Pro המעוצבים בקנבה (31..99) ---
             31 -> createPro87UnitConverter()
             32 -> createProPlumbingAndFluidsScreen()
             33 -> createProMedicalDosageScreen()
@@ -1944,7 +1939,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             77 -> createProEncryptionLabScreen()
             78 -> createProSmartNotesScreen()
             79 -> createProRingSizerScreen()
-                        80 -> createProShoeClothingHatSizeScreen()
+            80 -> createProShoeClothingHatSizeScreen()
             81 -> createProTextToolsStudioScreen()
             82 -> createProRomanNumeralsScreen()
             83 -> createProNumberSeriesScreen()
@@ -1975,8 +1970,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             CalculatorGestureManager.applyGestureButtonIcon(rawView, this)
         }
 
-        // חיבור אוטומטי של עדכון ויזואלי חי תוך כדי הקלדה (למעט ממיר הצבעים 73 ופתקים 78 שפועלים באופן עצמאי)
-        if (index !in listOf(0, 1, 19, 73, 78)) {
+        if (index !in listOf(0, 1, 19, 73, 78, 81, 96, 97, 98, 99)) {
             BidiFmt.attachUniversalLiveVisualizer(rawView)
         }
 
@@ -2111,7 +2105,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
         }
         currentView = TextView(this).apply {
-            text = if(currentInput.isEmpty()) "0" else currentInput
+            text = if (currentInput.isEmpty()) "0" else currentInput
             setTextColor(displayNumCol)
             typeface = if (isMinimalistMode) Typeface.create("sans-serif-light", Typeface.NORMAL)
             else if (isCleanGlassActive) Typeface.create("sans-serif-medium", Typeface.BOLD)
@@ -2127,9 +2121,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
 
         displayCard.addView(memoryIndicator); displayCard.addView(expressionView); displayCard.addView(currentView)
-        root.addView(displayCard, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, if(isGrid5x7) 0.28f else 0.32f).apply { bottomMargin = dp(12f) })
+        root.addView(displayCard, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, if (isGrid5x7) 0.28f else 0.32f).apply { bottomMargin = dp(12f) })
 
-        // חיבור מנוע ההחלקות והמחוות המותאמות אישית לצג המחשבון הרגיל והמדעי!
         CalculatorGestureManager.attachToCalculatorDisplay(this, displayCard)
 
         val keypad = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -2147,7 +2140,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
             keypad.addView(rowLayout, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
         }
-        root.addView(keypad, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, if(isGrid5x7) 0.72f else 0.68f)); return root
+        root.addView(keypad, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, if (isGrid5x7) 0.72f else 0.68f)); return root
     }
 
     private fun createAnimatedButton(symbol: String, isSmall: Boolean): TextView {
@@ -2177,7 +2170,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             minimumWidth = dp(44f)
             minimumHeight = dp(44f)
             setPadding(dp(6f), dp(4f), dp(6f), dp(4f))
-            setAutoSizeTextTypeUniformWithConfiguration(10, if(isSmall) 21 else 26, 2, TypedValue.COMPLEX_UNIT_SP)
+            setAutoSizeTextTypeUniformWithConfiguration(10, if (isSmall) 21 else 26, 2, TypedValue.COMPLEX_UNIT_SP)
             typeface = if (isMinimalistMode) Typeface.create("sans-serif", Typeface.NORMAL)
             else if (isCleanGlassActive) Typeface.create("sans-serif-medium", Typeface.BOLD)
             else if (symbol == "=" || isOp || isMem) Typeface.DEFAULT_BOLD
@@ -2352,7 +2345,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
-    // מתקן אוטומטית את כיוון הטקסט (RTL/LTR BiDi) בכל תשובות המחשבונים באפליקציה!
     fun createResultTextView(): TextView = object : TextView(this) {
         override fun setText(text: CharSequence?, type: BufferType?) {
             val raw = text?.toString() ?: ""
