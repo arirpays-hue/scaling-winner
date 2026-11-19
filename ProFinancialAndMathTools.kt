@@ -15,10 +15,9 @@ import java.util.Locale
 import kotlin.math.*
 
 // =========================================================================
-// מעטפת עיצוב קנבס אחידה המותאמת אוטומטית לכל 4 ערכות הנושא
-// (Minimalist / Aurora Borealis / Liquid Glass / Classic)
+// מחלקת צבעי קנבס משותפת (public יחידה בכל הפרויקט — משותפת גם ל-ProSensorAndNetworkTools)
 // =========================================================================
-private data class ProThemeCanvasColors(
+data class ProThemeCanvasColors(
     val isMin: Boolean,
     val isAurora: Boolean,
     val ink: Int,
@@ -32,7 +31,7 @@ private data class ProThemeCanvasColors(
     val warning: Int
 )
 
-private fun MainActivity.getProCanvasColors(): ProThemeCanvasColors {
+fun MainActivity.getProCanvasColors(): ProThemeCanvasColors {
     val isMin = isMinimalistMode
     val isAur = isAuroraMode
     return ProThemeCanvasColors(
@@ -62,7 +61,7 @@ private fun MainActivity.getProCanvasColors(): ProThemeCanvasColors {
     )
 }
 
-private fun MainActivity.styleProCanvasCard(view: View, heightDp: Float) {
+fun MainActivity.styleProCanvasCard(view: View, heightDp: Float) {
     view.layoutParams = LinearLayout.LayoutParams(
         LinearLayout.LayoutParams.MATCH_PARENT,
         dp(heightDp)
@@ -78,16 +77,32 @@ private fun MainActivity.styleProCanvasCard(view: View, heightDp: Float) {
     }
 }
 
-private fun Paint.applyAuroraGlow(enabled: Boolean, colorInt: Int, density: Float) {
+fun Paint.applyAuroraGlow(enabled: Boolean, colorInt: Int, density: Float) {
     if (enabled) {
-        setShadowLayer(6f * density, 0f, 0f, Color.argb(145, Color.red(colorInt), Color.green(colorInt), Color.blue(colorInt)))
+        setShadowLayer(
+            6f * density,
+            0f,
+            0f,
+            Color.argb(145, Color.red(colorInt), Color.green(colorInt), Color.blue(colorInt))
+        )
     } else {
         clearShadowLayer()
     }
 }
 
+private fun calcGcdLong(a: Long, b: Long): Long {
+    var x = abs(a)
+    var y = abs(b)
+    while (y != 0L) {
+        val t = x % y
+        x = y
+        y = t
+    }
+    return x.coerceAtLeast(1L)
+}
+
 // =========================================================================
-// סמלים וקטוריים מותאמים לכל 4 ערכות הנושא עבור הכלים החדשים (Tabs 81..95)
+// סמלים וקטוריים מותאמים לכל 4 ערכות הנושא עבור כלים 81..95
 // =========================================================================
 object ProFinancialAndMathIcons {
     fun createVectorIcon(
@@ -108,7 +123,12 @@ object ProFinancialAndMathIcons {
                 strokeCap = Paint.Cap.ROUND
                 strokeJoin = Paint.Join.ROUND
                 if (isAurora) {
-                    setShadowLayer(4.5f * d, 0f, 0f, Color.argb(165, Color.red(tintColor), Color.green(tintColor), Color.blue(tintColor)))
+                    setShadowLayer(
+                        4.5f * d,
+                        0f,
+                        0f,
+                        Color.argb(165, Color.red(tintColor), Color.green(tintColor), Color.blue(tintColor))
+                    )
                 }
             }
             private val fillP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -217,8 +237,16 @@ object ProFinancialAndMathIcons {
                 }
             }
 
-            override fun setAlpha(alpha: Int) { strokeP.alpha = alpha }
-            override fun setColorFilter(colorFilter: ColorFilter?) { strokeP.colorFilter = colorFilter }
+            override fun setAlpha(alpha: Int) {
+                strokeP.alpha = alpha
+                fillP.alpha = alpha
+            }
+
+            override fun setColorFilter(colorFilter: ColorFilter?) {
+                strokeP.colorFilter = colorFilter
+                fillP.colorFilter = colorFilter
+            }
+
             @Deprecated("Deprecated in Java")
             override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
         }.apply { setBounds(0, 0, sizePx, sizePx) }
@@ -226,7 +254,7 @@ object ProFinancialAndMathIcons {
 }
 
 // =========================================================================
-// 81. כלי טקסט ועיבוד מחרוזות עם טבעת הרכב ומדי צפיפות חיים (Text Tools - Tab 81)
+// 81. כלי טקסט ועיבוד מחרוזות (Text Tools Studio - Tab 81)
 // =========================================================================
 fun MainActivity.createProTextToolsStudioScreen(): View {
     val scroll = ScrollView(this)
@@ -258,11 +286,12 @@ fun MainActivity.createProTextToolsStudioScreen(): View {
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
-            val w = width.toFloat(); val h = height.toFloat()
+            val w = width.toFloat()
+            val h = height.toFloat()
             val pal = getProCanvasColors()
 
-            // טבעת Donut דינמית בצד שמאל של הרכב התווים
-            val cx = w * 0.23f; val cy = h * 0.50f
+            val cx = w * 0.23f
+            val cy = h * 0.50f
             val r = min(w * 0.16f, h * 0.34f)
             val ringRect = RectF(cx - r, cy - r, cx + r, cy + r)
             strokeP.strokeWidth = 9f * d
@@ -273,15 +302,15 @@ fun MainActivity.createProTextToolsStudioScreen(): View {
             if (totalChars > 0) {
                 val spaces = (totalChars - noSpaceChars).coerceAtLeast(0)
                 val segs = listOf(
-                    lettersCount to pal.accent1,
-                    digitsCount to pal.warning,
-                    spaces to pal.accent2,
-                    punctCount to pal.accent3
+                    Pair(lettersCount, pal.accent1),
+                    Pair(digitsCount, pal.warning),
+                    Pair(spaces, pal.accent2),
+                    Pair(punctCount, pal.accent3)
                 )
                 var startAng = -90f
                 for ((cnt, col) in segs) {
                     if (cnt <= 0) continue
-                    val sweep = (cnt.toFloat() / totalChars) * 360f
+                    val sweep = (cnt.toFloat() / totalChars.toFloat()) * 360f
                     strokeP.color = col
                     strokeP.applyAuroraGlow(pal.isAurora, col, d)
                     canvas.drawArc(ringRect, startAng, sweep.coerceAtLeast(2f), false, strokeP)
@@ -297,8 +326,9 @@ fun MainActivity.createProTextToolsStudioScreen(): View {
             txtP.textSize = 9.5f * d
             canvas.drawText("מילים", cx, cy + 14f * d, txtP)
 
-            // 3 מדי פס חיים בצד ימין: אותיות, ספרות, רווחים/פיסוק
-            val barL = w * 0.44f; val barR = w - 18f * d; val barW = (barR - barL).coerceAtLeast(10f)
+            val barL = w * 0.44f
+            val barR = w - 18f * d
+            val barW = (barR - barL).coerceAtLeast(10f)
             val denom = totalChars.coerceAtLeast(1).toFloat()
             val rows = listOf(
                 Triple("אותיות ($lettersCount)", lettersCount / denom, pal.accent1),
@@ -308,13 +338,14 @@ fun MainActivity.createProTextToolsStudioScreen(): View {
             txtP.textAlign = Paint.Align.RIGHT
             for ((idx, item) in rows.withIndex()) {
                 val ry = h * (0.24f + idx * 0.25f)
-                txtP.color = pal.ink; txtP.textSize = 11f * d
+                txtP.color = pal.ink
+                txtP.textSize = 11f * d
                 canvas.drawText("\u200F${item.first}", barR, ry - 4f * d, txtP)
 
                 fillP.color = pal.grid
                 canvas.drawRoundRect(RectF(barL, ry, barR, ry + 7f * d), 4f * d, 4f * d, fillP)
                 fillP.color = item.third
-                val fillW = (barW * item.second.coerceIn(0f, 1f))
+                val fillW = barW * item.second.coerceIn(0f, 1f)
                 if (fillW > 1f) {
                     canvas.drawRoundRect(RectF(barL, ry, barL + fillW, ry + 7f * d), 4f * d, 4f * d, fillP)
                 }
@@ -322,8 +353,18 @@ fun MainActivity.createProTextToolsStudioScreen(): View {
 
             val readSec = ((wordCount / 200.0) * 60.0).roundToInt()
             txtP.textAlign = Paint.Align.CENTER
-            txtP.color = pal.muted; txtP.textSize = 11f * d
-            CanvasUiHelper.drawFittedText(canvas, "\u200Fקריאה: ~${BidiFmt.ltr("$readSec ש׳")} • ${BidiFmt.ltr("${totalChars * 2} Bytes")}", (barL + barR) / 2f, h - 8f * d, barW, 11.5f * d, 8.5f * d, txtP)
+            txtP.color = pal.muted
+            txtP.textSize = 11f * d
+            CanvasUiHelper.drawFittedText(
+                canvas,
+                "\u200Fקריאה: ~${BidiFmt.ltr("$readSec ש׳")} • ${BidiFmt.ltr("${totalChars * 2} Bytes")}",
+                (barL + barR) / 2f,
+                h - 8f * d,
+                barW,
+                11.5f * d,
+                8.5f * d,
+                txtP
+            )
         }
     }.apply { styleProCanvasCard(this, 145f) }
 
@@ -369,7 +410,9 @@ fun MainActivity.createProTextToolsStudioScreen(): View {
         "אותיות קטנות" to { s -> s.lowercase(Locale.getDefault()) },
         "כל מילה באות גדולה" to { s ->
             s.split(" ").joinToString(" ") { w ->
-                w.lowercase(Locale.getDefault()).replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+                w.lowercase(Locale.getDefault()).replaceFirstChar {
+                    if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+                }
             }
         },
         "אות גדולה בתחילת משפט" to { s ->
@@ -405,9 +448,15 @@ fun MainActivity.createProTextToolsStudioScreen(): View {
 
     val chipsScroll = HorizontalScrollView(this).apply {
         isHorizontalScrollBarEnabled = false
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(12f) }
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply { bottomMargin = dp(12f) }
     }
-    val chipsRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+    val chipsRow = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+    }
 
     for ((label, transformFn) in chipTransforms) {
         val chip = TextView(this).apply {
@@ -424,11 +473,13 @@ fun MainActivity.createProTextToolsStudioScreen(): View {
                 setColor(chipBg)
                 setStroke(dp(1.2f), if (isMinimalistMode) Color.parseColor("#E0DBD3") else primaryColor)
             }
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(4f), dp(2f), dp(4f), dp(2f)) }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(dp(4f), dp(2f), dp(4f), dp(2f)) }
             setOnClickListener {
                 feedback(it)
-                val current = textIn.text?.toString() ?: ""
-                textIn.setText(transformFn(current))
+                textIn.setText(transformFn(textIn.text?.toString() ?: ""))
                 textIn.setSelection(textIn.text.length)
             }
         }
@@ -449,22 +500,37 @@ fun MainActivity.createProTextToolsStudioScreen(): View {
     val shareBtn = createActionBtn("📤 שיתוף", false) {
         val txt = textIn.text?.toString() ?: ""
         if (txt.isNotEmpty()) {
-            startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, txt) }, "שתף טקסט באמצעות"))
+            startActivity(
+                Intent.createChooser(
+                    Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, txt)
+                    },
+                    "שתף טקסט באמצעות"
+                )
+            )
         }
     }.apply { layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = dp(4f); rightMargin = dp(4f) } }
 
     val clearBtn = createActionBtn("🧹 נקה", false) { textIn.setText("") }.apply {
         layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.9f).apply { leftMargin = dp(5f) }
     }
-    bottomActionsRow.addView(copyBtn); bottomActionsRow.addView(shareBtn); bottomActionsRow.addView(clearBtn)
+    bottomActionsRow.addView(copyBtn)
+    bottomActionsRow.addView(shareBtn)
+    bottomActionsRow.addView(clearBtn)
 
     updateTextCounters()
-    root.addView(textAnalyticsCanvas); root.addView(textIn); root.addView(liveCounterTv); root.addView(chipsScroll); root.addView(bottomActionsRow)
-    scroll.addView(root); return scroll
+    root.addView(textAnalyticsCanvas)
+    root.addView(textIn)
+    root.addView(liveCounterTv)
+    root.addView(chipsScroll)
+    root.addView(bottomActionsRow)
+    scroll.addView(root)
+    return scroll
 }
 
 // =========================================================================
-// 82. ספרות רומיות עם אבני פירוק צבעוניות דינמיות (Roman Numerals - Tab 82)
+// 82. ספרות רומיות (Roman Numerals Converter - Tab 82)
 // =========================================================================
 fun MainActivity.createProRomanNumeralsScreen(): View {
     val scroll = ScrollView(this)
@@ -483,21 +549,21 @@ fun MainActivity.createProRomanNumeralsScreen(): View {
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
-            val w = width.toFloat(); val h = height.toFloat()
+            val w = width.toFloat()
+            val h = height.toFloat()
             val pal = getProCanvasColors()
 
-            // כותרת חקוקה בראש לוח האבן
             txtP.typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD)
             txtP.color = pal.ink
             CanvasUiHelper.drawFittedText(canvas, BidiFmt.ltr(curRoman), w / 2f, h * 0.30f, w - 36f * d, 28f * d, 14f * d, txtP)
 
-            // שורת אבני הפירוק הפרופורציונליות החיות
             val blocks = curBlocks.ifEmpty { listOf("?" to 1) }
             val padX = 16f * d
             val gap = 6f * d
             val totalW = (w - 2 * padX - gap * (blocks.size - 1)).coerceAtLeast(20f)
             val blockW = totalW / blocks.size
-            val topY = h * 0.44f; val botY = h * 0.80f
+            val topY = h * 0.44f
+            val botY = h * 0.80f
 
             for ((i, pair) in blocks.withIndex()) {
                 val bx = padX + i * (blockW + gap)
@@ -516,8 +582,7 @@ fun MainActivity.createProRomanNumeralsScreen(): View {
                 strokeP.applyAuroraGlow(pal.isAurora, col, d)
                 canvas.drawRoundRect(rect, 12f * d, 12f * d, strokeP)
 
-                val textCol = if (pal.isMin) MinimalistTheme.ensureReadableTextOnBg(pal.ink, col, 2.3) else Color.WHITE
-                txtP.color = textCol
+                txtP.color = if (pal.isMin) MinimalistTheme.ensureReadableTextOnBg(pal.ink, col, 2.3) else Color.WHITE
                 txtP.typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD)
                 CanvasUiHelper.drawFittedText(canvas, pair.first, rect.centerX(), topY + (botY - topY) * 0.48f, blockW - 6f * d, 14.5f * d, 9.5f * d, txtP)
 
@@ -525,7 +590,9 @@ fun MainActivity.createProRomanNumeralsScreen(): View {
                 CanvasUiHelper.drawFittedText(canvas, BidiFmt.ltr("+${pair.second}"), rect.centerX(), botY - 8f * d, blockW - 6f * d, 10.5f * d, 8f * d, txtP)
             }
 
-            txtP.color = pal.muted; txtP.typeface = Typeface.DEFAULT_BOLD; txtP.textSize = 11.5f * d
+            txtP.color = pal.muted
+            txtP.typeface = Typeface.DEFAULT_BOLD
+            txtP.textSize = 11.5f * d
             canvas.drawText(BidiFmt.ltr("= $curDecimal"), w / 2f, h - 8f * d, txtP)
         }
     }.apply { styleProCanvasCard(this, 175f) }
@@ -551,7 +618,9 @@ fun MainActivity.createProRomanNumeralsScreen(): View {
         for ((v, sym) in romanTable) {
             var count = 0
             while (rem >= v) {
-                sb.append(sym); rem -= v; count++
+                sb.append(sym)
+                rem -= v
+                count++
             }
             if (count > 0) blocks.add(sym.repeat(count) to (count * v))
         }
@@ -574,7 +643,8 @@ fun MainActivity.createProRomanNumeralsScreen(): View {
     fun updateFromDecimal() {
         curDecimal = BidiFmt.evalInputExpr(decIn, 2026.0).roundToInt().coerceIn(1, 3999)
         val (rom, blocks) = toRomanWithBlocks(curDecimal)
-        curRoman = rom; curBlocks = blocks
+        curRoman = rom
+        curBlocks = blocks
         romanCanvas.invalidate()
         resTv.text = BidiFmt.rtlParagraph(
             "תוצאת המרת ספרות רומיות:",
@@ -592,7 +662,8 @@ fun MainActivity.createProRomanNumeralsScreen(): View {
             if (parsed in 1..3999) {
                 curDecimal = parsed
                 val (rom, blocks) = toRomanWithBlocks(parsed)
-                curRoman = rom; curBlocks = blocks
+                curRoman = rom
+                curBlocks = blocks
                 romanCanvas.invalidate()
                 resTv.text = BidiFmt.rtlParagraph(
                     "פענוח ספרות רומיות:",
@@ -608,18 +679,23 @@ fun MainActivity.createProRomanNumeralsScreen(): View {
     val calcBtn = createActionBtn("המר ופענח ספרות רומיות 🏛️", true) { updateFromDecimal() }
     updateFromDecimal()
 
-    root.addView(romanCanvas); root.addView(decIn); root.addView(romIn); root.addView(calcBtn)
-    root.addView(createPinResultButton(resTv)); root.addView(resTv)
-    scroll.addView(root); return scroll
+    root.addView(romanCanvas)
+    root.addView(decIn)
+    root.addView(romIn)
+    root.addView(calcBtn)
+    root.addView(createPinResultButton(resTv))
+    root.addView(resTv)
+    scroll.addView(root)
+    return scroll
 }
 
 // =========================================================================
-// 83. סדרת מספרים עם גרף דו-כיווני (חיובי/שלילי) ועקומת מגמה חיה (Tab 83)
+// 83. סדרת מספרים עם גרף דו-כיווני ועקומת מגמה חיה (Tab 83)
 // =========================================================================
 fun MainActivity.createProNumberSeriesScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("🔢 סדרת מספרים (Arithmetic, Geometric & Fibonacci)", "גרף עמודות ועקומת מגמה חי התומך גם בסדרות עולות, יורדות ושליליות"))
+    root.addView(createProCanvaHeader("🔢 סדרת מספרים (Arithmetic, Geometric & Fibonacci)", "גרף עמודות ועקומת מגמה חי התומך בסדרות עולות, יורדות ושליליות"))
 
     val seriesModes = listOf("סדרה חשבונית (הפרש קבוע d)", "סדרה הנדסית (מנה קבועה q)", "סדרת פיבונאצ׳י (Fn = Fn-1 + Fn-2)")
     var modeIdx = 0
@@ -634,7 +710,8 @@ fun MainActivity.createProNumberSeriesScreen(): View {
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
-            val w = width.toFloat(); val h = height.toFloat()
+            val w = width.toFloat()
+            val h = height.toFloat()
             val pal = getProCanvasColors()
 
             val terms = previewTerms.ifEmpty { listOf(1.0) }
@@ -642,12 +719,15 @@ fun MainActivity.createProNumberSeriesScreen(): View {
             val maxV = max(0.0, terms.maxOrNull() ?: 1.0)
             val span = (maxV - minV).coerceAtLeast(1e-6)
 
-            val padL = 18f * d; val padR = w - 18f * d
-            val topY = 24f * d; val botY = h - 26f * d
+            val padL = 18f * d
+            val padR = w - 18f * d
+            val topY = 24f * d
+            val botY = h - 26f * d
             val plotH = (botY - topY).coerceAtLeast(10f)
             val zeroY = (topY + (maxV / span) * plotH).toFloat()
 
-            axisP.strokeWidth = 1.3f * d; axisP.color = pal.grid
+            axisP.strokeWidth = 1.3f * d
+            axisP.color = pal.grid
             canvas.drawLine(padL, zeroY, padR, zeroY, axisP)
 
             val slotW = (padR - padL) / terms.size.coerceAtLeast(1)
@@ -663,20 +743,23 @@ fun MainActivity.createProNumberSeriesScreen(): View {
                 } else {
                     Color.argb(if (pal.isMin) 210 else 145, Color.red(pal.negative), Color.green(pal.negative), Color.blue(pal.negative))
                 }
-                val rTop = min(zeroY, valY); val rBot = max(zeroY, valY)
+                val rTop = min(zeroY, valY)
+                val rBot = max(zeroY, valY)
                 canvas.drawRoundRect(RectF(cx - bw / 2f, rTop, cx + bw / 2f, rBot.coerceAtLeast(rTop + 3f * d)), 5f * d, 5f * d, barP)
 
                 if (i == 0) curvePath.moveTo(cx, valY) else curvePath.lineTo(cx, valY)
 
-                txtP.color = pal.ink; txtP.textSize = 9.5f * d
+                txtP.color = pal.ink
+                txtP.textSize = 9.5f * d
                 val lblY = if (v >= 0) (valY - 5f * d).coerceAtLeast(12f * d) else (valY + 12f * d).coerceAtMost(h - 16f * d)
                 canvas.drawText(BidiFmt.ltr(Utils.formatResult(v, 1)), cx, lblY, txtP)
 
-                txtP.color = pal.muted; txtP.textSize = 9.5f * d
+                txtP.color = pal.muted
                 canvas.drawText(BidiFmt.ltr("a${i + 1}"), cx, h - 8f * d, txtP)
             }
 
-            lineP.strokeWidth = 2.4f * d; lineP.color = pal.accent2
+            lineP.strokeWidth = 2.4f * d
+            lineP.color = pal.accent2
             lineP.applyAuroraGlow(pal.isAurora, pal.accent2, d)
             canvas.drawPath(curvePath, lineP)
 
@@ -700,8 +783,8 @@ fun MainActivity.createProNumberSeriesScreen(): View {
         val dq = BidiFmt.evalInputExpr(diffIn, 3.0)
         val n = BidiFmt.evalInputExpr(nIn, 10.0).roundToInt().coerceIn(1, 200)
         diffIn.visibility = if (modeIdx == 2) View.GONE else View.VISIBLE
-
         val countPreview = min(n, 9)
+
         when (modeIdx) {
             0 -> {
                 previewTerms = (1..countPreview).map { i -> a1 + (i - 1) * dq }
@@ -719,7 +802,11 @@ fun MainActivity.createProNumberSeriesScreen(): View {
                 previewTerms = (1..countPreview).map { i -> a1 * dq.pow((i - 1).toDouble()) }
                 val an = a1 * dq.pow((n - 1).toDouble())
                 val sn = if (abs(dq - 1.0) < 1e-9) a1 * n else a1 * (dq.pow(n.toDouble()) - 1.0) / (dq - 1.0)
-                val infSum = if (abs(dq) < 1.0) "• סכום סדרה אינסופית מתכנסת (${BidiFmt.ltr("S∞")}): ${BidiFmt.ltr(Utils.formatResult(a1 / (1.0 - dq), calcPrecision))}" else "• התכנסות: הסדרה אינה מתכנסת (${BidiFmt.ltr("|q| ≥ 1")})"
+                val infSum = if (abs(dq) < 1.0) {
+                    "• סכום סדרה אינסופית מתכנסת (${BidiFmt.ltr("S∞")}): ${BidiFmt.ltr(Utils.formatResult(a1 / (1.0 - dq), calcPrecision))}"
+                } else {
+                    "• התכנסות: הסדרה אינה מתכנסת (${BidiFmt.ltr("|q| ≥ 1")})"
+                }
                 resTv.text = BidiFmt.rtlParagraph(
                     "תוצאות סדרה הנדסית (${BidiFmt.ltr("a₁=${Utils.formatResult(a1, 2)}, q=${Utils.formatResult(dq, 2)}")}):",
                     "• האיבר ה-${BidiFmt.ltr(n)} (${BidiFmt.ltr("aₙ")}): ${BidiFmt.ltr(Utils.formatResult(an, calcPrecision))}",
@@ -737,11 +824,16 @@ fun MainActivity.createProNumberSeriesScreen(): View {
                     }
                 }
                 previewTerms = fib.take(9)
+                val ratioStr = if (fib.size >= 2 && fib[fib.size - 2] != 0.0) {
+                    Utils.formatResult(fib.last() / fib[fib.size - 2], 6)
+                } else {
+                    "1.618034"
+                }
                 resTv.text = BidiFmt.rtlParagraph(
                     "תוצאות סדרת פיבונאצ׳י:",
                     "• האיבר ה-${BidiFmt.ltr(fib.size)}: ${BidiFmt.ltr(Utils.formatResult(fib.lastOrNull() ?: a1, 0))}",
                     "• סכום ${BidiFmt.ltr(fib.size)} האיברים: ${BidiFmt.ltr(Utils.formatResult(fib.sum(), 0))}",
-                    "• יחס הזהב בין שני האחרונים (φ): ${BidiFmt.ltr(if (fib.size >= 2 && fib[fib.size - 2] != 0.0) Utils.formatResult(fib.last() / fib[fib.size - 2], 6) else "1.618034")}"
+                    "• יחס הזהב בין שני האחרונים (φ): ${BidiFmt.ltr(ratioStr)}"
                 )
             }
         }
@@ -760,20 +852,30 @@ fun MainActivity.createProNumberSeriesScreen(): View {
     val calcBtn = createActionBtn("חשב סדרת מספרים 🔢", false) { updateSeries() }
     updateSeries()
 
-    root.addView(seriesCanvas); root.addView(modeBtn); root.addView(a1In); root.addView(diffIn); root.addView(nIn)
-    root.addView(calcBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
-    scroll.addView(root); return scroll
+    root.addView(seriesCanvas)
+    root.addView(modeBtn)
+    root.addView(a1In)
+    root.addView(diffIn)
+    root.addView(nIn)
+    root.addView(calcBtn)
+    root.addView(createPinResultButton(resTv))
+    root.addView(resTv)
+    scroll.addView(root)
+    return scroll
 }
 
 // =========================================================================
-// 84. פרופורציות ויחס עם תרשים עוגה חי ומאזני פרופורציה כפולים (Tab 84)
+// 84. פרופורציות ויחס עם תרשים עוגה חי ופסים מקבילים (Tab 84)
 // =========================================================================
 fun MainActivity.createProProportionsAndRatioScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
     root.addView(createProCanvaHeader("⚖️ פרופורציות ויחס (Proportions & Ratio)", "תרשים עוגה חי ופסי השוואת פרופורציה A : B = C : X המשתנים בזמן אמת"))
 
-    var valA = 4.0; var valB = 6.0; var valC = 10.0; var valX = 15.0
+    var valA = 4.0
+    var valB = 6.0
+    var valC = 10.0
+    var valX = 15.0
 
     val propCanvas = object : View(this) {
         private val fillP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
@@ -783,14 +885,15 @@ fun MainActivity.createProProportionsAndRatioScreen(): View {
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
-            val w = width.toFloat(); val h = height.toFloat()
+            val w = width.toFloat()
+            val h = height.toFloat()
             val pal = getProCanvasColors()
 
             val sumAB = (abs(valA) + abs(valB)).coerceAtLeast(1e-6)
             val ratioA = (abs(valA) / sumAB).toFloat().coerceIn(0.05f, 0.95f)
 
-            // צד שמאל: תרשים עוגה חי ליחס A:B
-            val pieCx = w * 0.21f; val pieCy = h * 0.44f
+            val pieCx = w * 0.21f
+            val pieCy = h * 0.44f
             val pieR = min(w * 0.14f, h * 0.30f)
             val pieRect = RectF(pieCx - pieR, pieCy - pieR, pieCx + pieR, pieCy + pieR)
 
@@ -798,20 +901,20 @@ fun MainActivity.createProProportionsAndRatioScreen(): View {
             canvas.drawArc(pieRect, -90f, ratioA * 360f, true, fillP)
             fillP.color = pal.accent2
             canvas.drawArc(pieRect, -90f + ratioA * 360f, (1f - ratioA) * 360f, true, fillP)
-            strokeP.strokeWidth = 1.6f * d; strokeP.color = pal.ink
+            strokeP.strokeWidth = 1.6f * d
+            strokeP.color = pal.ink
             canvas.drawCircle(pieCx, pieCy, pieR, strokeP)
 
-            // צד ימין: שני פסי פרופורציה מקבילים A:B ו-C:X
-            val barL = w * 0.41f; val barR = w - 18f * d; val barW = (barR - barL).coerceAtLeast(20f)
+            val barL = w * 0.41f
+            val barR = w - 18f * d
+            val barW = (barR - barL).coerceAtLeast(20f)
             val splitX = barL + barW * ratioA
 
-            // פס 1: A : B
             fillP.color = pal.accent1
             canvas.drawRoundRect(RectF(barL, 20f * d, splitX - 2f * d, 46f * d), 8f * d, 8f * d, fillP)
             fillP.color = pal.accent2
             canvas.drawRoundRect(RectF(splitX + 2f * d, 20f * d, barR, 46f * d), 8f * d, 8f * d, fillP)
 
-            // פס 2: C : X (באותו יחס בדיוק!)
             fillP.color = Color.argb(190, Color.red(pal.accent1), Color.green(pal.accent1), Color.blue(pal.accent1))
             canvas.drawRoundRect(RectF(barL, 58f * d, splitX - 2f * d, 84f * d), 8f * d, 8f * d, fillP)
             fillP.color = Color.argb(190, Color.red(pal.accent2), Color.green(pal.accent2), Color.blue(pal.accent2))
@@ -848,15 +951,17 @@ fun MainActivity.createProProportionsAndRatioScreen(): View {
         valX = if (abs(valA) > 1e-12) (valB * valC) / valA else 0.0
         propCanvas.invalidate()
 
-        val g = Utils.gcd(valA.roundToLong().coerceAtLeast(1L), valB.roundToLong().coerceAtLeast(1L)).coerceAtLeast(1L)
-        val simpA = valA.roundToLong() / g; val simpB = valB.roundToLong() / g
+        val g = calcGcdLong(valA.roundToLong().coerceAtLeast(1L), valB.roundToLong().coerceAtLeast(1L))
+        val simpA = valA.roundToLong() / g
+        val simpB = valB.roundToLong() / g
         val sumParts = (valA + valB).let { if (abs(it) < 1e-12) 1.0 else it }
-        val shareA = totalAmount * (valA / sumParts); val shareB = totalAmount * (valB / sumParts)
+        val shareA = totalAmount * (valA / sumParts)
+        val shareB = totalAmount * (valB / sumParts)
 
         resTv.text = BidiFmt.rtlParagraph(
             "פתרון פרופורציה וניתוח יחס:",
             "• הנעלם בפרופורציה (${BidiFmt.ltr("X = B × C / A")}): ${BidiFmt.ltr("X = ${Utils.formatResult(valX, calcPrecision)}")}",
-            "• יחס מצומצם של ${BidiFmt.ltr("A : B")}: ${BidiFmt.ltr("$simpA : $simpB")} (מנה עשרונית: ${BidiFmt.ltr(Utils.formatResult(if (abs(valB) > 1e-12) valA / valB else 0.0, 4))})",
+            "• יחס מצומצם של ${BidiFmt.ltr("A : B")}: ${BidiFmt.ltr("$simpA : $simpB")} (מנה: ${BidiFmt.ltr(Utils.formatResult(if (abs(valB) > 1e-12) valA / valB else 0.0, 4))})",
             "• חלוקת ${BidiFmt.ltr(Utils.formatResult(totalAmount, 2))} לפי היחס ${BidiFmt.ltr("A:B")}:",
             "  חלק A (${BidiFmt.ltr("${Utils.formatResult((valA / sumParts) * 100, 1)}%")}): ${BidiFmt.ltr(Utils.formatResult(shareA, 2))}  |  חלק B (${BidiFmt.ltr("${Utils.formatResult((valB / sumParts) * 100, 1)}%")}): ${BidiFmt.ltr(Utils.formatResult(shareB, 2))}"
         )
@@ -866,20 +971,31 @@ fun MainActivity.createProProportionsAndRatioScreen(): View {
     val calcBtn = createActionBtn("פתור פרופורציה ויחס ⚖️", true) { updateProportions() }
     updateProportions()
 
-    root.addView(propCanvas); root.addView(aIn); root.addView(bIn); root.addView(cIn); root.addView(amountIn)
-    root.addView(calcBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
-    scroll.addView(root); return scroll
+    root.addView(propCanvas)
+    root.addView(aIn)
+    root.addView(bIn)
+    root.addView(cIn)
+    root.addView(amountIn)
+    root.addView(calcBtn)
+    root.addView(createPinResultButton(resTv))
+    root.addView(resTv)
+    scroll.addView(root)
+    return scroll
 }
 
 // =========================================================================
-// 85. משוואה לינארית עם מערכת צירים מדויקת, חיתוכים וזווית שיפוע חיה (Tab 85)
+// 85. משוואה לינארית עם מערכת צירים קרטזית ונקודות חיתוך (Tab 85)
 // =========================================================================
 fun MainActivity.createProLinearEquationScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
     root.addView(createProCanvaHeader("📈 משוואה לינארית וגרף ישר (aX + b = c)", "מערכת צירים מתמטית מדויקת המתכווננת אוטומטית לפי השיפוע ונקודות החיתוך עם הצירים"))
 
-    var curA = 2.0; var curB = -4.0; var curC = 6.0; var rootX = 5.0; var yIntercept = -10.0
+    var curA = 2.0
+    var curB = -4.0
+    var curC = 6.0
+    var rootX = 5.0
+    var yIntercept = -10.0
 
     val linearCanvas = object : View(this) {
         private val gridP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
@@ -891,11 +1007,14 @@ fun MainActivity.createProLinearEquationScreen(): View {
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
-            val w = width.toFloat(); val h = height.toFloat()
+            val w = width.toFloat()
+            val h = height.toFloat()
             val pal = getProCanvasColors()
 
-            val padL = 22f * d; val padR = w - 22f * d
-            val padT = 20f * d; val padB = h - 30f * d
+            val padL = 22f * d
+            val padR = w - 22f * d
+            val padT = 20f * d
+            val padB = h - 30f * d
             val plotW = (padR - padL).coerceAtLeast(10f)
             val plotH = (padB - padT).coerceAtLeast(10f)
 
@@ -903,8 +1022,8 @@ fun MainActivity.createProLinearEquationScreen(): View {
             fun toPxX(x: Double): Float = (padL + ((x + maxRange) / (2.0 * maxRange)) * plotW).toFloat()
             fun toPxY(y: Double): Float = (padB - ((y + maxRange) / (2.0 * maxRange)) * plotH).toFloat()
 
-            // רשת קרטזית
-            gridP.strokeWidth = 0.8f * d; gridP.color = pal.grid
+            gridP.strokeWidth = 0.8f * d
+            gridP.color = pal.grid
             for (k in -2..2) {
                 if (k == 0) continue
                 val v = k * (maxRange / 2.0)
@@ -912,32 +1031,34 @@ fun MainActivity.createProLinearEquationScreen(): View {
                 canvas.drawLine(padL, toPxY(v), padR, toPxY(v), gridP)
             }
 
-            // צירי X ו-Y ראשיים
-            val ox = toPxX(0.0); val oy = toPxY(0.0)
-            axisP.strokeWidth = 1.6f * d; axisP.color = pal.muted
+            val ox = toPxX(0.0)
+            val oy = toPxY(0.0)
+            axisP.strokeWidth = 1.6f * d
+            axisP.color = pal.muted
             canvas.drawLine(padL, oy, padR, oy, axisP)
             canvas.drawLine(ox, padT, ox, padB, axisP)
 
-            // שרטוט הישר המדויק y = a*x + (b - c) חתוך לגבולות הגרף
             canvas.save()
             canvas.clipRect(padL, padT, padR, padB)
-            val xLeft = -maxRange; val yLeft = curA * xLeft + yIntercept
-            val xRight = maxRange; val yRight = curA * xRight + yIntercept
-            lineP.strokeWidth = 3f * d; lineP.color = pal.accent2
+            val xLeft = -maxRange
+            val yLeft = curA * xLeft + yIntercept
+            val xRight = maxRange
+            val yRight = curA * xRight + yIntercept
+            lineP.strokeWidth = 3f * d
+            lineP.color = pal.accent2
             lineP.applyAuroraGlow(pal.isAurora, pal.accent2, d)
             canvas.drawLine(toPxX(xLeft), toPxY(yLeft), toPxX(xRight), toPxY(yRight), lineP)
             canvas.restore()
 
-            // נקודת חיתוך עם ציר X (הפתרון)
             if (abs(curA) > 1e-12) {
                 val rPx = toPxX(rootX).coerceIn(padL, padR)
                 dotP.color = pal.positive
                 canvas.drawCircle(rPx, oy, 6f * d, dotP)
-                txtP.color = pal.positive; txtP.textSize = 10.5f * d
+                txtP.color = pal.positive
+                txtP.textSize = 10.5f * d
                 canvas.drawText(BidiFmt.ltr("X=${Utils.formatResult(rootX, 2)}"), rPx, (oy - 10f * d).coerceAtLeast(padT + 10f * d), txtP)
             }
 
-            // נקודת חיתוך עם ציר Y
             val yIntPx = toPxY(yIntercept).coerceIn(padT, padB)
             dotP.color = pal.accent3
             canvas.drawCircle(ox, yIntPx, 5.5f * d, dotP)
@@ -988,21 +1109,31 @@ fun MainActivity.createProLinearEquationScreen(): View {
     val calcBtn = createActionBtn("פתור משוואה לינארית 📈", true) { solveLinear() }
     solveLinear()
 
-    root.addView(linearCanvas); root.addView(aIn); root.addView(bIn); root.addView(cIn)
-    root.addView(calcBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
-    scroll.addView(root); return scroll
+    root.addView(linearCanvas)
+    root.addView(aIn)
+    root.addView(bIn)
+    root.addView(cIn)
+    root.addView(calcBtn)
+    root.addView(createPinResultButton(resTv))
+    root.addView(resTv)
+    scroll.addView(root)
+    return scroll
 }
 
 // =========================================================================
-// 86. יעד חיסכון וזמן הכפלה עם גרף צמיחה דו-שכבתי וסמן הכפלה חי (Tab 86)
+// 86. יעד חיסכון וזמן הכפלה עם גרף צמיחה דו-שכבתי (Tab 86)
 // =========================================================================
 fun MainActivity.createProSavingsGoalAndDoublingScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
-    root.addView(createProCanvaHeader("🎯 יעד חיסכון וזמן הכפלה (Savings Goal & Rule of 72)", "עקומת צבירה חיה של קרן מול ריבית עד השגת היעד + סמן זמן הכפלת הכסף"))
+    root.addView(createProCanvaHeader("🎯 יעד חיסכון וזמן הכפלה (Savings Goal & Rule of 72)", "עקומת צבירה חיה של קרן מול ריבית עד השגת היעד + סמן זמן הכפלת ההון"))
 
-    var curInitial = 10000.0; var curTarget = 100000.0; var curYears = 3.0; var curRatePct = 6.0
-    var curMonthlyPmt = 2150.0; var curDoubleYears = 11.9
+    var curInitial = 10000.0
+    var curTarget = 100000.0
+    var curYears = 3.0
+    var curRatePct = 6.0
+    var curMonthlyPmt = 2150.0
+    var curDoubleYears = 11.9
 
     val goalCanvas = object : View(this) {
         private val fillP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
@@ -1013,11 +1144,14 @@ fun MainActivity.createProSavingsGoalAndDoublingScreen(): View {
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
-            val w = width.toFloat(); val h = height.toFloat()
+            val w = width.toFloat()
+            val h = height.toFloat()
             val pal = getProCanvasColors()
 
-            val padL = 22f * d; val padR = w - 22f * d
-            val padT = 26f * d; val padB = h - 30f * d
+            val padL = 22f * d
+            val padR = w - 22f * d
+            val padT = 26f * d
+            val padB = h - 30f * d
             val plotW = (padR - padL).coerceAtLeast(10f)
             val plotH = (padB - padT).coerceAtLeast(10f)
 
@@ -1044,7 +1178,8 @@ fun MainActivity.createProSavingsGoalAndDoublingScreen(): View {
 
                 if (s == 0) {
                     totalPath.moveTo(px, pyBal)
-                    totalArea.moveTo(px, padB); totalArea.lineTo(px, pyBal)
+                    totalArea.moveTo(px, padB)
+                    totalArea.lineTo(px, pyBal)
                     contribPath.moveTo(px, pyCon)
                 } else {
                     totalPath.lineTo(px, pyBal)
@@ -1052,27 +1187,31 @@ fun MainActivity.createProSavingsGoalAndDoublingScreen(): View {
                     contribPath.lineTo(px, pyCon)
                 }
             }
-            totalArea.lineTo(padR, padB); totalArea.close()
+            totalArea.lineTo(padR, padB)
+            totalArea.close()
 
             fillP.color = Color.argb(55, Color.red(pal.positive), Color.green(pal.positive), Color.blue(pal.positive))
             canvas.drawPath(totalArea, fillP)
 
-            dashP.strokeWidth = 1.6f * d; dashP.color = pal.accent2
+            dashP.strokeWidth = 1.6f * d
+            dashP.color = pal.accent2
             canvas.drawPath(contribPath, dashP)
 
-            lineP.strokeWidth = 2.8f * d; lineP.color = pal.positive
+            lineP.strokeWidth = 2.8f * d
+            lineP.color = pal.positive
             lineP.applyAuroraGlow(pal.isAurora, pal.positive, d)
             canvas.drawPath(totalPath, lineP)
 
-            // קו יעד עליון
-            dashP.color = pal.grid; dashP.strokeWidth = 1.2f * d
+            dashP.color = pal.grid
+            dashP.strokeWidth = 1.2f * d
             canvas.drawLine(padL, padT, padR, padT, dashP)
 
             txtP.color = pal.ink
             val topHeader = "\u200Fהפקדה נדרשת: ${BidiFmt.ltr("₪${Utils.formatResult(curMonthlyPmt, 0)} / חודש")}  |  הכפלה: ${BidiFmt.ltr("${Utils.formatResult(curDoubleYears, 1)} שנים")}"
             CanvasUiHelper.drawFittedText(canvas, topHeader, w / 2f, 18f * d, w - 24f * d, 13f * d, 9f * d, txtP)
 
-            txtP.color = pal.muted; txtP.textSize = 11f * d
+            txtP.color = pal.muted
+            txtP.textSize = 11f * d
             canvas.drawText("\u200Fירוק = יתרה כוללת עם ריבית  •  מקווקו = קרן מהכיס", w / 2f, h - 8f * d, txtP)
         }
     }.apply { styleProCanvasCard(this, 185f) }
@@ -1115,9 +1254,16 @@ fun MainActivity.createProSavingsGoalAndDoublingScreen(): View {
     val calcBtn = createActionBtn("חשב יעד חיסכון וזמן הכפלה 🎯", true) { calcSavingsGoal() }
     calcSavingsGoal()
 
-    root.addView(goalCanvas); root.addView(targetIn); root.addView(initIn); root.addView(yearsIn); root.addView(rateIn)
-    root.addView(calcBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
-    scroll.addView(root); return scroll
+    root.addView(goalCanvas)
+    root.addView(targetIn)
+    root.addView(initIn)
+    root.addView(yearsIn)
+    root.addView(rateIn)
+    root.addView(calcBtn)
+    root.addView(createPinResultButton(resTv))
+    root.addView(resTv)
+    scroll.addView(root)
+    return scroll
 }
 
 // =========================================================================
@@ -1130,7 +1276,11 @@ fun MainActivity.createProSalaryPeriodConverterScreen(): View {
 
     val periods = listOf("שכר חודשי", "שכר שעתי", "שכר יומי", "שכר שבועי", "שכר שנתי")
     var periodIdx = 0
-    var hourlyVal = 65.0; var dailyVal = 546.0; var weeklyVal = 2730.0; var monthlyVal = 12000.0; var yearlyVal = 144000.0
+    var hourlyVal = 65.0
+    var dailyVal = 546.0
+    var weeklyVal = 2730.0
+    var monthlyVal = 12000.0
+    var yearlyVal = 144000.0
     var curWeeklyHours = 42.0
 
     val salaryCanvas = object : View(this) {
@@ -1141,29 +1291,37 @@ fun MainActivity.createProSalaryPeriodConverterScreen(): View {
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
-            val w = width.toFloat(); val h = height.toFloat()
+            val w = width.toFloat()
+            val h = height.toFloat()
             val pal = getProCanvasColors()
 
-            // מד עומס משרה עגול בצד שמאל
-            val gCx = w * 0.16f; val gCy = h * 0.48f; val gR = min(w * 0.11f, h * 0.28f)
-            strokeP.strokeWidth = 6f * d; strokeP.color = pal.grid; strokeP.clearShadowLayer()
+            val gCx = w * 0.16f
+            val gCy = h * 0.48f
+            val gR = min(w * 0.11f, h * 0.28f)
+            strokeP.strokeWidth = 6f * d
+            strokeP.color = pal.grid
+            strokeP.clearShadowLayer()
             canvas.drawCircle(gCx, gCy, gR, strokeP)
+
             val jobLoad = (curWeeklyHours / 42.0).toFloat().coerceIn(0.05f, 1.5f)
             strokeP.color = if (jobLoad > 1.05f) pal.warning else pal.accent1
             strokeP.applyAuroraGlow(pal.isAurora, strokeP.color, d)
-            canvas.drawArc(RectF(gCx - gR, gCy - gR, gCx + gR, gCy + gR), -90f, (jobLoad.coerceAtMost(1f)) * 360f, false, strokeP)
+            canvas.drawArc(RectF(gCx - gR, gCy - gR, gCx + gR, gCy + gR), -90f, jobLoad.coerceAtMost(1f) * 360f, false, strokeP)
 
-            txtP.color = pal.ink; txtP.textSize = 11f * d
+            txtP.color = pal.ink
+            txtP.textSize = 11f * d
             canvas.drawText(BidiFmt.ltr("${(jobLoad * 100).roundToInt()}%"), gCx, gCy + 4f * d, txtP)
-            txtP.color = pal.muted; txtP.textSize = 9.5f * d
+            txtP.color = pal.muted
+            txtP.textSize = 9.5f * d
             canvas.drawText("משרה", gCx, gCy + gR + 14f * d, txtP)
 
-            // 5 עמודות לוגריתמיות דינמיות בצד ימין
             val items = listOf("שעתי" to hourlyVal, "יומי" to dailyVal, "שבועי" to weeklyVal, "חודשי" to monthlyVal, "שנתי" to yearlyVal)
             val maxLog = ln(yearlyVal.coerceAtLeast(10.0) + 1.0)
-            val padL = w * 0.31f; val padR = w - 14f * d
+            val padL = w * 0.31f
+            val padR = w - 14f * d
             val slotW = (padR - padL) / 5f
-            val baseBot = h - 26f * d; val maxH = h * 0.56f
+            val baseBot = h - 26f * d
+            val maxH = h * 0.56f
 
             for ((i, pair) in items.withIndex()) {
                 val logRatio = (ln(pair.second.coerceAtLeast(0.0) + 1.0) / maxLog.coerceAtLeast(1.0)).toFloat().coerceIn(0.12f, 1f)
@@ -1172,12 +1330,13 @@ fun MainActivity.createProSalaryPeriodConverterScreen(): View {
                 val bw = slotW * 0.72f
                 val isSelectedCol = (
                     (periodIdx == 1 && i == 0) || (periodIdx == 2 && i == 1) ||
-                    (periodIdx == 3 && i == 2) || (periodIdx == 0 && i == 3) || (periodIdx == 4 && i == 4)
-                )
+                        (periodIdx == 3 && i == 2) || (periodIdx == 0 && i == 3) || (periodIdx == 4 && i == 4)
+                    )
                 fillP.color = if (isSelectedCol) pal.accent2 else pal.accent1
                 canvas.drawRoundRect(RectF(bx, baseBot - bh, bx + bw, baseBot), 6f * d, 6f * d, fillP)
 
-                txtP.color = pal.ink; txtP.textSize = 9.5f * d
+                txtP.color = pal.ink
+                txtP.textSize = 9.5f * d
                 val shortNum = if (pair.second >= 10000) "${Utils.formatResult(pair.second / 1000.0, 0)}K" else Utils.formatResult(pair.second, 0)
                 canvas.drawText(BidiFmt.ltr("₪$shortNum"), bx + bw / 2f, baseBot - bh - 5f * d, txtP)
                 txtP.color = pal.muted
@@ -1231,9 +1390,16 @@ fun MainActivity.createProSalaryPeriodConverterScreen(): View {
     val calcBtn = createActionBtn("המר שכר לכל התקופות 💼", false) { convertSalary() }
     convertSalary()
 
-    root.addView(salaryCanvas); root.addView(periodBtn); root.addView(amountIn); root.addView(hoursWeekIn); root.addView(daysWeekIn)
-    root.addView(calcBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
-    scroll.addView(root); return scroll
+    root.addView(salaryCanvas)
+    root.addView(periodBtn)
+    root.addView(amountIn)
+    root.addView(hoursWeekIn)
+    root.addView(daysWeekIn)
+    root.addView(calcBtn)
+    root.addView(createPinResultButton(resTv))
+    root.addView(resTv)
+    scroll.addView(root)
+    return scroll
 }
 
 // =========================================================================
@@ -1244,7 +1410,10 @@ fun MainActivity.createProStackedDiscountsScreen(): View {
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
     root.addView(createProCanvaHeader("🏷️ הנחות מצטברות ומס שירותים", "תרשים מפל מחיר (Waterfall) חי המראה את ההוזלה בכל הנחה ואת תוספת המס"))
 
-    var origP = 500.0; var afterD1 = 400.0; var afterD2 = 360.0; var finalWithTax = 360.0
+    var origP = 500.0
+    var afterD1 = 400.0
+    var afterD2 = 360.0
+    var finalWithTax = 360.0
 
     val discCanvas = object : View(this) {
         private val fillP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
@@ -1254,39 +1423,44 @@ fun MainActivity.createProStackedDiscountsScreen(): View {
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
-            val w = width.toFloat(); val h = height.toFloat()
+            val w = width.toFloat()
+            val h = height.toFloat()
             val pal = getProCanvasColors()
 
             val maxP = maxOf(origP, finalWithTax, 1.0)
-            val padL = 18f * d; val padR = w - 18f * d
-            val topY = 24f * d; val botY = h - 28f * d
+            val padL = 18f * d
+            val padR = w - 18f * d
+            val topY = 24f * d
+            val botY = h - 28f * d
             val plotH = (botY - topY).coerceAtLeast(10f)
             fun yOf(v: Double): Float = (botY - (v / maxP).coerceIn(0.0, 1.0) * plotH).toFloat()
 
             val slotW = (padR - padL) / 4f
             val bw = slotW * 0.62f
 
-            val x0 = padL + slotW * 0.5f; val x1 = padL + slotW * 1.5f
-            val x2 = padL + slotW * 2.5f; val x3 = padL + slotW * 3.5f
+            val x0 = padL + slotW * 0.5f
+            val x1 = padL + slotW * 1.5f
+            val x2 = padL + slotW * 2.5f
+            val x3 = padL + slotW * 3.5f
 
-            val yOrig = yOf(origP); val yD1 = yOf(afterD1); val yD2 = yOf(afterD2); val yFin = yOf(finalWithTax)
+            val yOrig = yOf(origP)
+            val yD1 = yOf(afterD1)
+            val yD2 = yOf(afterD2)
+            val yFin = yOf(finalWithTax)
 
-            // עמודה 1: מחיר מקורי
             fillP.color = pal.muted
             canvas.drawRoundRect(RectF(x0 - bw / 2f, yOrig, x0 + bw / 2f, botY), 6f * d, 6f * d, fillP)
 
-            // קו חיבור מקווקו + נפילת הנחה 1
-            dashP.strokeWidth = 1.2f * d; dashP.color = pal.grid
+            dashP.strokeWidth = 1.2f * d
+            dashP.color = pal.grid
             canvas.drawLine(x0 + bw / 2f, yOrig, x1 - bw / 2f, yOrig, dashP)
             fillP.color = pal.negative
             canvas.drawRoundRect(RectF(x1 - bw / 2f, yOrig, x1 + bw / 2f, yD1.coerceAtLeast(yOrig + 3f * d)), 5f * d, 5f * d, fillP)
 
-            // נפילת הנחה 2
             canvas.drawLine(x1 + bw / 2f, yD1, x2 - bw / 2f, yD1, dashP)
             fillP.color = pal.warning
             canvas.drawRoundRect(RectF(x2 - bw / 2f, yD1, x2 + bw / 2f, yD2.coerceAtLeast(yD1 + 3f * d)), 5f * d, 5f * d, fillP)
 
-            // עמודה סופית לתשלום (כולל מס אם קיים)
             canvas.drawLine(x2 + bw / 2f, yD2, x3 - bw / 2f, yD2, dashP)
             fillP.color = pal.positive
             canvas.drawRoundRect(RectF(x3 - bw / 2f, yFin, x3 + bw / 2f, botY), 6f * d, 6f * d, fillP)
@@ -1299,7 +1473,12 @@ fun MainActivity.createProStackedDiscountsScreen(): View {
             )
             txtP.textSize = 10.5f * d
             for ((idx, item) in labels.withIndex()) {
-                val topLblY = when (idx) { 0 -> yOrig; 1 -> yOrig; 2 -> yD1; else -> yFin }
+                val topLblY = when (idx) {
+                    0 -> yOrig
+                    1 -> yOrig
+                    2 -> yD1
+                    else -> yFin
+                }
                 txtP.color = pal.ink
                 canvas.drawText(BidiFmt.ltr(item.third), item.first, (topLblY - 5f * d).coerceAtLeast(12f * d), txtP)
                 txtP.color = pal.muted
@@ -1341,20 +1520,31 @@ fun MainActivity.createProStackedDiscountsScreen(): View {
     val calcBtn = createActionBtn("חשב הנחות מצטברות ומס שירותים 🏷️", true) { calcDiscounts() }
     calcDiscounts()
 
-    root.addView(discCanvas); root.addView(priceIn); root.addView(d1In); root.addView(d2In); root.addView(serviceTaxIn)
-    root.addView(calcBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
-    scroll.addView(root); return scroll
+    root.addView(discCanvas)
+    root.addView(priceIn)
+    root.addView(d1In)
+    root.addView(d2In)
+    root.addView(serviceTaxIn)
+    root.addView(calcBtn)
+    root.addView(createPinResultButton(resTv))
+    root.addView(resTv)
+    scroll.addView(root)
+    return scroll
 }
 
 // =========================================================================
-// 89. תשואת מניות ודיבידנד עם טבעת פילוח תיק ונר רווח/הפסד חי (Tab 89)
+// 89. תשואת מניות ודיבידנד עם טבעת פילוח תיק ועמודות השוואה (Tab 89)
 // =========================================================================
 fun MainActivity.createProStockAndDividendScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
     root.addView(createProCanvaHeader("📈 תשואת מניות ודיבידנד (Stocks & Dividend Yield)", "טבעת פילוח תיק ונר שינוי מחיר חי כולל תשואת דיבידנד וניכוי מס רווחי הון (25%)"))
 
-    var curBuyTotal = 10000.0; var curSellTotal = 12500.0; var curCapGain = 2500.0; var curDivTotal = 450.0; var curTax = 737.5
+    var curBuyTotal = 10000.0
+    var curSellTotal = 12500.0
+    var curCapGain = 2500.0
+    var curDivTotal = 450.0
+    var curTax = 737.5
 
     val stockCanvas = object : View(this) {
         private val strokeP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
@@ -1364,26 +1554,30 @@ fun MainActivity.createProStockAndDividendScreen(): View {
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
-            val w = width.toFloat(); val h = height.toFloat()
+            val w = width.toFloat()
+            val h = height.toFloat()
             val pal = getProCanvasColors()
 
             val netProfit = curCapGain + curDivTotal - curTax
             val roiPct = if (curBuyTotal > 0) (netProfit / curBuyTotal) * 100.0 else 0.0
             val isProfit = netProfit >= 0
 
-            // צד שמאל: טבעת Donut של קרן / רווח נקי / דיבידנד / מס
-            val cx = w * 0.25f; val cy = h * 0.50f; val r = min(w * 0.17f, h * 0.34f)
+            val cx = w * 0.25f
+            val cy = h * 0.50f
+            val r = min(w * 0.17f, h * 0.34f)
             val rect = RectF(cx - r, cy - r, cx + r, cy + r)
-            strokeP.strokeWidth = 9f * d; strokeP.color = pal.grid; strokeP.clearShadowLayer()
+            strokeP.strokeWidth = 9f * d
+            strokeP.color = pal.grid
+            strokeP.clearShadowLayer()
             canvas.drawCircle(cx, cy, r, strokeP)
 
             val gainPart = max(0.0, curCapGain)
             val totalPie = (curBuyTotal + gainPart + curDivTotal + curTax).coerceAtLeast(1.0)
             val slices = listOf(
-                curBuyTotal to pal.accent2,
-                gainPart to pal.positive,
-                curDivTotal to pal.warning,
-                curTax to pal.negative
+                Pair(curBuyTotal, pal.accent2),
+                Pair(gainPart, pal.positive),
+                Pair(curDivTotal, pal.warning),
+                Pair(curTax, pal.negative)
             )
             var ang = -90f
             for ((v, col) in slices) {
@@ -1395,26 +1589,30 @@ fun MainActivity.createProStockAndDividendScreen(): View {
                 ang += sw
             }
 
-            txtP.color = if (isProfit) pal.positive else pal.negative; txtP.textSize = 13.5f * d
+            txtP.color = if (isProfit) pal.positive else pal.negative
+            txtP.textSize = 13.5f * d
             val sign = if (isProfit) "+" else ""
             canvas.drawText(BidiFmt.ltr("$sign${Utils.formatResult(roiPct, 1)}%"), cx, cy + 5f * d, txtP)
 
-            // צד ימין: השוואת עמודות שווי קנייה מול שווי מכירה + דיבידנד
-            val colL = w * 0.52f; val colR = w - 20f * d
+            val colL = w * 0.52f
+            val colR = w - 20f * d
             val maxBarV = maxOf(curBuyTotal, curSellTotal + curDivTotal, 1.0)
-            val botY = h - 26f * d; val maxH = h * 0.54f
+            val botY = h - 26f * d
+            val maxH = h * 0.54f
             val bw = (colR - colL) * 0.36f
 
             val hBuy = ((curBuyTotal / maxBarV).toFloat().coerceIn(0.12f, 1f)) * maxH
             val hNow = (((curSellTotal + curDivTotal) / maxBarV).toFloat().coerceIn(0.12f, 1f)) * maxH
 
-            val bx1 = colL + bw * 0.15f; val bx2 = colR - bw * 1.15f
+            val bx1 = colL + bw * 0.15f
+            val bx2 = colR - bw * 1.15f
             fillP.color = pal.accent2
             canvas.drawRoundRect(RectF(bx1, botY - hBuy, bx1 + bw, botY), 7f * d, 7f * d, fillP)
             fillP.color = if (isProfit) pal.positive else pal.negative
             canvas.drawRoundRect(RectF(bx2, botY - hNow, bx2 + bw, botY), 7f * d, 7f * d, fillP)
 
-            txtP.color = pal.ink; txtP.textSize = 10.5f * d
+            txtP.color = pal.ink
+            txtP.textSize = 10.5f * d
             canvas.drawText(BidiFmt.ltr("₪${Utils.formatResult(curBuyTotal, 0)}"), bx1 + bw / 2f, botY - hBuy - 5f * d, txtP)
             canvas.drawText(BidiFmt.ltr("₪${Utils.formatResult(curSellTotal + curDivTotal, 0)}"), bx2 + bw / 2f, botY - hNow - 5f * d, txtP)
             txtP.color = pal.muted
@@ -1461,9 +1659,16 @@ fun MainActivity.createProStockAndDividendScreen(): View {
     val calcBtn = createActionBtn("חשב תשואת מניות ודיבידנד 📈", true) { calcStocks() }
     calcStocks()
 
-    root.addView(stockCanvas); root.addView(buyPriceIn); root.addView(sellPriceIn); root.addView(sharesIn); root.addView(divPerShareIn)
-    root.addView(calcBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
-    scroll.addView(root); return scroll
+    root.addView(stockCanvas)
+    root.addView(buyPriceIn)
+    root.addView(sellPriceIn)
+    root.addView(sharesIn)
+    root.addView(divPerShareIn)
+    root.addView(calcBtn)
+    root.addView(createPinResultButton(resTv))
+    root.addView(resTv)
+    scroll.addView(root)
+    return scroll
 }
 
 // =========================================================================
@@ -1474,8 +1679,11 @@ fun MainActivity.createProFixedDepositAndSimpleInterestScreen(): View {
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
     root.addView(createProCanvaHeader("🏦 פיקדון קבוע, תעודת פיקדון וריבית פשוטה", "גרף השוואת עקומות חי המדגים את פער הרווח בין ריבית פשוטה לפיקדון בריבית דריבית"))
 
-    var curPrincipal = 50000.0; var curRate = 0.05; var curYears = 3.0
-    var curSimpleInterest = 7500.0; var curCompoundInterest = 8073.0
+    var curPrincipal = 50000.0
+    var curRate = 0.05
+    var curYears = 3.0
+    var curSimpleInterest = 7500.0
+    var curCompoundInterest = 8073.0
 
     val fdCanvas = object : View(this) {
         private val fillP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
@@ -1486,12 +1694,16 @@ fun MainActivity.createProFixedDepositAndSimpleInterestScreen(): View {
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
-            val w = width.toFloat(); val h = height.toFloat()
+            val w = width.toFloat()
+            val h = height.toFloat()
             val pal = getProCanvasColors()
 
-            val padL = 22f * d; val padR = w - 22f * d
-            val padT = 26f * d; val padB = h - 30f * d
-            val plotW = (padR - padL).coerceAtLeast(10f); val plotH = (padB - padT).coerceAtLeast(10f)
+            val padL = 22f * d
+            val padR = w - 22f * d
+            val padT = 26f * d
+            val padB = h - 30f * d
+            val plotW = (padR - padL).coerceAtLeast(10f)
+            val plotH = (padB - padT).coerceAtLeast(10f)
 
             val minV = curPrincipal * 0.92
             val maxV = maxOf(curPrincipal + curCompoundInterest, curPrincipal + 10.0)
@@ -1499,7 +1711,9 @@ fun MainActivity.createProFixedDepositAndSimpleInterestScreen(): View {
             fun yOf(v: Double): Float = (padB - ((v - minV) / span).coerceIn(0.0, 1.0) * plotH).toFloat()
 
             val steps = 24
-            val compPath = Path(); val simpPath = Path(); val gapPoly = Path()
+            val compPath = Path()
+            val simpPath = Path()
+            val gapPoly = Path()
             val simpPoints = ArrayList<Pair<Float, Float>>(steps + 1)
 
             for (s in 0..steps) {
@@ -1508,31 +1722,50 @@ fun MainActivity.createProFixedDepositAndSimpleInterestScreen(): View {
                 val vComp = curPrincipal * (1.0 + curRate / 12.0).pow(t * 12.0)
                 val vSimp = curPrincipal * (1.0 + curRate * t)
                 val px = (padL + frac * plotW).toFloat()
-                val pyC = yOf(vComp); val pyS = yOf(vSimp)
+                val pyC = yOf(vComp)
+                val pyS = yOf(vSimp)
                 simpPoints.add(px to pyS)
                 if (s == 0) {
-                    compPath.moveTo(px, pyC); simpPath.moveTo(px, pyS); gapPoly.moveTo(px, pyC)
+                    compPath.moveTo(px, pyC)
+                    simpPath.moveTo(px, pyS)
+                    gapPoly.moveTo(px, pyC)
                 } else {
-                    compPath.lineTo(px, pyC); simpPath.lineTo(px, pyS); gapPoly.lineTo(px, pyC)
+                    compPath.lineTo(px, pyC)
+                    simpPath.lineTo(px, pyS)
+                    gapPoly.lineTo(px, pyC)
                 }
             }
-            for (s in steps downTo 0) gapPoly.lineTo(simpPoints[s].first, simpPoints[s].second)
+            for (s in steps downTo 0) {
+                gapPoly.lineTo(simpPoints[s].first, simpPoints[s].second)
+            }
             gapPoly.close()
 
             fillP.color = Color.argb(65, Color.red(pal.positive), Color.green(pal.positive), Color.blue(pal.positive))
             canvas.drawPath(gapPoly, fillP)
 
-            dashP.strokeWidth = 2f * d; dashP.color = pal.accent2
+            dashP.strokeWidth = 2f * d
+            dashP.color = pal.accent2
             canvas.drawPath(simpPath, dashP)
 
-            lineP.strokeWidth = 2.8f * d; lineP.color = pal.positive
+            lineP.strokeWidth = 2.8f * d
+            lineP.color = pal.positive
             lineP.applyAuroraGlow(pal.isAurora, pal.positive, d)
             canvas.drawPath(compPath, lineP)
 
             txtP.color = pal.ink
             val bonus = (curCompoundInterest - curSimpleInterest).coerceAtLeast(0.0)
-            CanvasUiHelper.drawFittedText(canvas, "\u200Fדריבית: ${BidiFmt.ltr("₪${Utils.formatResult(curPrincipal + curCompoundInterest, 0)}")}  |  יתרון דריבית: ${BidiFmt.ltr("+₪${Utils.formatResult(bonus, 0)}")}", w / 2f, 18f * d, w - 24f * d, 13f * d, 9f * d, txtP)
-            txtP.color = pal.muted; txtP.textSize = 11f * d
+            CanvasUiHelper.drawFittedText(
+                canvas,
+                "\u200Fדריבית: ${BidiFmt.ltr("₪${Utils.formatResult(curPrincipal + curCompoundInterest, 0)}")}  |  יתרון דריבית: ${BidiFmt.ltr("+₪${Utils.formatResult(bonus, 0)}")}",
+                w / 2f,
+                18f * d,
+                w - 24f * d,
+                13f * d,
+                9f * d,
+                txtP
+            )
+            txtP.color = pal.muted
+            txtP.textSize = 11f * d
             canvas.drawText("\u200Fעקומה ירוקה = פיקדון דריבית  •  קו מקווקו = ריבית פשוטה", w / 2f, h - 8f * d, txtP)
         }
     }.apply { styleProCanvasCard(this, 180f) }
@@ -1572,9 +1805,16 @@ fun MainActivity.createProFixedDepositAndSimpleInterestScreen(): View {
     val calcBtn = createActionBtn("חשב פיקדון וריבית פשוטה 🏦", true) { calcDeposits() }
     calcDeposits()
 
-    root.addView(fdCanvas); root.addView(principalIn); root.addView(rateIn); root.addView(yearsIn); root.addView(taxRateIn)
-    root.addView(calcBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
-    scroll.addView(root); return scroll
+    root.addView(fdCanvas)
+    root.addView(principalIn)
+    root.addView(rateIn)
+    root.addView(yearsIn)
+    root.addView(taxRateIn)
+    root.addView(calcBtn)
+    root.addView(createPinResultButton(resTv))
+    root.addView(resTv)
+    scroll.addView(root)
+    return scroll
 }
 
 // =========================================================================
@@ -1585,8 +1825,13 @@ fun MainActivity.createProSipAndInflationScreen(): View {
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
     root.addView(createProCanvaHeader("🌱 מחשבון SIP ושחיקת אינפלציה", "גרף 3 עקומות חי: הפקדות מהכיס, שווי נומינלי וכוח קנייה ריאלי בניכוי אינפלציה"))
 
-    var curPmt = 1000.0; var curYears = 10.0; var curRetPct = 12.0; var curInfPct = 2.5
-    var curInvested = 120000.0; var curSipFuture = 232000.0; var curRealPurchasingPower = 180000.0
+    var curPmt = 1000.0
+    var curYears = 10.0
+    var curRetPct = 12.0
+    var curInfPct = 2.5
+    var curInvested = 120000.0
+    var curSipFuture = 232000.0
+    var curRealPurchasingPower = 180000.0
 
     val sipCanvas = object : View(this) {
         private val fillP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
@@ -1597,18 +1842,25 @@ fun MainActivity.createProSipAndInflationScreen(): View {
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
-            val w = width.toFloat(); val h = height.toFloat()
+            val w = width.toFloat()
+            val h = height.toFloat()
             val pal = getProCanvasColors()
 
-            val padL = 22f * d; val padR = w - 22f * d
-            val padT = 26f * d; val padB = h - 30f * d
-            val plotW = (padR - padL).coerceAtLeast(10f); val plotH = (padB - padT).coerceAtLeast(10f)
+            val padL = 22f * d
+            val padR = w - 22f * d
+            val padT = 26f * d
+            val padB = h - 30f * d
+            val plotW = (padR - padL).coerceAtLeast(10f)
+            val plotH = (padB - padT).coerceAtLeast(10f)
             val maxY = maxOf(curSipFuture, curInvested, 100.0)
             fun yOf(v: Double): Float = (padB - (v / maxY).coerceIn(0.0, 1.0) * plotH).toFloat()
 
             val steps = 24
             val rM = (curRetPct / 100.0) / 12.0
-            val nomPath = Path(); val realPath = Path(); val depPath = Path(); val erosionPoly = Path()
+            val nomPath = Path()
+            val realPath = Path()
+            val depPath = Path()
+            val erosionPoly = Path()
             val realPts = ArrayList<Pair<Float, Float>>(steps + 1)
 
             for (s in 0..steps) {
@@ -1620,34 +1872,58 @@ fun MainActivity.createProSipAndInflationScreen(): View {
                 val real = nom / (1.0 + curInfPct / 100.0).pow(yr)
 
                 val px = (padL + frac * plotW).toFloat()
-                val pyN = yOf(nom); val pyR = yOf(real); val pyD = yOf(dep)
+                val pyN = yOf(nom)
+                val pyR = yOf(real)
+                val pyD = yOf(dep)
                 realPts.add(px to pyR)
 
                 if (s == 0) {
-                    nomPath.moveTo(px, pyN); realPath.moveTo(px, pyR); depPath.moveTo(px, pyD); erosionPoly.moveTo(px, pyN)
+                    nomPath.moveTo(px, pyN)
+                    realPath.moveTo(px, pyR)
+                    depPath.moveTo(px, pyD)
+                    erosionPoly.moveTo(px, pyN)
                 } else {
-                    nomPath.lineTo(px, pyN); realPath.lineTo(px, pyR); depPath.lineTo(px, pyD); erosionPoly.lineTo(px, pyN)
+                    nomPath.lineTo(px, pyN)
+                    realPath.lineTo(px, pyR)
+                    depPath.lineTo(px, pyD)
+                    erosionPoly.lineTo(px, pyN)
                 }
             }
-            for (s in steps downTo 0) erosionPoly.lineTo(realPts[s].first, realPts[s].second)
+            for (s in steps downTo 0) {
+                erosionPoly.lineTo(realPts[s].first, realPts[s].second)
+            }
             erosionPoly.close()
 
             fillP.color = Color.argb(55, Color.red(pal.warning), Color.green(pal.warning), Color.blue(pal.warning))
             canvas.drawPath(erosionPoly, fillP)
 
-            dashP.strokeWidth = 1.6f * d; dashP.color = pal.accent2
+            dashP.strokeWidth = 1.6f * d
+            dashP.color = pal.accent2
             canvas.drawPath(depPath, dashP)
 
-            lineP.strokeWidth = 2.4f * d; lineP.color = pal.warning; lineP.clearShadowLayer()
+            lineP.strokeWidth = 2.4f * d
+            lineP.color = pal.warning
+            lineP.clearShadowLayer()
             canvas.drawPath(realPath, lineP)
 
-            lineP.strokeWidth = 2.8f * d; lineP.color = pal.positive
+            lineP.strokeWidth = 2.8f * d
+            lineP.color = pal.positive
             lineP.applyAuroraGlow(pal.isAurora, pal.positive, d)
             canvas.drawPath(nomPath, lineP)
 
             txtP.color = pal.ink
-            CanvasUiHelper.drawFittedText(canvas, "\u200Fנומינלי: ${BidiFmt.ltr("₪${Utils.formatResult(curSipFuture, 0)}")}  |  ריאלי: ${BidiFmt.ltr("₪${Utils.formatResult(curRealPurchasingPower, 0)}")}", w / 2f, 18f * d, w - 24f * d, 13f * d, 9f * d, txtP)
-            txtP.color = pal.muted; txtP.textSize = 10.5f * d
+            CanvasUiHelper.drawFittedText(
+                canvas,
+                "\u200Fנומינלי: ${BidiFmt.ltr("₪${Utils.formatResult(curSipFuture, 0)}")}  |  ריאלי: ${BidiFmt.ltr("₪${Utils.formatResult(curRealPurchasingPower, 0)}")}",
+                w / 2f,
+                18f * d,
+                w - 24f * d,
+                13f * d,
+                9f * d,
+                txtP
+            )
+            txtP.color = pal.muted
+            txtP.textSize = 10.5f * d
             canvas.drawText("\u200Fירוק = נומינלי • כתום = כוח קנייה ריאלי • מקווקו = הפקדות", w / 2f, h - 8f * d, txtP)
         }
     }.apply { styleProCanvasCard(this, 190f) }
@@ -1664,7 +1940,8 @@ fun MainActivity.createProSipAndInflationScreen(): View {
         curRetPct = BidiFmt.evalInputExpr(returnIn, 12.0).coerceAtLeast(0.0)
         curInfPct = BidiFmt.evalInputExpr(inflationIn, 2.5).coerceAtLeast(0.0)
 
-        val n = curYears * 12.0; val i = (curRetPct / 100.0) / 12.0
+        val n = curYears * 12.0
+        val i = (curRetPct / 100.0) / 12.0
         curInvested = curPmt * n
         curSipFuture = if (i > 1e-9) curPmt * (((1.0 + i).pow(n) - 1.0) / i) * (1.0 + i) else curInvested
         val infFactor = (1.0 + curInfPct / 100.0).pow(curYears)
@@ -1686,21 +1963,33 @@ fun MainActivity.createProSipAndInflationScreen(): View {
     val calcBtn = createActionBtn("חשב צמיחת SIP ואינפלציה 🌱", true) { calcSipAndInflation() }
     calcSipAndInflation()
 
-    root.addView(sipCanvas); root.addView(monthlyIn); root.addView(yearsIn); root.addView(returnIn); root.addView(inflationIn)
-    root.addView(calcBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
-    scroll.addView(root); return scroll
+    root.addView(sipCanvas)
+    root.addView(monthlyIn)
+    root.addView(yearsIn)
+    root.addView(returnIn)
+    root.addView(inflationIn)
+    root.addView(calcBtn)
+    root.addView(createPinResultButton(resTv))
+    root.addView(resTv)
+    scroll.addView(root)
+    return scroll
 }
 
 // =========================================================================
-// 92. הלוואת רכב ו-E.M.I עם טבעת פילוח 4-חלקים ועקומת סילוקין חיה (Tab 92)
+// 92. הלוואת רכב ו-E.M.I עם טבעת פילוח ועקומת סילוקין חיה (Tab 92)
 // =========================================================================
 fun MainActivity.createProCarLoanAndEmiScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
     root.addView(createProCanvaHeader("🚗 הלוואת רכב ו-E.M.I (Auto Financing & EMI)", "טבעת פילוח עלות הרכב ועקומת ירידת יתרת החוב עד תום ההלוואה או הבלון"))
 
-    var curDown = 40000.0; var curNetLoan = 90000.0; var curBalloon = 0.0; var curTotalInterest = 14800.0
-    var curEmi = 1850.0; var curMonths = 60.0; var curRateYr = 6.5
+    var curDown = 40000.0
+    var curNetLoan = 90000.0
+    var curBalloon = 0.0
+    var curTotalInterest = 14800.0
+    var curEmi = 1850.0
+    var curMonths = 60.0
+    var curRateYr = 6.5
 
     val emiCanvas = object : View(this) {
         private val strokeP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
@@ -1710,22 +1999,26 @@ fun MainActivity.createProCarLoanAndEmiScreen(): View {
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
-            val w = width.toFloat(); val h = height.toFloat()
+            val w = width.toFloat()
+            val h = height.toFloat()
             val pal = getProCanvasColors()
 
-            // צד שמאל: טבעת Donut ל-4 רכיבי עלות הרכב
-            val cx = w * 0.24f; val cy = h * 0.50f; val r = min(w * 0.16f, h * 0.34f)
+            val cx = w * 0.24f
+            val cy = h * 0.50f
+            val r = min(w * 0.16f, h * 0.34f)
             val rect = RectF(cx - r, cy - r, cx + r, cy + r)
-            strokeP.strokeWidth = 9f * d; strokeP.color = pal.grid; strokeP.clearShadowLayer()
+            strokeP.strokeWidth = 9f * d
+            strokeP.color = pal.grid
+            strokeP.clearShadowLayer()
             canvas.drawCircle(cx, cy, r, strokeP)
 
             val amortPrincipal = (curNetLoan - curBalloon).coerceAtLeast(0.0)
             val grandTotal = (curDown + amortPrincipal + curBalloon + curTotalInterest).coerceAtLeast(1.0)
             val parts = listOf(
-                curDown to pal.accent2,
-                amortPrincipal to pal.positive,
-                curBalloon to pal.warning,
-                curTotalInterest to pal.negative
+                Pair(curDown, pal.accent2),
+                Pair(amortPrincipal, pal.positive),
+                Pair(curBalloon, pal.warning),
+                Pair(curTotalInterest, pal.negative)
             )
             var ang = -90f
             for ((v, col) in parts) {
@@ -1737,15 +2030,22 @@ fun MainActivity.createProCarLoanAndEmiScreen(): View {
                 ang += sw
             }
 
-            txtP.color = pal.ink; txtP.textSize = 11.5f * d
+            txtP.color = pal.ink
+            txtP.textSize = 11.5f * d
             canvas.drawText(BidiFmt.ltr("₪${Utils.formatResult(curEmi, 0)}"), cx, cy + 2f * d, txtP)
-            txtP.color = pal.muted; txtP.textSize = 9f * d
+            txtP.color = pal.muted
+            txtP.textSize = 9f * d
             canvas.drawText("EMI/חודש", cx, cy + 14f * d, txtP)
 
-            // צד ימין: עקומת סילוקין חיה של יתרת ההלוואה מ-month 0 ועד month N (כולל מדרגת בלון!)
-            val gL = w * 0.46f; val gR = w - 18f * d; val gT = 24f * d; val gB = h - 26f * d
-            val gW = (gR - gL).coerceAtLeast(10f); val gH = (gB - gT).coerceAtLeast(10f)
-            lineP.strokeWidth = 1.1f * d; lineP.color = pal.grid; lineP.clearShadowLayer()
+            val gL = w * 0.46f
+            val gR = w - 18f * d
+            val gT = 24f * d
+            val gB = h - 26f * d
+            val gW = (gR - gL).coerceAtLeast(10f)
+            val gH = (gB - gT).coerceAtLeast(10f)
+            lineP.strokeWidth = 1.1f * d
+            lineP.color = pal.grid
+            lineP.clearShadowLayer()
             canvas.drawLine(gL, gB, gR, gB, lineP)
             canvas.drawLine(gL, gT, gL, gB, lineP)
 
@@ -1764,13 +2064,16 @@ fun MainActivity.createProCarLoanAndEmiScreen(): View {
             }
             if (curBalloon > 0.0) balPath.lineTo(gR, gB)
 
-            lineP.strokeWidth = 2.6f * d; lineP.color = pal.accent1
+            lineP.strokeWidth = 2.6f * d
+            lineP.color = pal.accent1
             lineP.applyAuroraGlow(pal.isAurora, pal.accent1, d)
             canvas.drawPath(balPath, lineP)
 
-            txtP.color = pal.ink; txtP.textSize = 11f * d
-            CanvasUiHelper.drawFittedText(canvas, "\u200Fירידת יתרת חוב (${BidiFmt.ltr("${totalSteps} חוד׳")})", (gL + gR) / 2f, 16f * d, gW, 11.5f * d, 8.5f * d, txtP)
-            txtP.color = pal.muted; txtP.textSize = 10f * d
+            txtP.color = pal.ink
+            txtP.textSize = 11f * d
+            CanvasUiHelper.drawFittedText(canvas, "\u200Fירידת יתרת חוב (${BidiFmt.ltr("$totalSteps חוד׳")})", (gL + gR) / 2f, 16f * d, gW, 11.5f * d, 8.5f * d, txtP)
+            txtP.color = pal.muted
+            txtP.textSize = 10f * d
             canvas.drawText(if (curBalloon > 0) "\u200Fבלון: ${BidiFmt.ltr("₪${Utils.formatResult(curBalloon, 0)}")}" else "יתרה בסוף: ₪0", (gL + gR) / 2f, h - 8f * d, txtP)
         }
     }.apply { styleProCanvasCard(this, 175f) }
@@ -1816,9 +2119,17 @@ fun MainActivity.createProCarLoanAndEmiScreen(): View {
     val calcBtn = createActionBtn("חשב מימון רכב ו-E.M.I 🚗", true) { calcCarEmi() }
     calcCarEmi()
 
-    root.addView(emiCanvas); root.addView(carPriceIn); root.addView(downPaymentIn); root.addView(monthsIn); root.addView(rateIn); root.addView(balloonIn)
-    root.addView(calcBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
-    scroll.addView(root); return scroll
+    root.addView(emiCanvas)
+    root.addView(carPriceIn)
+    root.addView(downPaymentIn)
+    root.addView(monthsIn)
+    root.addView(rateIn)
+    root.addView(balloonIn)
+    root.addView(calcBtn)
+    root.addView(createPinResultButton(resTv))
+    root.addView(resTv)
+    scroll.addView(root)
+    return scroll
 }
 
 // =========================================================================
@@ -1829,8 +2140,11 @@ fun MainActivity.createProFutureAndPresentValueScreen(): View {
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
     root.addView(createProCanvaHeader("⏳ ערך עתידי וערך נוכחי (FV & PV)", "עקומת הזמן של הכסף המשתנה בזמן אמת מהיוון העבר (PV) דרך היום אל העתיד (FV)"))
 
-    var curBaseAmount = 100000.0; var curRate = 0.07; var curYears = 5.0
-    var curFv = 140255.0; var curPv = 71298.0
+    var curBaseAmount = 100000.0
+    var curRate = 0.07
+    var curYears = 5.0
+    var curFv = 140255.0
+    var curPv = 71298.0
 
     val fvPvCanvas = object : View(this) {
         private val lineP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
@@ -1840,54 +2154,65 @@ fun MainActivity.createProFutureAndPresentValueScreen(): View {
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
-            val w = width.toFloat(); val h = height.toFloat()
+            val w = width.toFloat()
+            val h = height.toFloat()
             val pal = getProCanvasColors()
 
-            val padL = 28f * d; val padR = w - 28f * d
-            val padT = 26f * d; val padB = h - 30f * d
-            val plotW = (padR - padL).coerceAtLeast(10f); val plotH = (padB - padT).coerceAtLeast(10f)
+            val padL = 28f * d
+            val padR = w - 28f * d
+            val padT = 26f * d
+            val padB = h - 30f * d
+            val plotW = (padR - padL).coerceAtLeast(10f)
+            val plotH = (padB - padT).coerceAtLeast(10f)
 
             val maxV = maxOf(curFv, curBaseAmount, curPv, 1.0)
             fun yOf(v: Double): Float = (padB - (v / maxV).coerceIn(0.0, 1.0) * plotH).toFloat()
 
             val steps = 28
-            val curvePath = Path(); val areaPath = Path()
+            val curvePath = Path()
+            val areaPath = Path()
             for (s in 0..steps) {
-                val frac = s.toDouble() / steps // 0 = -n (PV), 0.5 = today, 1 = +n (FV)
+                val frac = s.toDouble() / steps
                 val t = (frac - 0.5) * 2.0 * curYears
                 val v = curBaseAmount * (1.0 + curRate).pow(t)
                 val px = (padL + frac * plotW).toFloat()
                 val py = yOf(v)
                 if (s == 0) {
                     curvePath.moveTo(px, py)
-                    areaPath.moveTo(px, padB); areaPath.lineTo(px, py)
+                    areaPath.moveTo(px, padB)
+                    areaPath.lineTo(px, py)
                 } else {
-                    curvePath.lineTo(px, py); areaPath.lineTo(px, py)
+                    curvePath.lineTo(px, py)
+                    areaPath.lineTo(px, py)
                 }
             }
-            areaPath.lineTo(padR, padB); areaPath.close()
+            areaPath.lineTo(padR, padB)
+            areaPath.close()
 
             fillP.color = Color.argb(45, Color.red(pal.accent1), Color.green(pal.accent1), Color.blue(pal.accent1))
             canvas.drawPath(areaPath, fillP)
 
-            lineP.strokeWidth = 2.8f * d; lineP.color = pal.accent1
+            lineP.strokeWidth = 2.8f * d
+            lineP.color = pal.accent1
             lineP.applyAuroraGlow(pal.isAurora, pal.accent1, d)
             canvas.drawPath(curvePath, lineP)
 
             val pts = listOf(
-                Triple(padL, yOf(curPv), "PV: ₪${Utils.formatResult(curPv, 0)}" to pal.accent2),
-                Triple(padL + plotW * 0.5f, yOf(curBaseAmount), "היום: ₪${Utils.formatResult(curBaseAmount, 0)}" to pal.warning),
-                Triple(padR, yOf(curFv), "FV: ₪${Utils.formatResult(curFv, 0)}" to pal.positive)
+                Triple(padL, yOf(curPv), Pair("PV: ₪${Utils.formatResult(curPv, 0)}", pal.accent2)),
+                Triple(padL + plotW * 0.5f, yOf(curBaseAmount), Pair("היום: ₪${Utils.formatResult(curBaseAmount, 0)}", pal.warning)),
+                Triple(padR, yOf(curFv), Pair("FV: ₪${Utils.formatResult(curFv, 0)}", pal.positive))
             )
             for ((px, py, pair) in pts) {
                 fillP.color = pair.second
                 canvas.drawCircle(px, py, 6f * d, fillP)
-                txtP.color = pal.ink; txtP.textSize = 10.5f * d
+                txtP.color = pal.ink
+                txtP.textSize = 10.5f * d
                 val tx = px.coerceIn(50f * d, w - 50f * d)
                 canvas.drawText(BidiFmt.ltr(pair.first), tx, (py - 10f * d).coerceAtLeast(14f * d), txtP)
             }
 
-            txtP.color = pal.muted; txtP.textSize = 11f * d
+            txtP.color = pal.muted
+            txtP.textSize = 11f * d
             canvas.drawText("\u200F${BidiFmt.ltr("-${Utils.formatResult(curYears, 1)}y")}  ◄──────  היום  ──────►  ${BidiFmt.ltr("+${Utils.formatResult(curYears, 1)}y")}", w / 2f, h - 8f * d, txtP)
         }
     }.apply { styleProCanvasCard(this, 175f) }
@@ -1919,21 +2244,30 @@ fun MainActivity.createProFutureAndPresentValueScreen(): View {
     val calcBtn = createActionBtn("חשב ערך עתידי וערך נוכחי ⏳", true) { calcFvPv() }
     calcFvPv()
 
-    root.addView(fvPvCanvas); root.addView(amountIn); root.addView(rateIn); root.addView(yearsIn)
-    root.addView(calcBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
-    scroll.addView(root); return scroll
+    root.addView(fvPvCanvas)
+    root.addView(amountIn)
+    root.addView(rateIn)
+    root.addView(yearsIn)
+    root.addView(calcBtn)
+    root.addView(createPinResultButton(resTv))
+    root.addView(resTv)
+    scroll.addView(root)
+    return scroll
 }
 
 // =========================================================================
-// 94. אנונה ואנונה נצחית עם קנבס תזרים תשלומים מהוון חי (Tab 94 - חדש!)
+// 94. אנונה ואנונה נצחית עם קנבס תזרים תשלומים מהוון חי (Tab 94)
 // =========================================================================
 fun MainActivity.createProAnnuityAndPerpetuityScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
     root.addView(createProCanvaHeader("♾️ אנונה ואנונה נצחית (Annuity & Perpetuity)", "קנבס תזרים מזומנים מהוון חי המציג את התכווצות ערך כל תשלום מול שווי האנונה הנצחית"))
 
-    var curPmt = 5000.0; var curRate = 0.06; var curPeriods = 20
-    var curPvAnnuity = 57349.6; var curPvPerpetuity = 83333.3
+    var curPmt = 5000.0
+    var curRate = 0.06
+    var curPeriods = 20
+    var curPvAnnuity = 57349.6
+    var curPvPerpetuity = 83333.3
 
     val annuityCanvas = object : View(this) {
         private val fillP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
@@ -1943,11 +2277,14 @@ fun MainActivity.createProAnnuityAndPerpetuityScreen(): View {
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
-            val w = width.toFloat(); val h = height.toFloat()
+            val w = width.toFloat()
+            val h = height.toFloat()
             val pal = getProCanvasColors()
 
-            val padL = 18f * d; val padR = w - 18f * d
-            val topY = 28f * d; val midY = h * 0.64f
+            val padL = 18f * d
+            val padR = w - 18f * d
+            val topY = 28f * d
+            val midY = h * 0.64f
             val barsH = (midY - topY).coerceAtLeast(10f)
 
             val showN = curPeriods.coerceIn(1, 14)
@@ -1959,25 +2296,35 @@ fun MainActivity.createProAnnuityAndPerpetuityScreen(): View {
                 val bh = ((pvK / maxPmt).toFloat().coerceIn(0.08f, 1f)) * barsH
                 val bx = padL + (k - 1) * slotW + slotW * 0.16f
                 val bw = slotW * 0.68f
-
                 fillP.color = pal.accent1
                 canvas.drawRoundRect(RectF(bx, midY - bh, bx + bw, midY), 4f * d, 4f * d, fillP)
             }
 
-            lineP.strokeWidth = 1.2f * d; lineP.color = pal.grid
+            lineP.strokeWidth = 1.2f * d
+            lineP.color = pal.grid
             canvas.drawLine(padL, midY, padR, midY, lineP)
 
-            // מד השוואה תחתון: אחוז כיסוי של אנונה סופית מתוך אנונה נצחית (PV Annuity / PV Perpetuity)
             val ratioOfInf = (curPvAnnuity / curPvPerpetuity.coerceAtLeast(1.0)).toFloat().coerceIn(0.05f, 1f)
-            val barT = h * 0.74f; val barB = h * 0.84f
+            val barT = h * 0.74f
+            val barB = h * 0.84f
             fillP.color = pal.grid
             canvas.drawRoundRect(RectF(padL, barT, padR, barB), 6f * d, 6f * d, fillP)
             fillP.color = pal.accent2
             canvas.drawRoundRect(RectF(padL, barT, padL + (padR - padL) * ratioOfInf, barB), 6f * d, 6f * d, fillP)
 
             txtP.color = pal.ink
-            CanvasUiHelper.drawFittedText(canvas, "\u200Fאנונה (${curPeriods} תק׳): ${BidiFmt.ltr("₪${Utils.formatResult(curPvAnnuity, 0)}")}  |  נצחית: ${BidiFmt.ltr("₪${Utils.formatResult(curPvPerpetuity, 0)}")}", w / 2f, 18f * d, w - 24f * d, 13f * d, 9f * d, txtP)
-            txtP.color = pal.muted; txtP.textSize = 10.5f * d
+            CanvasUiHelper.drawFittedText(
+                canvas,
+                "\u200Fאנונה ($curPeriods תק׳): ${BidiFmt.ltr("₪${Utils.formatResult(curPvAnnuity, 0)}")}  |  נצחית: ${BidiFmt.ltr("₪${Utils.formatResult(curPvPerpetuity, 0)}")}",
+                w / 2f,
+                18f * d,
+                w - 24f * d,
+                13f * d,
+                9f * d,
+                txtP
+            )
+            txtP.color = pal.muted
+            txtP.textSize = 10.5f * d
             canvas.drawText("\u200Fהאנונה מהווה ${BidiFmt.ltr("${(ratioOfInf * 100).roundToInt()}%")} משווי האנונה הנצחית האינסופית", w / 2f, h - 5f * d, txtP)
         }
     }.apply { styleProCanvasCard(this, 185f) }
@@ -2020,21 +2367,33 @@ fun MainActivity.createProAnnuityAndPerpetuityScreen(): View {
     val calcBtn = createActionBtn("חשב אנונה ואנונה נצחית ♾️", true) { calcAnnuity() }
     calcAnnuity()
 
-    root.addView(annuityCanvas); root.addView(pmtIn); root.addView(rateIn); root.addView(periodsIn); root.addView(growthIn)
-    root.addView(calcBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
-    scroll.addView(root); return scroll
+    root.addView(annuityCanvas)
+    root.addView(pmtIn)
+    root.addView(rateIn)
+    root.addView(periodsIn)
+    root.addView(growthIn)
+    root.addView(calcBtn)
+    root.addView(createPinResultButton(resTv))
+    root.addView(resTv)
+    scroll.addView(root)
+    return scroll
 }
 
 // =========================================================================
-// 95. מחשבון פרישה וקצבה עם גרף מחזור חיים מתמטי מלא (צבירה + משיכה) (Tab 95)
+// 95. מחשבון פרישה וקצבה עם גרף מחזור חיים מתמטי מלא (Tab 95)
 // =========================================================================
 fun MainActivity.createProRetirementPlannerScreen(): View {
     val scroll = ScrollView(this)
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(12f), dp(20f), dp(24f)) }
     root.addView(createProCanvaHeader("🏖️ מחשבון פרישה וקצבה חודשית", "עקומת מחזור חיים אמיתית המחשבת בזמן אמת את שלב הצבירה ושלב משיכת הקצבה עד גיל 90"))
 
-    var curAgeNow = 30.0; var curAgeRet = 67.0; var curSavedNow = 150000.0; var curMonthlyDep = 2500.0; var curAnnualRet = 5.5
-    var curNestEgg = 2450000.0; var curMonthlyPension = 12250.0
+    var curAgeNow = 30.0
+    var curAgeRet = 67.0
+    var curSavedNow = 150000.0
+    var curMonthlyDep = 2500.0
+    var curAnnualRet = 5.5
+    var curNestEgg = 2450000.0
+    var curMonthlyPension = 12250.0
 
     val retireCanvas = object : View(this) {
         private val fillP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
@@ -2045,12 +2404,16 @@ fun MainActivity.createProRetirementPlannerScreen(): View {
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
-            val w = width.toFloat(); val h = height.toFloat()
+            val w = width.toFloat()
+            val h = height.toFloat()
             val pal = getProCanvasColors()
 
-            val padL = 20f * d; val padR = w - 20f * d
-            val padT = 26f * d; val padB = h - 30f * d
-            val plotW = (padR - padL).coerceAtLeast(10f); val plotH = (padB - padT).coerceAtLeast(10f)
+            val padL = 20f * d
+            val padR = w - 20f * d
+            val padT = 26f * d
+            val padB = h - 30f * d
+            val plotW = (padR - padL).coerceAtLeast(10f)
+            val plotH = (padB - padT).coerceAtLeast(10f)
 
             val endAge = max(90.0, curAgeRet + 15.0)
             val totalSpanYears = (endAge - curAgeNow).coerceAtLeast(2.0)
@@ -2059,27 +2422,35 @@ fun MainActivity.createProRetirementPlannerScreen(): View {
             fun xOfAge(age: Double): Float = (padL + ((age - curAgeNow) / totalSpanYears).coerceIn(0.0, 1.0) * plotW).toFloat()
             fun yOfBal(bal: Double): Float = (padB - (bal / maxY).coerceIn(0.0, 1.0) * plotH).toFloat()
 
-            // שלב 1: צבירה מ-curAgeNow עד curAgeRet
             val rM = (curAnnualRet / 100.0) / 12.0
-            val accPath = Path(); val accArea = Path()
+            val accPath = Path()
+            val accArea = Path()
             val accSteps = 18
             for (s in 0..accSteps) {
                 val age = curAgeNow + (s.toDouble() / accSteps) * (curAgeRet - curAgeNow)
                 val m = (age - curAgeNow) * 12.0
                 val bal = curSavedNow * (1.0 + rM).pow(m) + if (rM > 1e-9) curMonthlyDep * (((1.0 + rM).pow(m) - 1.0) / rM) else curMonthlyDep * m
-                val px = xOfAge(age); val py = yOfBal(bal)
+                val px = xOfAge(age)
+                val py = yOfBal(bal)
                 if (s == 0) {
-                    accPath.moveTo(px, py); accArea.moveTo(px, padB); accArea.lineTo(px, py)
+                    accPath.moveTo(px, py)
+                    accArea.moveTo(px, padB)
+                    accArea.lineTo(px, py)
                 } else {
-                    accPath.lineTo(px, py); accArea.lineTo(px, py)
+                    accPath.lineTo(px, py)
+                    accArea.lineTo(px, py)
                 }
             }
-            val retX = xOfAge(curAgeRet); val retY = yOfBal(curNestEgg)
-            accArea.lineTo(retX, padB); accArea.close()
+            val retX = xOfAge(curAgeRet)
+            val retY = yOfBal(curNestEgg)
+            accArea.lineTo(retX, padB)
+            accArea.close()
 
-            // שלב 2: משיכת קצבה מ-curAgeRet עד endAge (בריבית פנסיונית שמרנית 3.5%)
-            val drawPath = Path(); val drawArea = Path()
-            drawPath.moveTo(retX, retY); drawArea.moveTo(retX, padB); drawArea.lineTo(retX, retY)
+            val drawPath = Path()
+            val drawArea = Path()
+            drawPath.moveTo(retX, retY)
+            drawArea.moveTo(retX, padB)
+            drawArea.lineTo(retX, retY)
             var balDraw = curNestEgg
             val drawYears = (endAge - curAgeRet).roundToInt().coerceAtLeast(1)
             val postRateM = 0.035 / 12.0
@@ -2087,24 +2458,30 @@ fun MainActivity.createProRetirementPlannerScreen(): View {
                 for (m in 1..12) {
                     balDraw = (balDraw * (1.0 + postRateM) - curMonthlyPension).coerceAtLeast(0.0)
                 }
-                val px = xOfAge(curAgeRet + yr); val py = yOfBal(balDraw)
-                drawPath.lineTo(px, py); drawArea.lineTo(px, py)
+                val px = xOfAge(curAgeRet + yr)
+                val py = yOfBal(balDraw)
+                drawPath.lineTo(px, py)
+                drawArea.lineTo(px, py)
             }
-            drawArea.lineTo(padR, padB); drawArea.close()
+            drawArea.lineTo(padR, padB)
+            drawArea.close()
 
             fillP.color = Color.argb(55, Color.red(pal.positive), Color.green(pal.positive), Color.blue(pal.positive))
             canvas.drawPath(accArea, fillP)
             fillP.color = Color.argb(50, Color.red(pal.accent2), Color.green(pal.accent2), Color.blue(pal.accent2))
             canvas.drawPath(drawArea, fillP)
 
-            dashP.strokeWidth = 1.4f * d; dashP.color = pal.warning
+            dashP.strokeWidth = 1.4f * d
+            dashP.color = pal.warning
             canvas.drawLine(retX, padT, retX, padB, dashP)
 
-            lineP.strokeWidth = 2.8f * d; lineP.color = pal.positive
+            lineP.strokeWidth = 2.8f * d
+            lineP.color = pal.positive
             lineP.applyAuroraGlow(pal.isAurora, pal.positive, d)
             canvas.drawPath(accPath, lineP)
 
-            lineP.color = pal.accent2; lineP.applyAuroraGlow(pal.isAurora, pal.accent2, d)
+            lineP.color = pal.accent2
+            lineP.applyAuroraGlow(pal.isAurora, pal.accent2, d)
             canvas.drawPath(drawPath, lineP)
 
             fillP.color = pal.warning
@@ -2113,7 +2490,8 @@ fun MainActivity.createProRetirementPlannerScreen(): View {
             txtP.color = pal.ink
             val topTxt = "\u200Fהון בגיל ${BidiFmt.ltr(curAgeRet.roundToInt())}: ${BidiFmt.ltr("₪${Utils.formatResult(curNestEgg, 0)}")}  ➔  קצבה: ${BidiFmt.ltr("₪${Utils.formatResult(curMonthlyPension, 0)}/חודש")}"
             CanvasUiHelper.drawFittedText(canvas, topTxt, w / 2f, 18f * d, w - 24f * d, 13f * d, 9f * d, txtP)
-            txtP.color = pal.muted; txtP.textSize = 10.5f * d
+            txtP.color = pal.muted
+            txtP.textSize = 10.5f * d
             canvas.drawText("\u200Fגיל ${BidiFmt.ltr(curAgeNow.roundToInt())}  ── צבירה (ירוק) ──  פרישה (${BidiFmt.ltr(curAgeRet.roundToInt())})  ── קצבה ──  גיל ${BidiFmt.ltr(endAge.roundToInt())}", w / 2f, h - 8f * d, txtP)
         }
     }.apply { styleProCanvasCard(this, 190f) }
@@ -2157,7 +2535,15 @@ fun MainActivity.createProRetirementPlannerScreen(): View {
     val calcBtn = createActionBtn("חשב חיסכון וקצבת פרישה 🏖️", true) { calcRetirement() }
     calcRetirement()
 
-    root.addView(retireCanvas); root.addView(curAgeIn); root.addView(retAgeIn); root.addView(savedNowIn); root.addView(monthlyDepositIn); root.addView(annualReturnIn)
-    root.addView(calcBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
-    scroll.addView(root); return scroll
+    root.addView(retireCanvas)
+    root.addView(curAgeIn)
+    root.addView(retAgeIn)
+    root.addView(savedNowIn)
+    root.addView(monthlyDepositIn)
+    root.addView(annualReturnIn)
+    root.addView(calcBtn)
+    root.addView(createPinResultButton(resTv))
+    root.addView(resTv)
+    scroll.addView(root)
+    return scroll
 }
