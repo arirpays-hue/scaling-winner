@@ -406,7 +406,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             drawerMenu?.addView(sectionItemsContainer)
         }
 
-        // רק הקטגוריה הראשונה של המחשבון הרגיל פתוחה כברירת מחדל
         expandedSections.add(301)
 
         val bottomSpacer = Space(this).apply {
@@ -1255,10 +1254,22 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             )
             headerTv.setTextColor(headerTextCol)
 
-            val secIcon = if (isMinimalistMode) {
-                MinimalistTheme.createMinimalistVectorIcon(this, secIconCode, headerIconCol, 22f)
-            } else {
-                AuroraBorealisTheme.createVectorIcon(this, secIconCode, headerIconCol, 22f, isAuroraMode)
+            // 4 שפות אייקונים מובחנות לכותרות הקטגוריות (מינימליסטי / זוהר / זכוכית / קלאסי)
+            val secIcon = when {
+                isMinimalistMode -> MinimalistTheme.createMinimalistVectorIcon(this, secIconCode, headerIconCol, 22f)
+                isAuroraMode -> AuroraBorealisTheme.createVectorIcon(this, secIconCode, headerIconCol, 22f, true)
+                isIosGlassMode -> ProUnifiedThemeIcons.wrapForLiquidGlass(
+                    this,
+                    AuroraBorealisTheme.createVectorIcon(this, secIconCode, Color.WHITE, 15f, false),
+                    headerIconCol,
+                    25f
+                )
+                else -> ProUnifiedThemeIcons.wrapForClassicBadge(
+                    this,
+                    AuroraBorealisTheme.createVectorIcon(this, secIconCode, Color.WHITE, 14f, false),
+                    secIconCode,
+                    25f
+                )
             }
             if (isRightHanded) headerTv.setCompoundDrawables(null, null, secIcon, null)
             else headerTv.setCompoundDrawables(secIcon, null, null, null)
@@ -1298,14 +1309,26 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             )
 
             tv.text = IosGlassTheme.cleanCategoryTitle(categories[i], true)
-            val icon = when (i) {
-                in 81..95 -> ProFinancialAndMathIcons.createVectorIcon(this, i, itemIconCol, 20f, isMinimalistMode, isAuroraMode)
-                in 96..99 -> ProSensorNetworkIcons.createVectorIcon(this, i, itemIconCol, 20f, isMinimalistMode, isAuroraMode)
-                else -> if (isMinimalistMode) {
-                    MinimalistTheme.createMinimalistVectorIcon(this, resolveToolIconCode(i), itemIconCol, 20f)
-                } else {
-                    AuroraBorealisTheme.createVectorIcon(this, resolveToolIconCode(i), itemIconCol, 20f, isAuroraMode)
-                }
+
+            // 4 שפות אייקונים מובחנות לכל 100 הכלים והמחשבונים (0..99)
+            val icon = when {
+                i == 73 || i in 81..99 -> ProUnifiedThemeIcons.createToolIcon(
+                    this, i, itemIconCol, 20f, isMinimalistMode, isIosGlassMode, isAuroraMode
+                )
+                isMinimalistMode -> MinimalistTheme.createMinimalistVectorIcon(this, resolveToolIconCode(i), itemIconCol, 20f)
+                isAuroraMode -> AuroraBorealisTheme.createVectorIcon(this, resolveToolIconCode(i), itemIconCol, 21f, true)
+                isIosGlassMode -> ProUnifiedThemeIcons.wrapForLiquidGlass(
+                    this,
+                    AuroraBorealisTheme.createVectorIcon(this, resolveToolIconCode(i), Color.WHITE, 14.5f, false),
+                    itemIconCol,
+                    24f
+                )
+                else -> ProUnifiedThemeIcons.wrapForClassicBadge(
+                    this,
+                    AuroraBorealisTheme.createVectorIcon(this, resolveToolIconCode(i), Color.WHITE, 14f, false),
+                    i,
+                    24f
+                )
             }
             if (isRightHanded) tv.setCompoundDrawables(null, null, icon, null)
             else tv.setCompoundDrawables(icon, null, null, null)
@@ -1329,8 +1352,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     private fun applyGlassAndAuroraSettingsIcons(settingsRoot: View?) {
-        if (settingsRoot == null || isMinimalistMode || (!isIosGlassMode && !isAuroraMode)) return
-        val iconTint = MinimalistTheme.resolveDrawerIconColor(this, isSelected = false, isExpandedHeader = false)
+        if (settingsRoot == null || isMinimalistMode) return
+        val baseIconTint = MinimalistTheme.resolveDrawerIconColor(this, isSelected = false, isExpandedHeader = false)
 
         fun traverse(v: View) {
             if (v.tag == "MINIMALIST_CUSTOMIZER_IGNORE" || v.tag == "THEME_MATCHED_PALETTES_BAR") return
@@ -1338,39 +1361,54 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
             if (v is TextView && v.isClickable && v.background != null) {
                 val txt = v.text?.toString() ?: ""
+                val isDarkText = MinimalistTheme.computeLuminance(v.currentTextColor) < 0.25
+                val iconTint = if (isDarkText) v.currentTextColor else baseIconTint
+
                 if (txt.contains("אודות")) {
                     val aboutIcon = AppVersionTracker.createAboutVectorIcon(this, iconTint, 22f, false, isAuroraMode)
+                    val styledAbout = when {
+                        isIosGlassMode -> ProUnifiedThemeIcons.wrapForLiquidGlass(this, aboutIcon, iconTint, 25f)
+                        !isAuroraMode -> ProUnifiedThemeIcons.wrapForClassicBadge(this, AppVersionTracker.createAboutVectorIcon(this, Color.WHITE, 15f, false, false), 901, 25f)
+                        else -> aboutIcon
+                    }
                     v.compoundDrawablePadding = dp(12f)
-                    if (isRightHanded) v.setCompoundDrawables(null, null, aboutIcon, null)
-                    else v.setCompoundDrawables(aboutIcon, null, null, null)
+                    if (isRightHanded) v.setCompoundDrawables(null, null, styledAbout, null)
+                    else v.setCompoundDrawables(styledAbout, null, null, null)
                     return
                 }
                 if (txt.contains("החלקות במסך")) {
                     val gIcon = CalculatorGestureManager.createGestureVectorIcon(this, iconTint, 22f, false, isAuroraMode)
+                    val styledGesture = when {
+                        isIosGlassMode -> ProUnifiedThemeIcons.wrapForLiquidGlass(this, gIcon, iconTint, 25f)
+                        !isAuroraMode -> ProUnifiedThemeIcons.wrapForClassicBadge(this, CalculatorGestureManager.createGestureVectorIcon(this, Color.WHITE, 15f, false, false), 902, 25f)
+                        else -> gIcon
+                    }
                     v.compoundDrawablePadding = dp(12f)
-                    if (isRightHanded) v.setCompoundDrawables(null, null, gIcon, null)
-                    else v.setCompoundDrawables(gIcon, null, null, null)
+                    if (isRightHanded) v.setCompoundDrawables(null, null, styledGesture, null)
+                    else v.setCompoundDrawables(styledGesture, null, null, null)
                     return
                 }
-                val settingIconCode: Int? = when {
-                    txt.contains("מצב תצוגה") -> 214
-                    txt.contains("התאמה אישית") -> 203
-                    txt.contains("רטט") -> 204
-                    txt.contains("צלילי הקשה") -> 201
-                    txt.contains("סוג צליל") -> 205
-                    txt.contains("צליל AC") -> 206
-                    txt.contains("אנימציות") -> 207
-                    txt.contains("מסך תמיד דולק") -> 208
-                    txt.contains("צורת כפתורים") -> 209
-                    txt.contains("דיוק עשרוני") -> 210
-                    txt.contains("מצב מקצועי") || txt.contains("Pro Mode") -> 211
-                    txt.contains("יד דומיננטית") -> 212
-                    txt.contains("רשימת סימון") -> 213
-                    txt.contains("איפוס") -> 19
+                val settingKey: String? = when {
+                    txt.contains("מצב תצוגה") -> "display"
+                    txt.contains("התאמה אישית") -> "customize"
+                    txt.contains("רטט") -> "haptic"
+                    txt.contains("צלילי הקשה") -> "sound_toggle"
+                    txt.contains("סוג צליל") -> "sound_type"
+                    txt.contains("צליל AC") -> "ac_sound"
+                    txt.contains("אנימציות") -> "animations"
+                    txt.contains("מסך תמיד דולק") -> "keep_screen"
+                    txt.contains("צורת כפתורים") -> "btn_shape"
+                    txt.contains("דיוק עשרוני") -> "precision"
+                    txt.contains("מצב מקצועי") || txt.contains("Pro Mode") -> "pro_mode"
+                    txt.contains("יד דומיננטית") -> "handedness"
+                    txt.contains("רשימת סימון") -> "checklist"
+                    txt.contains("איפוס") -> "reset"
                     else -> null
                 }
-                if (settingIconCode != null) {
-                    val iconDrawable = AuroraBorealisTheme.createVectorIcon(this, settingIconCode, iconTint, 22f, isAuroraMode)
+                if (settingKey != null) {
+                    val iconDrawable = ProUnifiedThemeIcons.createSettingsIcon(
+                        this, settingKey, iconTint, 22f, false, isIosGlassMode, isAuroraMode
+                    )
                     v.compoundDrawablePadding = dp(12f)
                     if (isRightHanded) {
                         v.setCompoundDrawables(null, null, iconDrawable, null)
