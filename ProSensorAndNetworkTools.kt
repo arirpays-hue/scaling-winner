@@ -17,15 +17,18 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import org.json.JSONObject
+import java.net.HttpURLConnection
 import java.net.Inet4Address
+import java.net.Inet6Address
 import java.net.NetworkInterface
+import java.net.URL
 import java.util.Locale
+import java.util.concurrent.Executors
 import kotlin.math.*
 
 // =========================================================================
 // סמלים וקטוריים מותאמים לכל 4 ערכות הנושא עבור 4 כלי החיישנים והרשת (Tabs 96..99)
-// הערה: ProThemeCanvasColors / getProCanvasColors / styleProCanvasCard / applyAuroraGlow
-// מוגדרים פעם אחת בלבד כ-public בתוך ProFinancialAndMathTools.kt כדי למנוע כפילויות!
 // =========================================================================
 object ProSensorNetworkIcons {
     fun createVectorIcon(
@@ -541,7 +544,7 @@ fun MainActivity.createProClinometerScreen(): View {
 }
 
 // =========================================================================
-// 99. פרטי רשת ו-IP מקומי (Network & IP Inspector - Tab 99)
+// 99. פרטי רשת וכתובת IP מלאים (עובד ב-4G/5G סלולרי וגם ב-Wi-Fi - Tab 99)
 // =========================================================================
 fun MainActivity.createProNetworkInspectorScreen(): View {
     val scroll = ScrollView(this)
@@ -551,15 +554,29 @@ fun MainActivity.createProNetworkInspectorScreen(): View {
     }
     root.addView(
         createProCanvaHeader(
-            "🌐 פרטי רשת ו-IP (Network Inspector)",
-            "איתור כתובת IP מקומית (IPv4), שער ברירת מחדל (Gateway), סוג חיבור ונתוני רשת פעילים"
+            "🌐 פרטי רשת וכתובת IP (Network Inspector)",
+            "איתור IP חיצוני, IPv4/IPv6 מקומי, Gateway, DNS, מסכת רשת, ספק אינטרנט ומיקום (Wi-Fi ו-4G/5G)"
         )
     )
 
-    var localIpStr = "לא זמין"
-    var gatewayStr = "לא זמין"
-    var netTypeStr = "לא מחובר"
+    val netExecutor = Executors.newSingleThreadExecutor()
+    val uiHandler = Handler(Looper.getMainLooper())
+
+    var publicIpStr = "טוען..."
+    var localIpv4Str = "מאתר..."
+    var localIpv6Str = "—"
+    var subnetMaskStr = "—"
+    var gatewayStr = "—"
+    var dnsStr = "—"
+    var ifaceNameStr = "—"
+    var netTypeStr = "בודק חיבור..."
+    var ispStr = "—"
+    var geoStr = "—"
+    var wifiExtraStr = ""
+    var bandwidthStr = "—"
+    var pingMs = -1L
     var isConnected = false
+    var isVpnActive = false
 
     val netCanvas = object : View(this) {
         private val strokeP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -580,116 +597,338 @@ fun MainActivity.createProNetworkInspectorScreen(): View {
             val pal = getProCanvasColors()
 
             val cx = w / 2f
-            val cy = h * 0.42f
-            val r = min(w * 0.21f, h * 0.30f)
+            val cy = h * 0.34f
+            val r = min(w * 0.18f, h * 0.25f)
 
             strokeP.strokeWidth = 2.4f * d
             strokeP.color = if (isConnected) pal.accent1 else pal.muted
             strokeP.clearShadowLayer()
             canvas.drawCircle(cx, cy, r, strokeP)
-            canvas.drawCircle(cx, cy, r * 0.58f, strokeP)
+            canvas.drawCircle(cx, cy, r * 0.60f, strokeP)
 
             fillP.color = if (isConnected) pal.positive else pal.negative
             fillP.applyAuroraGlow(pal.isAurora, fillP.color, d)
             canvas.drawCircle(cx, cy, 7.5f * d, fillP)
 
+            val primaryDisplayIp = when {
+                publicIpStr.contains(".") || publicIpStr.contains(":") -> publicIpStr
+                localIpv4Str.contains(".") -> localIpv4Str
+                localIpv6Str.contains(":") -> localIpv6Str
+                else -> publicIpStr
+            }
+
             txtP.color = pal.ink
-            txtP.textSize = 15.5f * d
-            CanvasUiHelper.drawFittedText(canvas, BidiFmt.ltr(localIpStr), cx, cy + r + 18f * d, w - 28f * d, 15.5f * d, 11f * d, txtP)
+            CanvasUiHelper.drawFittedText(
+                canvas,
+                BidiFmt.ltr(primaryDisplayIp),
+                cx,
+                cy + r + 22f * d,
+                w - 28f * d,
+                16.5f * d,
+                11f * d,
+                txtP
+            )
 
             txtP.color = pal.muted
-            txtP.textSize = 11f * d
-            canvas.drawText("\u200Fחיבור פעיל: $netTypeStr", cx, cy + r + 34f * d, txtP)
+            val secondaryLine = if (localIpv4Str.contains(".") && primaryDisplayIp != localIpv4Str) {
+                "\u200F$netTypeStr  •  IP מקומי: ${BidiFmt.ltr(localIpv4Str)}"
+            } else {
+                "\u200Fחיבור פעיל: $netTypeStr"
+            }
+            CanvasUiHelper.drawFittedText(
+                canvas,
+                secondaryLine,
+                cx,
+                cy + r + 40f * d,
+                w - 24f * d,
+                11.5f * d,
+                9f * d,
+                txtP
+            )
         }
-    }.apply { styleProCanvasCard(this, 185f) }
+    }.apply { styleProCanvasCard(this, 195f) }
 
     val resTv = BidiFmt.applyRtlToResultView(createResultTextView())
 
-    fun intIpToString(ip: Int): String {
+    fun intIpToString(ip: Int): String = String.format(
+        Locale.US,
+        "%d.%d.%d.%d",
+        ip and 0xff,
+        (ip shr 8) and 0xff,
+        (ip shr 16) and 0xff,
+        (ip shr 24) and 0xff
+    )
+
+    fun prefixLenToSubnetMask(prefixLen: Int): String {
+        val clamped = prefixLen.coerceIn(0, 32)
+        val mask = if (clamped == 0) 0 else (-1 shl (32 - clamped))
         return String.format(
             Locale.US,
-            "%d.%d.%d.%d",
-            ip and 0xff,
-            (ip shr 8) and 0xff,
-            (ip shr 16) and 0xff,
-            (ip shr 24) and 0xff
+            "%d.%d.%d.%d (/%d)",
+            (mask ushr 24) and 0xff,
+            (mask ushr 16) and 0xff,
+            (mask ushr 8) and 0xff,
+            mask and 0xff,
+            clamped
         )
     }
 
+    fun renderNetworkReport() {
+        netCanvas.invalidate()
+        val lines = mutableListOf(
+            "פרטי חיבור רשת ו-IP מלאים:",
+            "• סוג חיבור פעיל: $netTypeStr${if (isVpnActive) " (🔒 VPN פעיל)" else ""}",
+            "• כתובת IP חיצונית (Public IP): ${BidiFmt.ltr(publicIpStr)}",
+            "• כתובת IP מקומית (IPv4): ${BidiFmt.ltr(localIpv4Str)}"
+        )
+        if (localIpv6Str != "—") {
+            lines.add("• כתובת IP מקומית (IPv6): ${BidiFmt.ltr(localIpv6Str)}")
+        }
+        lines.add("• שער ברירת מחדל (Gateway): ${BidiFmt.ltr(gatewayStr)}")
+        lines.add("• מסכת רשת (Subnet): ${BidiFmt.ltr(subnetMaskStr)}")
+        lines.add("• שרתי DNS פעילים: ${BidiFmt.ltr(dnsStr)}")
+        lines.add("• ממשק רשת (Interface): ${BidiFmt.ltr(ifaceNameStr)}")
+        lines.add("• רוחב פס מדווח: ${BidiFmt.ltr(bandwidthStr)}")
+        if (wifiExtraStr.isNotEmpty()) {
+            lines.add("• נתוני Wi-Fi: $wifiExtraStr")
+        }
+        if (ispStr != "—") {
+            lines.add("• ספק אינטרנט (ISP): ${BidiFmt.ltr(ispStr)}")
+        }
+        if (geoStr != "—") {
+            lines.add("• מיקום IP משוער: ${BidiFmt.ltr(geoStr)}")
+        }
+        if (pingMs >= 0) {
+            lines.add("• זמן תגובה לשרת (Latency): ${BidiFmt.ltr("${pingMs} ms")}")
+        }
+        lines.add("• סטטוס חיבור: ${if (isConnected) "מחובר ותקין 🟢" else "מנותק מרשת 🔴"}")
+
+        resTv.text = BidiFmt.rtlParagraph(*lines.toTypedArray())
+    }
+
     fun fetchNetDetails() {
-        localIpStr = "לא זמין"
-        gatewayStr = "לא זמין"
+        publicIpStr = "טוען..."
+        localIpv4Str = "—"
+        localIpv6Str = "—"
+        subnetMaskStr = "—"
+        gatewayStr = "—"
+        dnsStr = "—"
+        ifaceNameStr = "—"
         netTypeStr = "לא מחובר"
+        ispStr = "—"
+        geoStr = "—"
+        wifiExtraStr = ""
+        bandwidthStr = "—"
+        pingMs = -1L
         isConnected = false
+        isVpnActive = false
 
         try {
             val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                val caps = cm?.getNetworkCapabilities(cm.activeNetwork)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && cm != null) {
+                val activeNet = cm.activeNetwork
+                val caps = cm.getNetworkCapabilities(activeNet)
                 if (caps != null) {
                     isConnected = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    isVpnActive = caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
                     netTypeStr = when {
                         caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "Wi-Fi אלחוטי"
                         caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "רשת סלולרית (4G/5G)"
                         caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "רשת קווית (Ethernet)"
                         else -> "רשת פעילה"
                     }
+                    val downMbps = caps.linkDownstreamBandwidthKbps / 1000.0
+                    val upMbps = caps.linkUpstreamBandwidthKbps / 1000.0
+                    if (downMbps > 0 || upMbps > 0) {
+                        bandwidthStr = "↓ ${Utils.formatResult(downMbps, 1)} Mbps  |  ↑ ${Utils.formatResult(upMbps, 1)} Mbps"
+                    }
+                }
+
+                // שליפת LinkProperties — עובד גם על רשת סלולרית (4G/5G) וגם על Wi-Fi!
+                val lp = cm.getLinkProperties(activeNet)
+                if (lp != null) {
+                    if (!lp.interfaceName.isNullOrBlank()) {
+                        ifaceNameStr = lp.interfaceName!!
+                    }
+                    for (la in lp.linkAddresses) {
+                        val addr = la.address
+                        if (addr.isLoopbackAddress) continue
+                        when (addr) {
+                            is Inet4Address -> {
+                                val host = addr.hostAddress
+                                if (!host.isNullOrBlank()) {
+                                    localIpv4Str = host
+                                    subnetMaskStr = prefixLenToSubnetMask(la.prefixLength)
+                                    isConnected = true
+                                }
+                            }
+                            is Inet6Address -> {
+                                val host = addr.hostAddress?.substringBefore('%')
+                                if (!host.isNullOrBlank() && !addr.isLinkLocalAddress && localIpv6Str == "—") {
+                                    localIpv6Str = host
+                                    isConnected = true
+                                }
+                            }
+                        }
+                    }
+
+                    // שליפת Gateway אמיתי מתוך טבלת הניתוב של הממשק הפעיל
+                    var ipv4Gw: String? = null
+                    var ipv6Gw: String? = null
+                    for (route in lp.routes) {
+                        val gw = route.gateway ?: continue
+                        val host = gw.hostAddress?.substringBefore('%') ?: continue
+                        if (host == "0.0.0.0" || host == "::") continue
+                        if (route.isDefaultRoute) {
+                            if (gw is Inet4Address) ipv4Gw = host
+                            else if (gw is Inet6Address && ipv6Gw == null) ipv6Gw = host
+                        } else if (ipv4Gw == null && gw is Inet4Address) {
+                            ipv4Gw = host
+                        }
+                    }
+                    gatewayStr = ipv4Gw ?: ipv6Gw ?: gatewayStr
+
+                    // שליפת שרתי DNS פעילים
+                    val dnsList = lp.dnsServers.mapNotNull { it.hostAddress?.substringBefore('%') }.distinct()
+                    if (dnsList.isNotEmpty()) {
+                        dnsStr = dnsList.take(2).joinToString(" , ")
+                    }
                 }
             }
 
+            // גיבוי והשלמת נתוני Wi-Fi (עוצמת קליטה ותדר)
             val wm = applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
-            @Suppress("DEPRECATION")
-            val ipInt = wm?.connectionInfo?.ipAddress ?: 0
-            if (ipInt != 0) {
-                localIpStr = intIpToString(ipInt)
-                isConnected = true
-            }
-            @Suppress("DEPRECATION")
-            val gwInt = wm?.dhcpInfo?.gateway ?: 0
-            if (gwInt != 0) {
-                gatewayStr = intIpToString(gwInt)
+            if (wm != null && wm.isWifiEnabled) {
+                @Suppress("DEPRECATION")
+                val info = wm.connectionInfo
+                if (info != null && info.ipAddress != 0) {
+                    if (localIpv4Str == "—") localIpv4Str = intIpToString(info.ipAddress)
+                    isConnected = true
+                    val freqGhz = if (info.frequency >= 5000) "5 GHz" else if (info.frequency >= 2400) "2.4 GHz" else ""
+                    wifiExtraStr = BidiFmt.ltr("${info.linkSpeed} Mbps • ${info.rssi} dBm${if (freqGhz.isNotEmpty()) " • $freqGhz" else ""}")
+                }
+                @Suppress("DEPRECATION")
+                val dhcp = wm.dhcpInfo
+                if (dhcp != null) {
+                    if (gatewayStr == "—" && dhcp.gateway != 0) gatewayStr = intIpToString(dhcp.gateway)
+                    if (subnetMaskStr == "—" && dhcp.netmask != 0) subnetMaskStr = intIpToString(dhcp.netmask)
+                }
             }
 
-            val interfaces = NetworkInterface.getNetworkInterfaces()
-            if (interfaces != null) {
-                while (interfaces.hasMoreElements()) {
+            // גיבוי נוסף דרך NetworkInterface לכל הממשקים הפעילים
+            if (localIpv4Str == "—") {
+                val interfaces = NetworkInterface.getNetworkInterfaces()
+                while (interfaces != null && interfaces.hasMoreElements()) {
                     val intf = interfaces.nextElement()
+                    if (!intf.isUp || intf.isLoopback) continue
                     val addrs = intf.inetAddresses
                     while (addrs.hasMoreElements()) {
                         val addr = addrs.nextElement()
                         if (!addr.isLoopbackAddress && addr is Inet4Address) {
                             val host = addr.hostAddress
                             if (!host.isNullOrBlank()) {
-                                localIpStr = host
+                                localIpv4Str = host
+                                if (ifaceNameStr == "—") ifaceNameStr = intf.name
                                 isConnected = true
                                 break
                             }
                         }
                     }
+                    if (localIpv4Str != "—") break
                 }
             }
         } catch (_: Throwable) {
         }
 
-        netCanvas.invalidate()
-        resTv.text = BidiFmt.rtlParagraph(
-            "פרטי חיבור רשת נוכחיים:",
-            "• סוג חיבור פעיל: $netTypeStr",
-            "• כתובת IP מקומית (IPv4): ${BidiFmt.ltr(localIpStr)}",
-            "• שער ברירת מחדל (Gateway): ${BidiFmt.ltr(gatewayStr)}",
-            "• סטטוס חיבור: ${if (isConnected) "מחובר ותקין 🟢" else "מנותק מרשת 🔴"}"
-        )
+        if (!isConnected) {
+            publicIpStr = "אין חיבור אינטרנט"
+        }
+        renderNetworkReport()
+
+        // שליפה חיה של IP חיצוני, ספק אינטרנט ומיקום ברקע (עובד ב-4G/5G וב-Wi-Fi)
+        if (isConnected) {
+            netExecutor.execute {
+                var fetchedIp: String? = null
+                var fetchedIsp: String? = null
+                var fetchedGeo: String? = null
+                var measuredPing = -1L
+
+                try {
+                    val t0 = System.currentTimeMillis()
+                    val conn = (URL("https://ipwho.is/").openConnection() as HttpURLConnection).apply {
+                        connectTimeout = 4500
+                        readTimeout = 4500
+                        requestMethod = "GET"
+                        setRequestProperty("User-Agent", "CalcProApp/5.2")
+                    }
+                    if (conn.responseCode == 200) {
+                        val body = conn.inputStream.bufferedReader().use { it.readText() }
+                        measuredPing = (System.currentTimeMillis() - t0).coerceAtLeast(1L)
+                        val json = JSONObject(body)
+                        if (json.optBoolean("success", true)) {
+                            fetchedIp = json.optString("ip").takeIf { it.isNotBlank() }
+                            val connObj = json.optJSONObject("connection")
+                            fetchedIsp = connObj?.optString("isp")?.takeIf { it.isNotBlank() }
+                                ?: connObj?.optString("org")?.takeIf { it.isNotBlank() }
+                            val city = json.optString("city")
+                            val country = json.optString("country")
+                            val loc = listOf(city, country).filter { it.isNotBlank() }.joinToString(", ")
+                            if (loc.isNotBlank()) fetchedGeo = loc
+                        }
+                    }
+                    conn.disconnect()
+                } catch (_: Throwable) {
+                }
+
+                // גיבוי מהיר ל-api.ipify.org במידה והשרת הראשון לא זמין
+                if (fetchedIp == null) {
+                    try {
+                        val t0 = System.currentTimeMillis()
+                        val conn = (URL("https://api.ipify.org?format=text").openConnection() as HttpURLConnection).apply {
+                            connectTimeout = 4000
+                            readTimeout = 4000
+                        }
+                        if (conn.responseCode == 200) {
+                            fetchedIp = conn.inputStream.bufferedReader().use { it.readText().trim() }
+                            measuredPing = (System.currentTimeMillis() - t0).coerceAtLeast(1L)
+                        }
+                        conn.disconnect()
+                    } catch (_: Throwable) {
+                    }
+                }
+
+                uiHandler.post {
+                    publicIpStr = fetchedIp ?: "לא ניתן לשלוף כרגע"
+                    if (!fetchedIsp.isNullOrBlank()) ispStr = fetchedIsp
+                    if (!fetchedGeo.isNullOrBlank()) geoStr = fetchedGeo
+                    if (measuredPing >= 0) pingMs = measuredPing
+                    renderNetworkReport()
+                }
+            }
+        }
     }
 
+    root.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+        override fun onViewAttachedToWindow(v: View) {}
+        override fun onViewDetachedFromWindow(v: View) {
+            netExecutor.shutdownNow()
+        }
+    })
+
     val refreshBtn = createActionBtn("🔄 רענן פרטי רשת ו-IP", true) { fetchNetDetails() }
-    val copyIpBtn = createActionBtn("📋 העתק כתובת IP ללוח", false) {
-        copyToClipboard(localIpStr)
+    val copyPublicIpBtn = createActionBtn("📋 העתק כתובת IP חיצונית ללוח", false) {
+        copyToClipboard(publicIpStr)
     }
+    val copyLocalIpBtn = createActionBtn("📋 העתק כתובת IP מקומית ללוח", false) {
+        copyToClipboard(if (localIpv4Str != "—") localIpv4Str else localIpv6Str)
+    }
+
     fetchNetDetails()
 
     root.addView(netCanvas)
     root.addView(refreshBtn)
-    root.addView(copyIpBtn)
+    root.addView(copyPublicIpBtn)
+    root.addView(copyLocalIpBtn)
     root.addView(createPinResultButton(resTv))
     root.addView(resTv)
     scroll.addView(root)
