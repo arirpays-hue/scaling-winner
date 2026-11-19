@@ -1557,22 +1557,25 @@ object MinimalistTheme {
             pillTone = if (isChecklistBtn) 3 else 5
         )
 
-        val rightDrawable: Drawable? = when {
-            isChecklistBtn -> createSettingsBadgeDrawable(activity, 7)
-            clean.contains("החלקות במסך") -> CalculatorGestureManager.createGestureVectorIcon(activity, rowTextCol, 20f, true, false)
-            clean.contains("התאמה אישית") -> createMinimalistVectorIcon(activity, 203, rowTextCol, 20f)
-            clean.contains("אודות") -> AppVersionTracker.createAboutVectorIcon(activity, rowTextCol, 20f, true, false)
-            clean.contains("רטט") || clean.contains("אנימציות") || clean.contains("מצב מקצועי") || clean.contains("מצב תצוגה") ->
-                createSettingsBadgeDrawable(activity, if (clean.contains("כבוי")) 2 else 1)
-            clean.contains("צלילי הקשה") -> createSettingsBadgeDrawable(activity, 3)
-            clean.contains("סוג צליל") -> createSettingsBadgeDrawable(activity, 4)
-            clean.contains("צליל AC") -> createSettingsBadgeDrawable(activity, 8)
-            clean.contains("מסך תמיד דולק") -> createSettingsBadgeDrawable(activity, 5)
-            clean.contains("צורת כפתורים") -> createSettingsBadgeDrawable(activity, 6)
-            clean.contains("דיוק עשרוני") || clean.contains("הגדרות") -> createMinimalistVectorIcon(activity, 19, rowTextCol, 20f)
-            clean.contains("יד דומיננטית") -> createSettingsBadgeDrawable(activity, 9)
+                val rightDrawable: Drawable? = when {
+            isChecklistBtn -> ProUnifiedThemeIcons.createSettingsIcon(activity, "checklist", rowTextCol, 22f, true, false, false)
+            clean.contains("החלקות במסך") -> CalculatorGestureManager.createGestureVectorIcon(activity, rowTextCol, 22f, true, false)
+            clean.contains("התאמה אישית") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "customize", rowTextCol, 22f, true, false, false)
+            clean.contains("אודות") -> AppVersionTracker.createAboutVectorIcon(activity, rowTextCol, 22f, true, false)
+            clean.contains("מצב תצוגה") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "display", rowTextCol, 22f, true, false, false)
+            clean.contains("מצב מקצועי") || clean.contains("Pro Mode") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "pro_mode", rowTextCol, 22f, true, false, false)
+            clean.contains("רטט") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "haptic", rowTextCol, 22f, true, false, false)
+            clean.contains("אנימציות") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "animations", rowTextCol, 22f, true, false, false)
+            clean.contains("צלילי הקשה") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "sound_toggle", rowTextCol, 22f, true, false, false)
+            clean.contains("סוג צליל") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "sound_type", rowTextCol, 22f, true, false, false)
+            clean.contains("צליל AC") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "ac_sound", rowTextCol, 22f, true, false, false)
+            clean.contains("מסך תמיד דולק") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "keep_screen", rowTextCol, 22f, true, false, false)
+            clean.contains("צורת כפתורים") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "btn_shape", rowTextCol, 22f, true, false, false)
+            clean.contains("דיוק עשרוני") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "precision", rowTextCol, 22f, true, false, false)
+            clean.contains("יד דומיננטית") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "handedness", rowTextCol, 22f, true, false, false)
+            clean.contains("איפוס") -> ProUnifiedThemeIcons.createSettingsIcon(activity, "reset", rowTextCol, 22f, true, false, false)
             else -> null
-        }
+                }
         tv.setCompoundDrawables(null, null, rightDrawable, null)
     }
 
