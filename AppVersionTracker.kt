@@ -28,9 +28,9 @@ data class VersionReleaseNote(
 object AppVersionTracker {
 
     const val DEVELOPER_NAME = "Harry"
-        const val CURRENT_SEMANTIC_VERSION = "5.1.0 Pro"
-    const val CURRENT_BUILD_NUMBER = 51
-    const val CURRENT_RELEASE_DATE = "18/11/2026"
+            const val CURRENT_SEMANTIC_VERSION = "5.2.0 Pro"
+    const val CURRENT_BUILD_NUMBER = 52
+    const val CURRENT_RELEASE_DATE = "19/11/2026"
 
     private const val PREF_LAST_SEEN_BUILD = "app_tracker_last_seen_build"
     private const val PREF_LAST_PKG_UPDATE_TIME = "app_tracker_last_pkg_update_time"
@@ -40,6 +40,18 @@ object AppVersionTracker {
 
     val changelogHistory: List<VersionReleaseNote> = listOf(
                 VersionReleaseNote(
+            versionCode = 52,
+            versionName = "v5.2.0 Pro",
+            releaseDate = "19/11/2026",
+            title = "מנוע כלי טקסט מהיר (120,000+ תווים) ושדרוג מלא לכלי פרטי רשת ו-IP",
+            highlights = listOf(
+                "בניית קובץ ייעודי ומואץ לכלי הטקסט (ProTextToolsStudio.kt) המבצע ספירה וטרנספורמציות ברקע (Background Thread) ללא תקיעות גם על מאות אלפי תווים ואלפי שורות",
+                "הוספת 12 תכונות חדשות לכלי הטקסט מעבר ל-11 הפעולות הקיימות: בטל/חזור (Undo/Redo), הדבקה מהלוח, סרגל חיפוש והחלפה, מיון ת-א ולפי אורך, ערבוב שורות, מספור שורות, הסרת ניקוד עברי, חילוץ קישורים/אימיילים/מספרים והמרת שורות לפסיקים",
+                "שדרוג מנוע 'פרטי רשת וכתובת IP' (Tab 99) באמצעות ConnectivityManager.LinkProperties לעבודה מלאה גם ברשת סלולרית (4G/5G) וגם ב-Wi-Fi[span_4](start_span)[span_4](end_span)[span_5](start_span)[span_5](end_span)",
+                "הוספת שליפה חיה של כתובת IP חיצונית (Public IP), IPv4 ו-IPv6 מקומי, Gateway, מסכת רשת, שרתי DNS פעילים, ספק אינטרנט (ISP), מיקום משוער וזמן תגובה (Ping)"
+            )
+        ),
+        VersionReleaseNote(
             versionCode = 51,
             versionName = "v5.1.0 Pro",
             releaseDate = "18/11/2026",
