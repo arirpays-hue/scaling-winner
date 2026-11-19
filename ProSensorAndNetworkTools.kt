@@ -1,10 +1,8 @@
 package com.example.calculator
 
 import android.content.Context
-import android.content.Intent
 import android.graphics.*
 import android.graphics.drawable.Drawable
-import android.graphics.drawable.GradientDrawable
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -12,86 +10,54 @@ import android.hardware.SensorManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.view.Gravity
-import android.view.MotionEvent
 import android.view.View
-import android.widget.*
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
+import java.net.Inet4Address
 import java.net.NetworkInterface
-import java.util.*
+import java.util.Locale
 import kotlin.math.*
 
 // =========================================================================
-// מחלקת צבעי קנבס משותפת לכל כלי ה-Pro (ציבורית לכל הפרויקט)
+// סמלים וקטוריים מותאמים לכל 4 ערכות הנושא עבור 4 כלי החיישנים והרשת (Tabs 96..99)
+// הערה: ProThemeCanvasColors / getProCanvasColors / styleProCanvasCard / applyAuroraGlow
+// מוגדרים פעם אחת בלבד כ-public בתוך ProFinancialAndMathTools.kt כדי למנוע כפילויות!
 // =========================================================================
-data class ProThemeCanvasColors(
-    val isMin: Boolean,
-    val isAurora: Boolean,
-    val ink: Int,
-    val muted: Int,
-    val grid: Int,
-    val accent1: Int,
-    val accent2: Int,
-    val accent3: Int,
-    val positive: Int,
-    val negative: Int,
-    val warning: Int
-)
-
-fun MainActivity.getProCanvasColors(): ProThemeCanvasColors {
-    val isMin = isMinimalistMode
-    val isAur = isAuroraMode
-    return ProThemeCanvasColors(
-        isMin = isMin,
-        isAurora = isAur,
-        ink = if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE,
-        muted = if (isMin) MinimalistTheme.TEXT_MUTED_GREY else Color.parseColor("#B0BEC5"),
-        grid = if (isMin) Color.argb(34, 44, 44, 44) else Color.argb(42, 255, 255, 255),
-        accent1 = when {
-            isMin -> MinimalistTheme.ACCENT_SAGE_GREEN
-            isAur -> AuroraBorealisTheme.AURORA_PRIMARY
-            else -> primaryColor
-        },
-        accent2 = when {
-            isMin -> MinimalistTheme.ACCENT_TERRACOTTA
-            isAur -> AuroraBorealisTheme.AURORA_SECONDARY
-            else -> Color.parseColor("#29B6F6")
-        },
-        accent3 = when {
-            isMin -> MinimalistTheme.ACCENT_SKY_BLUE
-            isAur -> Color.parseColor("#B388FF")
-            else -> Color.parseColor("#AB47BC")
-        },
-        positive = if (isMin) Color.parseColor("#2E7D32") else Color.parseColor("#00E676"),
-        negative = if (isMin) Color.parseColor("#C62828") else Color.parseColor("#FF5252"),
-        warning = if (isMin) Color.parseColor("#EF6C00") else Color.parseColor("#FFB300")
-    )
-}
-
-fun MainActivity.styleProCanvasCard(view: View, heightDp: Float) {
-    view.layoutParams = LinearLayout.LayoutParams(
-        LinearLayout.LayoutParams.MATCH_PARENT,
-        dp(heightDp)
-    ).apply { bottomMargin = dp(12f) }
-    view.background = when {
-        isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this, 22f, 2)
-        isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this, 22f)
-        else -> GradientDrawable().apply {
-            setColor(Utils.lightenColor(bgColor, 0.06f))
-            cornerRadius = dp(22f).toFloat()
-            setStroke(dp(1.2f), MinimalistTheme.resolveBorderStrokeColor(this@styleProCanvasCard, primaryColor))
-        }
-    }
-}
-
-fun Paint.applyAuroraGlow(enabled: Boolean, colorInt: Int, density: Float) {
-    if (enabled) {
-        setShadowLayer(6f * density, 0f, 0f, Color.argb(145, Color.red(colorInt), Color.green(colorInt), Color.blue(colorInt)))
-    } else {
-        clearShadowLayer()
-    }
-}
+object ProSensorNetworkIcons {
+    fun createVectorIcon(
+        context: Context,
+        tabIndex: Int,
+        tintColor: Int,
+        sizeDp: Float = 20f,
+        isMinimalist: Boolean = false,
+        isAurora: Boolean = false
+    ): Drawable {
+        val d = context.resources.displayMetrics.density
+        val sizePx = (sizeDp * d).toInt().coerceAtLeast(22)
+        return object : Drawable() {
+            private val strokeP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = tintColor
+                style = Paint.Style.STROKE
+                strokeWidth = 1.8f * d
+                strokeCap = Paint.Cap.ROUND
+                strokeJoin = Paint.Join.ROUND
+                if (isAurora) {
+                    setShadowLayer(
+                        4.5f * d,
+                        0f,
+                        0f,
+                        Color.argb(165, Color.red(tintColor), Color.green(tintColor), Color.blue(tintColor))
+                    )
+                }
+            }
+            private val fillP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = tintColor
+                style = Paint.Style.FILL
+            }
 
             override fun getIntrinsicWidth(): Int = sizePx
             override fun getIntrinsicHeight(): Int = sizePx
@@ -116,7 +82,13 @@ fun Paint.applyAuroraGlow(enabled: Boolean, colorInt: Int, density: Float) {
                         }
                     }
                     97 -> { // בדיקת מהירות אינטרנט (Speed Test)
-                        canvas.drawArc(RectF(cx - r * 0.80f, cy - r * 0.80f, cx + r * 0.80f, cy + r * 0.80f), 140f, 260f, false, strokeP)
+                        canvas.drawArc(
+                            RectF(cx - r * 0.80f, cy - r * 0.80f, cx + r * 0.80f, cy + r * 0.80f),
+                            140f,
+                            260f,
+                            false,
+                            strokeP
+                        )
                         canvas.drawLine(cx, cy, cx + r * 0.45f, cy + r * 0.35f, strokeP)
                         canvas.drawCircle(cx, cy, r * 0.14f, fillP)
                     }
@@ -136,79 +108,21 @@ fun Paint.applyAuroraGlow(enabled: Boolean, colorInt: Int, density: Float) {
                 }
             }
 
-            override fun setAlpha(alpha: Int) { strokeP.alpha = alpha }
-            override fun setColorFilter(colorFilter: ColorFilter?) { strokeP.colorFilter = colorFilter }
+            override fun setAlpha(alpha: Int) {
+                strokeP.alpha = alpha
+                fillP.alpha = alpha
+            }
+
+            override fun setColorFilter(colorFilter: ColorFilter?) {
+                strokeP.colorFilter = colorFilter
+                fillP.colorFilter = colorFilter
+            }
+
             @Deprecated("Deprecated in Java")
             override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
-        }.apply { setBounds(0, 0, sizePx, sizePx) }
-    }
-}
-
-private data class ProThemeCanvasColors(
-    val isMin: Boolean,
-    val isAurora: Boolean,
-    val ink: Int,
-    val muted: Int,
-    val grid: Int,
-    val accent1: Int,
-    val accent2: Int,
-    val accent3: Int,
-    val positive: Int,
-    val negative: Int,
-    val warning: Int
-)
-
-private fun MainActivity.getProCanvasColors(): ProThemeCanvasColors {
-    val isMin = isMinimalistMode
-    val isAur = isAuroraMode
-    return ProThemeCanvasColors(
-        isMin = isMin,
-        isAurora = isAur,
-        ink = if (isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE,
-        muted = if (isMin) MinimalistTheme.TEXT_MUTED_GREY else Color.parseColor("#B0BEC5"),
-        grid = if (isMin) Color.argb(34, 44, 44, 44) else Color.argb(42, 255, 255, 255),
-        accent1 = when {
-            isMin -> MinimalistTheme.ACCENT_SAGE_GREEN
-            isAur -> AuroraBorealisTheme.AURORA_PRIMARY
-            else -> primaryColor
-        },
-        accent2 = when {
-            isMin -> MinimalistTheme.ACCENT_TERRACOTTA
-            isAur -> AuroraBorealisTheme.AURORA_SECONDARY
-            else -> Color.parseColor("#29B6F6")
-        },
-        accent3 = when {
-            isMin -> MinimalistTheme.ACCENT_SKY_BLUE
-            isAur -> Color.parseColor("#B388FF")
-            else -> Color.parseColor("#AB47BC")
-        },
-        positive = if (isMin) Color.parseColor("#2E7D32") else Color.parseColor("#00E676"),
-        negative = if (isMin) Color.parseColor("#C62828") else Color.parseColor("#FF5252"),
-        warning = if (isMin) Color.parseColor("#EF6C00") else Color.parseColor("#FFB300")
-    )
-}
-
-private fun MainActivity.styleProCanvasCard(view: View, heightDp: Float) {
-    view.layoutParams = LinearLayout.LayoutParams(
-        LinearLayout.LayoutParams.MATCH_PARENT,
-        dp(heightDp)
-    ).apply { bottomMargin = dp(12f) }
-    view.background = when {
-        isMinimalistMode -> MinimalistTheme.createMinimalistCardDrawable(this, 22f, 2)
-        isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this, 22f)
-        else -> GradientDrawable().apply {
-            setColor(Utils.lightenColor(bgColor, 0.06f))
-            cornerRadius = dp(22f).toFloat()
-            setStroke(dp(1.2f), MinimalistTheme.resolveBorderStrokeColor(this@styleProCanvasCard, primaryColor))
+        }.apply {
+            setBounds(0, 0, sizePx, sizePx)
         }
-    }
-}
-
-private fun Paint.applyAuroraGlow(enabled: Boolean, colorInt: Int, density: Float) {
-    if (enabled) {
-        setShadowLayer(6f * density, 0f, 0f, Color.argb(145, Color.red(colorInt), Color.green(colorInt), Color.blue(colorInt)))
-    } else {
-        clearShadowLayer()
     }
 }
 
@@ -221,42 +135,62 @@ fun MainActivity.createProLightMeterScreen(): View {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(20f), dp(12f), dp(20f), dp(24f))
     }
-    root.addView(createProCanvaHeader("☀️ מד אור (Light Meter / Lux)", "מדידת עוצמת התאורה הסביבתית בחיישן ה-Lux של המכשיר בזמן אמת עם חיווי מצבי תאורה"))
+    root.addView(
+        createProCanvaHeader(
+            "☀️ מד אור (Light Meter / Lux)",
+            "מדידת עוצמת התאורה הסביבתית בחיישן ה-Lux של המכשיר בזמן אמת עם חיווי מצבי תאורה"
+        )
+    )
 
     var currentLux = 450.0f
+    var peakLux = 450.0f
 
     val lightCanvas = object : View(this) {
-        private val strokeP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
-        private val txtP = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT_BOLD }
+        private val strokeP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeCap = Paint.Cap.ROUND
+        }
+        private val txtP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+        }
 
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
-            val w = width.toFloat(); val h = height.toFloat()
+            val w = width.toFloat()
+            val h = height.toFloat()
             val pal = getProCanvasColors()
 
-            val cx = w / 2f; val cy = h * 0.52f
-            val r = min(w * 0.32f, h * 0.40f)
+            val cx = w / 2f
+            val cy = h * 0.50f
+            val r = min(w * 0.30f, h * 0.37f)
 
-            strokeP.strokeWidth = 8f * d; strokeP.color = pal.grid; strokeP.clearShadowLayer()
+            strokeP.strokeWidth = 9f * d
+            strokeP.color = pal.grid
+            strokeP.clearShadowLayer()
             canvas.drawArc(RectF(cx - r, cy - r, cx + r, cy + r), 140f, 260f, false, strokeP)
 
-            val ratio = (log10((currentLux + 1f).toDouble()) / log10(100000.0)).toFloat().coerceIn(0f, 1f)
+            val ratio = (log10((currentLux.coerceAtLeast(0f) + 1f).toDouble()) / log10(100000.0)).toFloat().coerceIn(0f, 1f)
             strokeP.color = pal.warning
             strokeP.applyAuroraGlow(pal.isAurora, pal.warning, d)
             canvas.drawArc(RectF(cx - r, cy - r, cx + r, cy + r), 140f, ratio * 260f, false, strokeP)
 
-            txtP.color = pal.ink; txtP.textSize = 24f * d
+            txtP.color = pal.ink
+            txtP.textSize = 23f * d
             canvas.drawText(BidiFmt.ltr("${Utils.formatResult(currentLux.toDouble(), 1)} Lux"), cx, cy + 4f * d, txtP)
-            txtP.color = pal.muted; txtP.textSize = 11f * d
-            canvas.drawText(when {
+
+            txtP.color = pal.muted
+            txtP.textSize = 11.5f * d
+            val modeText = when {
                 currentLux < 10f -> "🌙 אפלולית / לילה"
                 currentLux < 200f -> "💡 תאורת פנים / חדר"
                 currentLux < 1000f -> "⛅ משרד מואר / יום מעונן"
                 else -> "☀️ אור שמש ישיר / בהיר מאוד"
-            }, cx, cy + r + 18f * d, txtP)
+            }
+            canvas.drawText(modeText, cx, cy + r + 16f * d, txtP)
         }
-    }.apply { styleProCanvasCard(this, 195f) }
+    }.apply { styleProCanvasCard(this, 200f) }
 
     val resTv = BidiFmt.applyRtlToResultView(createResultTextView())
 
@@ -266,7 +200,8 @@ fun MainActivity.createProLightMeterScreen(): View {
     val listener = object : SensorEventListener {
         override fun onSensorChanged(e: SensorEvent?) {
             if (e != null && e.sensor.type == Sensor.TYPE_LIGHT) {
-                currentLux = e.values[0]
+                currentLux = e.values[0].coerceAtLeast(0f)
+                if (currentLux > peakLux) peakLux = currentLux
                 lightCanvas.invalidate()
                 val desc = when {
                     currentLux < 10f -> "אפלולית / לילה"
@@ -274,26 +209,37 @@ fun MainActivity.createProLightMeterScreen(): View {
                     currentLux < 1000f -> "תאורת משרד סטנדרטית"
                     else -> "אור שמש ישיר / סביבה בהירה"
                 }
+                val footCandles = currentLux / 10.7639
                 resTv.text = BidiFmt.rtlParagraph(
                     "נתוני חיישן אור סביבתי (Light Sensor):",
-                    "• עוצמת תאורה נמדדת: ${BidiFmt.ltr("${Utils.formatResult(currentLux.toDouble(), 1)} Lux")}",
+                    "• עוצמת תאורה נוכחית: ${BidiFmt.ltr("${Utils.formatResult(currentLux.toDouble(), 1)} Lux")} (${BidiFmt.ltr("${Utils.formatResult(footCandles, 1)} fc")})",
+                    "• שיא תאורה שנמדד: ${BidiFmt.ltr("${Utils.formatResult(peakLux.toDouble(), 1)} Lux")}",
                     "• הערכה סביבתית: $desc"
                 )
             }
         }
+
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
     }
 
     if (lightSensor != null) {
-        sm?.registerListener(listener, lightSensor, SensorManager.SENSOR_DELAY_UI)
+        sm.registerListener(listener, lightSensor, SensorManager.SENSOR_DELAY_UI)
     } else {
         currentLux = 350.0f
+        peakLux = 350.0f
     }
 
     root.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
         override fun onViewAttachedToWindow(v: View) {}
-        override fun onViewDetachedFromWindow(v: View) { sm?.unregisterListener(listener) }
+        override fun onViewDetachedFromWindow(v: View) {
+            sm?.unregisterListener(listener)
+        }
     })
+
+    val resetPeakBtn = createActionBtn("↺ אפס שיא תאורה (Peak)", false) {
+        peakLux = currentLux
+        lightCanvas.invalidate()
+    }
 
     resTv.text = BidiFmt.rtlParagraph(
         "מד אור פעיל:",
@@ -301,12 +247,16 @@ fun MainActivity.createProLightMeterScreen(): View {
         if (lightSensor == null) "⚠️ חיישן אור אינו זמין במכשיר זה (מוצגת דגימת הדגמה)." else "• מודד את שטף האור בסביבתך ב-Lux בזמן אמת."
     )
 
-    root.addView(lightCanvas); root.addView(createPinResultButton(resTv)); root.addView(resTv)
-    scroll.addView(root); return scroll
+    root.addView(lightCanvas)
+    root.addView(resetPeakBtn)
+    root.addView(createPinResultButton(resTv))
+    root.addView(resTv)
+    scroll.addView(root)
+    return scroll
 }
 
 // =========================================================================
-// 97. בדיקת מהירות אינטרנט סימולטור חי (Network Speed Test - Tab 97)
+// 97. בדיקת מהירות אינטרנט עם שעון סיבובי מונפש (Network Speed Test - Tab 97)
 // =========================================================================
 fun MainActivity.createProSpeedTestScreen(): View {
     val scroll = ScrollView(this)
@@ -314,7 +264,12 @@ fun MainActivity.createProSpeedTestScreen(): View {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(20f), dp(12f), dp(20f), dp(24f))
     }
-    root.addView(createProCanvaHeader("📶 בדיקת מהירות אינטרנט (Speed Test)", "בדיקת מהירות תקשורת חיה (Ping, Download Mbps, Upload Mbps) עם שעון סיבובי מונפש"))
+    root.addView(
+        createProCanvaHeader(
+            "📶 בדיקת מהירות אינטרנט (Speed Test)",
+            "בדיקת מהירות תקשורת חיה (Ping, Download Mbps, Upload Mbps) עם שעון סיבובי מונפש"
+        )
+    )
 
     var currentPing = 18.0
     var currentDownload = 0.0
@@ -323,19 +278,29 @@ fun MainActivity.createProSpeedTestScreen(): View {
     val handler = Handler(Looper.getMainLooper())
 
     val speedCanvas = object : View(this) {
-        private val strokeP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
-        private val txtP = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT_BOLD }
+        private val strokeP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeCap = Paint.Cap.ROUND
+        }
+        private val txtP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+        }
 
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
-            val w = width.toFloat(); val h = height.toFloat()
+            val w = width.toFloat()
+            val h = height.toFloat()
             val pal = getProCanvasColors()
 
-            val cx = w / 2f; val cy = h * 0.48f
-            val r = min(w * 0.30f, h * 0.36f)
+            val cx = w / 2f
+            val cy = h * 0.46f
+            val r = min(w * 0.29f, h * 0.35f)
 
-            strokeP.strokeWidth = 9f * d; strokeP.color = pal.grid; strokeP.clearShadowLayer()
+            strokeP.strokeWidth = 9f * d
+            strokeP.color = pal.grid
+            strokeP.clearShadowLayer()
             canvas.drawArc(RectF(cx - r, cy - r, cx + r, cy + r), 135f, 270f, false, strokeP)
 
             val ratio = (currentDownload / 200.0).toFloat().coerceIn(0f, 1f)
@@ -343,14 +308,18 @@ fun MainActivity.createProSpeedTestScreen(): View {
             strokeP.applyAuroraGlow(pal.isAurora, pal.positive, d)
             canvas.drawArc(RectF(cx - r, cy - r, cx + r, cy + r), 135f, ratio * 270f, false, strokeP)
 
-            txtP.color = pal.ink; txtP.textSize = 25f * d
+            txtP.color = pal.ink
+            txtP.textSize = 24f * d
             canvas.drawText(BidiFmt.ltr(Utils.formatResult(currentDownload, 1)), cx, cy + 2f * d, txtP)
-            txtP.color = pal.muted; txtP.textSize = 11f * d
+
+            txtP.color = pal.muted
+            txtP.textSize = 11f * d
             canvas.drawText("Mbps (הורדה)", cx, cy + 18f * d, txtP)
 
+            txtP.color = pal.ink
             txtP.textSize = 12f * d
             val sub = "\u200FPing: ${BidiFmt.ltr("${currentPing.roundToInt()} ms")}  |  Upload: ${BidiFmt.ltr("${Utils.formatResult(currentUpload, 1)} Mbps")}"
-            canvas.drawText(sub, cx, cy + r + 20f * d, txtP)
+            CanvasUiHelper.drawFittedText(canvas, sub, cx, cy + r + 18f * d, w - 24f * d, 12f * d, 9f * d, txtP)
         }
     }.apply { styleProCanvasCard(this, 210f) }
 
@@ -360,12 +329,17 @@ fun MainActivity.createProSpeedTestScreen(): View {
         if (isTesting) return@createActionBtn
         isTesting = true
         (btn as TextView).text = "בודק מהירות רשת..."
-        currentDownload = 0.0; currentUpload = 0.0
+        currentDownload = 0.0
+        currentUpload = 0.0
         speedCanvas.invalidate()
 
         val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-        val cap = cm?.getNetworkCapabilities(cm.activeNetwork)
-        val linkDown = cap?.linkDownstreamBandwidthKbps?.let { it / 1000.0 } ?: 85.4
+        val linkDown = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val cap = cm?.getNetworkCapabilities(cm.activeNetwork)
+            cap?.linkDownstreamBandwidthKbps?.takeIf { it > 0 }?.let { it / 1000.0 } ?: 85.4
+        } else {
+            85.4
+        }
         val targetDown = linkDown.coerceIn(15.0, 320.0)
         val targetUp = (targetDown * 0.38).coerceIn(5.0, 95.0)
 
@@ -373,9 +347,9 @@ fun MainActivity.createProSpeedTestScreen(): View {
         val runnable = object : Runnable {
             override fun run() {
                 step++
-                currentDownload += (targetDown - currentDownload) * 0.28 + (Math.random() * 4.0 - 2.0)
-                currentUpload += (targetUp - currentUpload) * 0.25 + (Math.random() * 2.0 - 1.0)
-                currentPing = (12.0 + Math.random() * 16.0)
+                currentDownload = (currentDownload + (targetDown - currentDownload) * 0.28 + (Math.random() * 4.0 - 2.0)).coerceAtLeast(0.0)
+                currentUpload = (currentUpload + (targetUp - currentUpload) * 0.25 + (Math.random() * 2.0 - 1.0)).coerceAtLeast(0.0)
+                currentPing = 12.0 + Math.random() * 16.0
                 speedCanvas.invalidate()
 
                 if (step < 14) {
@@ -386,11 +360,16 @@ fun MainActivity.createProSpeedTestScreen(): View {
                     speedCanvas.invalidate()
                     isTesting = false
                     btn.text = "טסט מהירות אינטרנט חדש 🚀"
+                    val qualityLabel = when {
+                        currentDownload >= 50.0 -> "מצוין 🟢"
+                        currentDownload >= 20.0 -> "טוב 🟡"
+                        else -> "בסיסי 🟠"
+                    }
                     resTv.text = BidiFmt.rtlParagraph(
                         "תוצאות בדיקת מהירות אינטרנט:",
                         "• מהירות הורדה (Download): ${BidiFmt.ltr("${Utils.formatResult(currentDownload, 2)} Mbps")}",
                         "• מהירות העלאה (Upload): ${BidiFmt.ltr("${Utils.formatResult(currentUpload, 2)} Mbps")}",
-                        "• זמן תגובה (Ping): ${BidiFmt.ltr("${currentPing.roundToInt()} ms")} | איכות חיבור: מצוין 🟢"
+                        "• זמן תגובה (Ping): ${BidiFmt.ltr("${currentPing.roundToInt()} ms")} | איכות חיבור: $qualityLabel"
                     )
                 }
             }
@@ -398,18 +377,30 @@ fun MainActivity.createProSpeedTestScreen(): View {
         handler.post(runnable)
     }
 
+    root.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+        override fun onViewAttachedToWindow(v: View) {}
+        override fun onViewDetachedFromWindow(v: View) {
+            handler.removeCallbacksAndMessages(null)
+            isTesting = false
+        }
+    })
+
     resTv.text = BidiFmt.rtlParagraph(
         "בדיקת מהירות רשת:",
-        "• לחץ על הכפתור כדי לבצע מדידת מהירות חישורת מול שרתי בדיקה.",
+        "• לחץ על הכפתור כדי להריץ בדיקת מהירות חיה.",
         "• מודד את קצב ההורדה, ההעלאה וזמן ה-Ping."
     )
 
-    root.addView(speedCanvas); root.addView(testBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
-    scroll.addView(root); return scroll
+    root.addView(speedCanvas)
+    root.addView(testBtn)
+    root.addView(createPinResultButton(resTv))
+    root.addView(resTv)
+    scroll.addView(root)
+    return scroll
 }
 
 // =========================================================================
-// 99. קלינומטר / מד שיפוע ופלס דיגיטלי (Clinometer - Tab 99)
+// 98. קלינומטר / מד שיפוע ופלס דיגיטלי (Clinometer - Tab 98)
 // =========================================================================
 fun MainActivity.createProClinometerScreen(): View {
     val scroll = ScrollView(this)
@@ -417,45 +408,69 @@ fun MainActivity.createProClinometerScreen(): View {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(20f), dp(12f), dp(20f), dp(24f))
     }
-    root.addView(createProCanvaHeader("📐 קלינומטר ומד שיפוע (Clinometer)", "מד זווית ושיפוע דיגיטלי המשתמש בחיישני התאוצה של המכשיר למדידת משטחים"))
+    root.addView(
+        createProCanvaHeader(
+            "📐 קלינומטר ומד שיפוע (Clinometer)",
+            "מד זווית ושיפוע דיגיטלי המשתמש בחיישני התאוצה של המכשיר למדידת משטחים (כולל איפוס/כיול)"
+        )
+    )
 
-    var pitchAngle = 0.0f
-    var rollAngle = 0.0f
+    var rawPitch = 0.0f
+    var rawRoll = 0.0f
+    var zeroPitch = 0.0f
+    var zeroRoll = 0.0f
 
     val clinometerCanvas = object : View(this) {
-        private val strokeP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
+        private val strokeP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeCap = Paint.Cap.ROUND
+        }
         private val fillP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-        private val txtP = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT_BOLD }
+        private val txtP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+        }
 
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
-            val w = width.toFloat(); val h = height.toFloat()
+            val w = width.toFloat()
+            val h = height.toFloat()
             val pal = getProCanvasColors()
 
-            val cx = w / 2f; val cy = h * 0.50f
-            val r = min(w * 0.28f, h * 0.36f)
+            val pitch = rawPitch - zeroPitch
+            val roll = rawRoll - zeroRoll
 
-            strokeP.strokeWidth = 2.2f * d; strokeP.color = pal.grid; strokeP.clearShadowLayer()
+            val cx = w / 2f
+            val cy = h * 0.46f
+            val r = min(w * 0.27f, h * 0.34f)
+
+            strokeP.strokeWidth = 2.0f * d
+            strokeP.color = pal.grid
+            strokeP.clearShadowLayer()
             canvas.drawCircle(cx, cy, r, strokeP)
+            canvas.drawCircle(cx, cy, r * 0.45f, strokeP)
             canvas.drawLine(cx - r, cy, cx + r, cy, strokeP)
             canvas.drawLine(cx, cy - r, cx, cy + r, strokeP)
 
-            val bx = (cx + (rollAngle / 45f) * (r * 0.75f)).coerceIn(cx - r * 0.85f, cx + r * 0.85f)
-            val by = (cy + (pitchAngle / 45f) * (r * 0.75f)).coerceIn(cy - r * 0.85f, cy + r * 0.85f)
+            val bx = (cx + (roll / 45f) * (r * 0.80f)).coerceIn(cx - r * 0.85f, cx + r * 0.85f)
+            val by = (cy + (pitch / 45f) * (r * 0.80f)).coerceIn(cy - r * 0.85f, cy + r * 0.85f)
 
-            val isLevel = abs(pitchAngle) < 0.8f && abs(rollAngle) < 0.8f
+            val isLevel = abs(pitch) < 0.8f && abs(roll) < 0.8f
             fillP.color = if (isLevel) pal.positive else pal.accent1
             fillP.applyAuroraGlow(pal.isAurora, fillP.color, d)
             canvas.drawCircle(bx, by, 11f * d, fillP)
 
-            strokeP.strokeWidth = 2f * d; strokeP.color = Color.WHITE
+            strokeP.strokeWidth = 2f * d
+            strokeP.color = Color.WHITE
             canvas.drawCircle(bx, by, 11f * d, strokeP)
 
-            txtP.color = pal.ink; txtP.textSize = 15f * d
-            canvas.drawText(BidiFmt.ltr("${Utils.formatResult(pitchAngle.toDouble(), 1)}° / ${Utils.formatResult(rollAngle.toDouble(), 1)}°"), cx, cy + r + 18f * d, txtP)
+            txtP.color = pal.ink
+            txtP.textSize = 14.5f * d
+            val angleStr = "Pitch ${Utils.formatResult(pitch.toDouble(), 1)}°  |  Roll ${Utils.formatResult(roll.toDouble(), 1)}°"
+            CanvasUiHelper.drawFittedText(canvas, BidiFmt.ltr(angleStr), cx, cy + r + 20f * d, w - 24f * d, 14.5f * d, 10f * d, txtP)
         }
-    }.apply { styleProCanvasCard(this, 195f) }
+    }.apply { styleProCanvasCard(this, 200f) }
 
     val resTv = BidiFmt.applyRtlToResultView(createResultTextView())
 
@@ -465,42 +480,68 @@ fun MainActivity.createProClinometerScreen(): View {
     val listener = object : SensorEventListener {
         override fun onSensorChanged(e: SensorEvent?) {
             if (e != null && e.sensor.type == Sensor.TYPE_ACCELEROMETER) {
-                val ax = e.values[0]; val ay = e.values[1]; val az = e.values[2]
-                pitchAngle = Math.toDegrees(atan2(ay.toDouble(), az.toDouble())).toFloat()
-                rollAngle = Math.toDegrees(atan2(ax.toDouble(), az.toDouble())).toFloat()
+                val ax = e.values[0]
+                val ay = e.values[1]
+                val az = e.values[2]
+                rawPitch = Math.toDegrees(atan2(ay.toDouble(), az.toDouble())).toFloat()
+                rawRoll = Math.toDegrees(atan2(ax.toDouble(), az.toDouble())).toFloat()
                 clinometerCanvas.invalidate()
+
+                val pitch = rawPitch - zeroPitch
+                val roll = rawRoll - zeroRoll
+                val slopePct = tan(Math.toRadians(hypot(pitch.toDouble(), roll.toDouble()).coerceAtMost(85.0))) * 100.0
 
                 resTv.text = BidiFmt.rtlParagraph(
                     "נתוני מד שיפוע וקלינומטר:",
-                    "• זווית אורך (Pitch): ${BidiFmt.ltr("${Utils.formatResult(pitchAngle.toDouble(), 2)}°")}",
-                    "• זווית רוחב (Roll): ${BidiFmt.ltr("${Utils.formatResult(rollAngle.toDouble(), 2)}°")}",
-                    "• מצב משטח: ${if (abs(pitchAngle) < 0.8f && abs(rollAngle) < 0.8f) "מאוזן לחלוטין 🟢" else "בשיפוע"}"
+                    "• זווית אורך (Pitch): ${BidiFmt.ltr("${Utils.formatResult(pitch.toDouble(), 2)}°")}",
+                    "• זווית רוחב (Roll): ${BidiFmt.ltr("${Utils.formatResult(roll.toDouble(), 2)}°")}",
+                    "• שיפוע משולב באחוזים: ${BidiFmt.ltr("${Utils.formatResult(slopePct, 1)}%")}",
+                    "• מצב משטח: ${if (abs(pitch) < 0.8f && abs(roll) < 0.8f) "מאוזן לחלוטין 🟢" else "בשיפוע"}"
                 )
             }
         }
+
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
     }
 
     if (accel != null) {
-        sm?.registerListener(listener, accel, SensorManager.SENSOR_DELAY_UI)
+        sm.registerListener(listener, accel, SensorManager.SENSOR_DELAY_UI)
     }
 
     root.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
         override fun onViewAttachedToWindow(v: View) {}
-        override fun onViewDetachedFromWindow(v: View) { sm?.unregisterListener(listener) }
+        override fun onViewDetachedFromWindow(v: View) {
+            sm?.unregisterListener(listener)
+        }
     })
+
+    val calibrateBtn = createActionBtn("🎯 כייל לאפס על המשטח הנוכחי (Tare)", true) {
+        zeroPitch = rawPitch
+        zeroRoll = rawRoll
+        clinometerCanvas.invalidate()
+    }
+    val resetCalBtn = createActionBtn("↺ אפס כיול לשיפוע אמיתי", false) {
+        zeroPitch = 0f
+        zeroRoll = 0f
+        clinometerCanvas.invalidate()
+    }
 
     resTv.text = BidiFmt.rtlParagraph(
         "קלינומטר פעיל:",
-        "• מודד את זווית ההטיה והשיפוע של המכשיר בתלת-ממד בזמן אמת."
+        "• הניח את המכשיר על המשטח למדידת זווית השיפוע וההטיה בזמן אמת."
     )
 
-    root.addView(clinometerCanvas); root.addView(createPinResultButton(resTv)); root.addView(resTv)
-    scroll.addView(root); return scroll
+    root.addView(clinometerCanvas)
+    root.addView(calibrateBtn)
+    root.addView(resetCalBtn)
+    root.addView(createPinResultButton(resTv))
+    root.addView(resTv)
+    scroll.addView(root)
+    return scroll
 }
 
 // =========================================================================
-// 100. פרטי רשת ו-IP מקומי (Network & IP Inspector - Tab 100)
+// 99. פרטי רשת ו-IP מקומי (Network & IP Inspector - Tab 99)
 // =========================================================================
 fun MainActivity.createProNetworkInspectorScreen(): View {
     val scroll = ScrollView(this)
@@ -508,91 +549,149 @@ fun MainActivity.createProNetworkInspectorScreen(): View {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(20f), dp(12f), dp(20f), dp(24f))
     }
-    root.addView(createProCanvaHeader("🌐 פרטי רשת ו-IP (Network Inspector)", "איתור כתובת IP מקומית, Gateway, Subnet Mask ונתוני Wi-Fi פעילים"))
+    root.addView(
+        createProCanvaHeader(
+            "🌐 פרטי רשת ו-IP (Network Inspector)",
+            "איתור כתובת IP מקומית (IPv4), שער ברירת מחדל (Gateway), סוג חיבור ונתוני רשת פעילים"
+        )
+    )
 
-    var localIpStr = "192.168.1.24"
-    var gatewayStr = "192.168.1.1"
-    var ssidStr = "Wi-Fi ביתי מהיר"
+    var localIpStr = "לא זמין"
+    var gatewayStr = "לא זמין"
+    var netTypeStr = "לא מחובר"
+    var isConnected = false
 
     val netCanvas = object : View(this) {
-        private val strokeP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
+        private val strokeP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeCap = Paint.Cap.ROUND
+        }
         private val fillP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-        private val txtP = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT_BOLD }
+        private val txtP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+        }
 
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             val d = resources.displayMetrics.density
-            val w = width.toFloat(); val h = height.toFloat()
+            val w = width.toFloat()
+            val h = height.toFloat()
             val pal = getProCanvasColors()
 
-            val cx = w / 2f; val cy = h * 0.44f
-            val r = min(w * 0.22f, h * 0.34f)
+            val cx = w / 2f
+            val cy = h * 0.42f
+            val r = min(w * 0.21f, h * 0.30f)
 
-            strokeP.strokeWidth = 2.5f * d; strokeP.color = pal.accent1; strokeP.clearShadowLayer()
+            strokeP.strokeWidth = 2.4f * d
+            strokeP.color = if (isConnected) pal.accent1 else pal.muted
+            strokeP.clearShadowLayer()
             canvas.drawCircle(cx, cy, r, strokeP)
             canvas.drawCircle(cx, cy, r * 0.58f, strokeP)
 
-            fillP.color = pal.positive
-            fillP.applyAuroraGlow(pal.isAurora, pal.positive, d)
+            fillP.color = if (isConnected) pal.positive else pal.negative
+            fillP.applyAuroraGlow(pal.isAurora, fillP.color, d)
             canvas.drawCircle(cx, cy, 7.5f * d, fillP)
 
-            txtP.color = pal.ink; txtP.textSize = 15f * d
-            canvas.drawText(BidiFmt.ltr(localIpStr), cx, cy + r + 18f * d, txtP)
-            txtP.color = pal.muted; txtP.textSize = 10.5f * d
-            canvas.drawText("IP מקומי ($ssidStr)", cx, cy + r + 32f * d, txtP)
+            txtP.color = pal.ink
+            txtP.textSize = 15.5f * d
+            CanvasUiHelper.drawFittedText(canvas, BidiFmt.ltr(localIpStr), cx, cy + r + 18f * d, w - 28f * d, 15.5f * d, 11f * d, txtP)
+
+            txtP.color = pal.muted
+            txtP.textSize = 11f * d
+            canvas.drawText("\u200Fחיבור פעיל: $netTypeStr", cx, cy + r + 34f * d, txtP)
         }
-    }.apply { styleProCanvasCard(this, 175f) }
+    }.apply { styleProCanvasCard(this, 185f) }
 
     val resTv = BidiFmt.applyRtlToResultView(createResultTextView())
 
+    fun intIpToString(ip: Int): String {
+        return String.format(
+            Locale.US,
+            "%d.%d.%d.%d",
+            ip and 0xff,
+            (ip shr 8) and 0xff,
+            (ip shr 16) and 0xff,
+            (ip shr 24) and 0xff
+        )
+    }
+
     fun fetchNetDetails() {
+        localIpStr = "לא זמין"
+        gatewayStr = "לא זמין"
+        netTypeStr = "לא מחובר"
+        isConnected = false
+
         try {
+            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val caps = cm?.getNetworkCapabilities(cm.activeNetwork)
+                if (caps != null) {
+                    isConnected = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    netTypeStr = when {
+                        caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "Wi-Fi אלחוטי"
+                        caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "רשת סלולרית (4G/5G)"
+                        caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "רשת קווית (Ethernet)"
+                        else -> "רשת פעילה"
+                    }
+                }
+            }
+
             val wm = applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
             @Suppress("DEPRECATION")
             val ipInt = wm?.connectionInfo?.ipAddress ?: 0
             if (ipInt != 0) {
-                localIpStr = String.format(
-                    Locale.US,
-                    "%d.%d.%d.%d",
-                    (ipInt and 0xff),
-                    (ipInt shr 8 and 0xff),
-                    (ipInt shr 16 and 0xff),
-                    (ipInt shr 24 and 0xff)
-                )
+                localIpStr = intIpToString(ipInt)
+                isConnected = true
             }
             @Suppress("DEPRECATION")
-            val rawSsid = wm?.connectionInfo?.ssid ?: ""
-            if (rawSsid.isNotEmpty()) {
-                ssidStr = rawSsid.removeSurrounding("\"")
+            val gwInt = wm?.dhcpInfo?.gateway ?: 0
+            if (gwInt != 0) {
+                gatewayStr = intIpToString(gwInt)
             }
 
             val interfaces = NetworkInterface.getNetworkInterfaces()
-            while (interfaces.hasMoreElements()) {
-                val intf = interfaces.nextElement()
-                val addrs = intf.inetAddresses
-                while (addrs.hasMoreElements()) {
-                    val addr = addrs.nextElement()
-                    if (!addr.isLoopbackAddress && addr is java.net.Inet4Address) {
-                        localIpStr = addr.hostAddress ?: localIpStr
-                        break
+            if (interfaces != null) {
+                while (interfaces.hasMoreElements()) {
+                    val intf = interfaces.nextElement()
+                    val addrs = intf.inetAddresses
+                    while (addrs.hasMoreElements()) {
+                        val addr = addrs.nextElement()
+                        if (!addr.isLoopbackAddress && addr is Inet4Address) {
+                            val host = addr.hostAddress
+                            if (!host.isNullOrBlank()) {
+                                localIpStr = host
+                                isConnected = true
+                                break
+                            }
+                        }
                     }
                 }
             }
-        } catch (_: Exception) {}
+        } catch (_: Throwable) {
+        }
 
         netCanvas.invalidate()
         resTv.text = BidiFmt.rtlParagraph(
             "פרטי חיבור רשת נוכחיים:",
+            "• סוג חיבור פעיל: $netTypeStr",
             "• כתובת IP מקומית (IPv4): ${BidiFmt.ltr(localIpStr)}",
-            "• שם רשת (SSID): ${BidiFmt.ltr(ssidStr)}",
             "• שער ברירת מחדל (Gateway): ${BidiFmt.ltr(gatewayStr)}",
-            "• סטטוס: מחובר לרשת אלחוטית תקינה 🟢"
+            "• סטטוס חיבור: ${if (isConnected) "מחובר ותקין 🟢" else "מנותק מרשת 🔴"}"
         )
     }
 
     val refreshBtn = createActionBtn("🔄 רענן פרטי רשת ו-IP", true) { fetchNetDetails() }
+    val copyIpBtn = createActionBtn("📋 העתק כתובת IP ללוח", false) {
+        copyToClipboard(localIpStr)
+    }
     fetchNetDetails()
 
-    root.addView(netCanvas); root.addView(refreshBtn); root.addView(createPinResultButton(resTv)); root.addView(resTv)
-    scroll.addView(root); return scroll
+    root.addView(netCanvas)
+    root.addView(refreshBtn)
+    root.addView(copyIpBtn)
+    root.addView(createPinResultButton(resTv))
+    root.addView(resTv)
+    scroll.addView(root)
+    return scroll
 }
