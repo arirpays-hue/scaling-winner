@@ -1298,10 +1298,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             )
 
             tv.text = IosGlassTheme.cleanCategoryTitle(categories[i], true)
-                        val icon = when (i) {
-                73, in 81..99 -> ProUnifiedThemeIcons.createToolIcon(
-                    this, i, itemIconCol, 20f, isMinimalistMode, isIosGlassMode, isAuroraMode
-                )
+            val icon = when (i) {
+                in 81..95 -> ProFinancialAndMathIcons.createVectorIcon(this, i, itemIconCol, 20f, isMinimalistMode, isAuroraMode)
+                in 96..99 -> ProSensorNetworkIcons.createVectorIcon(this, i, itemIconCol, 20f, isMinimalistMode, isAuroraMode)
                 else -> if (isMinimalistMode) {
                     MinimalistTheme.createMinimalistVectorIcon(this, resolveToolIconCode(i), itemIconCol, 20f)
                 } else {
@@ -1329,9 +1328,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
-        private fun applyGlassAndAuroraSettingsIcons(settingsRoot: View?) {
-        if (settingsRoot == null || isMinimalistMode) return
-        val baseIconTint = MinimalistTheme.resolveDrawerIconColor(this, isSelected = false, isExpandedHeader = false)
+    private fun applyGlassAndAuroraSettingsIcons(settingsRoot: View?) {
+        if (settingsRoot == null || isMinimalistMode || (!isIosGlassMode && !isAuroraMode)) return
+        val iconTint = MinimalistTheme.resolveDrawerIconColor(this, isSelected = false, isExpandedHeader = false)
 
         fun traverse(v: View) {
             if (v.tag == "MINIMALIST_CUSTOMIZER_IGNORE" || v.tag == "THEME_MATCHED_PALETTES_BAR") return
@@ -1339,9 +1338,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
             if (v is TextView && v.isClickable && v.background != null) {
                 val txt = v.text?.toString() ?: ""
-                val isDarkText = MinimalistTheme.computeLuminance(v.currentTextColor) < 0.25
-                val iconTint = if (isDarkText) v.currentTextColor else baseIconTint
-
                 if (txt.contains("אודות")) {
                     val aboutIcon = AppVersionTracker.createAboutVectorIcon(this, iconTint, 22f, false, isAuroraMode)
                     v.compoundDrawablePadding = dp(12f)
@@ -1356,27 +1352,25 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     else v.setCompoundDrawables(gIcon, null, null, null)
                     return
                 }
-                val settingKey: String? = when {
-                    txt.contains("מצב תצוגה") -> "display"
-                    txt.contains("התאמה אישית") -> "customize"
-                    txt.contains("רטט") -> "haptic"
-                    txt.contains("צלילי הקשה") -> "sound_toggle"
-                    txt.contains("סוג צליל") -> "sound_type"
-                    txt.contains("צליל AC") -> "ac_sound"
-                    txt.contains("אנימציות") -> "animations"
-                    txt.contains("מסך תמיד דולק") -> "keep_screen"
-                    txt.contains("צורת כפתורים") -> "btn_shape"
-                    txt.contains("דיוק עשרוני") -> "precision"
-                    txt.contains("מצב מקצועי") || txt.contains("Pro Mode") -> "pro_mode"
-                    txt.contains("יד דומיננטית") -> "handedness"
-                    txt.contains("רשימת סימון") -> "checklist"
-                    txt.contains("איפוס") -> "reset"
+                val settingIconCode: Int? = when {
+                    txt.contains("מצב תצוגה") -> 214
+                    txt.contains("התאמה אישית") -> 203
+                    txt.contains("רטט") -> 204
+                    txt.contains("צלילי הקשה") -> 201
+                    txt.contains("סוג צליל") -> 205
+                    txt.contains("צליל AC") -> 206
+                    txt.contains("אנימציות") -> 207
+                    txt.contains("מסך תמיד דולק") -> 208
+                    txt.contains("צורת כפתורים") -> 209
+                    txt.contains("דיוק עשרוני") -> 210
+                    txt.contains("מצב מקצועי") || txt.contains("Pro Mode") -> 211
+                    txt.contains("יד דומיננטית") -> 212
+                    txt.contains("רשימת סימון") -> 213
+                    txt.contains("איפוס") -> 19
                     else -> null
                 }
-                if (settingKey != null) {
-                    val iconDrawable = ProUnifiedThemeIcons.createSettingsIcon(
-                        this, settingKey, iconTint, 22f, false, isIosGlassMode, isAuroraMode
-                    )
+                if (settingIconCode != null) {
+                    val iconDrawable = AuroraBorealisTheme.createVectorIcon(this, settingIconCode, iconTint, 22f, isAuroraMode)
                     v.compoundDrawablePadding = dp(12f)
                     if (isRightHanded) {
                         v.setCompoundDrawables(null, null, iconDrawable, null)
@@ -1391,7 +1385,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
         }
         traverse(settingsRoot)
-        } 
+    }
 
     private fun createCollapsibleColorCustomizerSection(): View {
         val wrapper = LinearLayout(this).apply {
