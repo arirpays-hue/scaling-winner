@@ -1940,7 +1940,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             78 -> createProSmartNotesScreen()
             79 -> createProRingSizerScreen()
             80 -> createProShoeClothingHatSizeScreen()
-            81 -> createProTextToolsStudioScreen()
+            81 -> createProUltraTextToolsStudioScreen()
             82 -> createProRomanNumeralsScreen()
             83 -> createProNumberSeriesScreen()
             84 -> createProProportionsAndRatioScreen()
