@@ -424,6 +424,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         drawerMenu?.addView(drawerItemsViews[19])
 
         drawerScroll.addView(drawerMenu); rootFrame.addView(mainContent); rootFrame.addView(dimView); rootFrame.addView(drawerScroll)
+        ProCanvasAnimations.loadPrefs(prefs)
+        ProCanvasAnimations.installOverlay(this, rootFrame)
         updateHandednessLayout()
         setContentView(rootFrame); setupShortcuts(); handleIntent(intent)
         CompassHomeWidgetHelper.renderCurrentStateToWidgets(this)
@@ -432,6 +434,12 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     override fun onResume() {
         super.onResume()
         CompassHomeWidgetHelper.renderCurrentStateToWidgets(this)
+        ProCanvasAnimations.onActivityResume()
+    }
+
+    override fun onPause() {
+        ProCanvasAnimations.onActivityPause()
+        super.onPause()
     }
 
     fun updateLiveDrawerAndHeaderColors() {
@@ -503,6 +511,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         refreshFavHeaderIcon()
         updateDrawerSelection()
+        ProCanvasAnimations.refreshThemePalette(this)
     }
 
     fun showHistoryDialog() {
@@ -947,6 +956,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             contentFrame.removeAllViews()
             val isLandscape = newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE
             val targetView = if (isLandscape) createScientificCalculator() else if (currentTabIndex == 1) createScientificCalculator() else createBasicCalculator()
+            ProCanvasAnimations.attachAmbientToContent(this, contentFrame, currentTabIndex)
             contentFrame.addView(targetView)
             if (useAnimations) {
                 targetView.alpha = 0f
@@ -980,6 +990,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         IosGlassTheme.loadIosPrefs(prefs)
         MinimalistTheme.loadMinimalistPrefs(prefs)
+        ProCanvasAnimations.loadPrefs(prefs)
         calcPrecision = prefs?.getInt("calcPrecision", 8) ?: 8; buttonCornerStyle = prefs?.getFloat("buttonCornerStyle", 24f) ?: 24f
         primaryColor = prefs?.getInt("primaryColor", Color.parseColor("#64B5F6")) ?: Color.parseColor("#64B5F6"); bgColor = prefs?.getInt("bgColor", Color.parseColor("#08090C")) ?: Color.parseColor("#08090C")
         memoryValue = Double.fromBits(prefs?.getLong("memoryValue", 0L) ?: 0L); val savedHist = prefs?.getString("history", "") ?: ""
@@ -1156,6 +1167,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         refreshFavHeaderIcon()
         AuroraBorealisTheme.applyHeaderMetallicGradient(appLogoView, isAuroraMode, isIosGlassMode)
         updateHandednessLayout(); updateDrawerSelection(); switchTab(currentTabIndex)
+        ProCanvasAnimations.refreshThemePalette(this)
     }
 
     private fun openDrawer() {
@@ -1166,6 +1178,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             .setInterpolator(DecelerateInterpolator())
             .start()
         isDrawerOpen = true
+        ProCanvasAnimations.onDrawerStateChanged(this, true, drawerMenu)
     }
 
     private fun closeDrawer() {
@@ -1175,6 +1188,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         dimView.animate().alpha(0f).setDuration(250).withEndAction { dimView.visibility = View.GONE }.start()
         drawerScroll.animate().translationX(targetX).setDuration(250).setInterpolator(AccelerateInterpolator()).start()
         isDrawerOpen = false
+        ProCanvasAnimations.onDrawerStateChanged(this, false, drawerMenu)
     }
 
     fun feedback(view: View, symbol: String = "") {
@@ -1903,6 +1917,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 container?.addView(handBtn)
                 container?.addView(createDrawerCalculatorsChecklistSection())
                 container?.addView(CalculatorGestureManager.createCollapsibleGesturesSettingsSection(this))
+                container?.addView(ProCanvasAnimations.createSettingsToggleButton(this))
                 container?.addView(AppVersionTracker.createAboutSettingsButton(this))
 
                 unifyThemeSelectorAndCustomizerInSettings(settingsView)
@@ -2012,7 +2027,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             BidiFmt.attachUniversalLiveVisualizer(rawView)
         }
 
+        ProCanvasAnimations.attachAmbientToContent(this, contentFrame, index)
         contentFrame.addView(rawView)
+        ProCanvasAnimations.playTabTransition(this, rawView, index, wasInSettings)
         if (useAnimations && !wasInSettings) {
             rawView.alpha = 0f; rawView.translationY = dp(24f).toFloat()
             rawView.animate().alpha(1f).translationY(0f).setDuration(260).setInterpolator(DecelerateInterpolator()).start()
@@ -2227,6 +2244,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 when (e.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
                         feedback(v, symbol)
+                        ProCanvasAnimations.triggerTouchRipple(this@MainActivity, v, e.x, e.y, symbol)
                         if (isMinimalistMode) {
                             tv.background = MinimalistTheme.createMinimalistKeypadButtonDrawable(this@MainActivity, symbol, true)
                             tv.setTextColor(MinimalistTheme.resolveKeypadSymbolTextColor(this@MainActivity, symbol))
@@ -2259,11 +2277,12 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         if (MiniGameEngine.isActive && MiniGameEngine.onKeyPress(this, s)) return
         if (justCalculated && s !in listOf("÷", "×", "−", "+", "^", "%")) { currentInput = ""; justCalculated = false }
         justCalculated = false
+        if (s in listOf("MC", "MR", "M+", "M-")) ProCanvasAnimations.triggerMemoryPulse(this)
         when (s) {
             "MC" -> { memoryValue = 0.0; savePreferences() }; "MR" -> { currentInput += Utils.formatResult(memoryValue, calcPrecision) }
             "M+" -> { try { memoryValue += Utils.evalMathExpression(if (currentInput.isEmpty()) "0" else currentInput); savePreferences(); justCalculated = true } catch (e: Exception) {} }
             "M-" -> { try { memoryValue -= Utils.evalMathExpression(if (currentInput.isEmpty()) "0" else currentInput); savePreferences(); justCalculated = true } catch (e: Exception) {} }
-            "AC" -> { currentInput = ""; expressionView?.text = "" }; "⌫" -> { if (currentInput.isNotEmpty()) currentInput = currentInput.dropLast(1) }
+            "AC" -> { currentInput = ""; expressionView?.text = ""; ProCanvasAnimations.triggerClearWave(this) }; "⌫" -> { if (currentInput.isNotEmpty()) currentInput = currentInput.dropLast(1) }
             "sin", "cos", "tan", "log", "ln" -> { currentInput += "$s(" }; "√" -> { currentInput += "√(" }; "x²" -> { currentInput += "^2" }; "x³" -> { currentInput += "^3" }; "x^y" -> { currentInput += "^" }
             "=" -> {
                 if (checkEasterEggs(currentInput)) return
@@ -2274,6 +2293,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                         expressionView?.text = "$currentInput ="
                         historyList.add(0, "$currentInput = $formatted")
                         savePreferences(); currentInput = formatted; justCalculated = true
+                        ProCanvasAnimations.triggerEqualsCelebration(this)
                     } catch (e: Exception) { currentInput = "Error"; justCalculated = true }
                 }
             }
@@ -2379,7 +2399,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
             isClickable = true
             if (isCleanGlassActive && !isMinimalistMode) IosGlassTheme.apply3DElevation(this, 5f)
-            setOnClickListener { feedback(it); onClick(it) }
+            setOnClickListener {
+                feedback(it)
+                ProCanvasAnimations.triggerViewPulseRipple(this@MainActivity, it)
+                onClick(it)
+            }
         }
     }
 
