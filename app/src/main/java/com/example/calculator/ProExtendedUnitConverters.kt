@@ -16,7 +16,8 @@ import kotlin.math.*
 
 // =========================================================================
 // 18 ממירי יחידות מורחבים וייחודיים (Tabs 100..117)
-// תמיכה בתת-קטגוריות מופרדות פיזיקלית, קנבס מונפש אישי וסמלים ל-4 ערכות הנושא
+// תמיכה בתת-קטגוריות מופרדות פיזיקלית, Superscript אחיד לכל החזקות,
+// קנבס מונפש אישי וסמלים וקטוריים לכל 4 ערכות הנושא
 // =========================================================================
 
 data class ExtUnitDef(
@@ -118,6 +119,31 @@ object ProExtendedUnitConverters {
         "⚡ צפיפות זרם, מוליכות ומטען (J / G / Q)"     // 117
     )
 
+    fun toSuperscript(value: Int): String {
+        val raw = value.toString()
+        val sb = StringBuilder(raw.length)
+        for (ch in raw) {
+            sb.append(
+                when (ch) {
+                    '-' -> '⁻'
+                    '+' -> '⁺'
+                    '0' -> '⁰'
+                    '1' -> '¹'
+                    '2' -> '²'
+                    '3' -> '³'
+                    '4' -> '⁴'
+                    '5' -> '⁵'
+                    '6' -> '⁶'
+                    '7' -> '⁷'
+                    '8' -> '⁸'
+                    '9' -> '⁹'
+                    else -> ch
+                }
+            )
+        }
+        return sb.toString()
+    }
+
     fun formatSmartValue(value: Double, precision: Int): String {
         if (value.isNaN() || value.isInfinite()) return "—"
         if (value == 0.0) return "0"
@@ -127,13 +153,18 @@ object ProExtendedUnitConverters {
             val mant = value / 10.0.pow(exp)
             val mantStr = String.format(Locale.US, "%.${precision.coerceIn(2, 5)}f", mant)
                 .trimEnd('0').trimEnd('.')
-            "${mantStr}×10^$exp"
+            "${mantStr}×10${toSuperscript(exp)}"
         } else {
             Utils.formatResult(value, precision.coerceIn(2, 8))
         }
     }
 
+    fun formatValueWithUnit(valStr: String, symbol: String): String {
+        return if (symbol.isBlank()) valStr else "$valStr $symbol"
+    }
+
     fun formatUnitDisplayLabel(u: ExtUnitDef): String {
+        if (u.symbol.isBlank()) return u.name
         return if (u.name.contains("(${u.symbol})") || u.name.contains(" ${u.symbol})") || u.name == u.symbol) {
             u.name
         } else {
@@ -147,9 +178,9 @@ object ProExtendedUnitConverters {
             tabIndex = 100,
             title = "קידומות SI וחזקות של 10",
             subtitle = "המרה מדויקת בין כל קידומות השיטה המטרית (10⁻³⁰ עד 10³⁰)",
-            formulaHint = "Value_to = Value_from × 10^(exp₁ − exp₂)",
+            formulaHint = "Value_to = Value_from × 10⁽ⁿ¹⁻ⁿ²⁾",
             units = listOf(
-                linearUnit("יחידה בסיסית — 10⁰", "1", 1.0),
+                linearUnit("יחידה בסיסית — 10⁰", "", 1.0),
                 linearUnit("קילו — Kilo 10³", "k", 1e3),
                 linearUnit("מגה — Mega 10⁶", "M", 1e6),
                 linearUnit("גיגה — Giga 10⁹", "G", 1e9),
@@ -179,9 +210,11 @@ object ProExtendedUnitConverters {
             defaultTo = 12,
             defaultValue = 1.0,
             insightProvider = { _, from, to, baseVal, res ->
-                val expBase = if (baseVal > 0) floor(log10(abs(baseVal))).toInt() else 0
+                val expBase = if (baseVal != 0.0) floor(log10(abs(baseVal))).toInt() else 0
                 val ratio = if (res != 0.0 && baseVal != 0.0) log10(abs(from.toBase(1.0) / to.toBase(1.0))).roundToInt() else 0
-                "• סדר גודל בסיסי: ${BidiFmt.ltr("10^$expBase")}\n• הפרש חזקות בין ${BidiFmt.ltr(from.symbol)} ל-${BidiFmt.ltr(to.symbol)}: ${BidiFmt.ltr("10^$ratio")} (כפל פי ${BidiFmt.ltr(formatSmartValue(10.0.pow(ratio), 4))})"
+                val fromLbl = if (from.symbol.isBlank()) "יחידה בסיסית" else BidiFmt.ltr(from.symbol)
+                val toLbl = if (to.symbol.isBlank()) "יחידה בסיסית" else BidiFmt.ltr(to.symbol)
+                "• סדר גודל בסיסי: ${BidiFmt.ltr("10${toSuperscript(expBase)}")}\n• הפרש חזקות בין $fromLbl ל-$toLbl: ${BidiFmt.ltr("10${toSuperscript(ratio)}")} (כפל פי ${BidiFmt.ltr(formatSmartValue(10.0.pow(ratio), 4))})"
             }
         )
 
@@ -227,7 +260,7 @@ object ProExtendedUnitConverters {
             subtitle = "סולם מערבי (מיליון/מיליארד/טריליון), סולם הודי (Lakh/Crore) וגוגול",
             formulaHint = "1 Crore = 10⁷  |  1 Billion = 10⁹  |  1 Googol = 10¹⁰⁰",
             units = listOf(
-                linearUnit("יחידות — 10⁰", "1", 1.0),
+                linearUnit("יחידות בודדות — 10⁰", "", 1.0),
                 linearUnit("אלף — Thousand 10³", "K", 1e3),
                 linearUnit("לאק הודי — Lakh 10⁵", "Lakh", 1e5),
                 linearUnit("מיליון — Million 10⁶", "M", 1e6),
@@ -249,7 +282,7 @@ object ProExtendedUnitConverters {
             defaultTo = 3,
             defaultValue = 1.0,
             insightProvider = { _, _, _, baseVal, _ ->
-                val zeros = if (baseVal >= 1.0) floor(log10(baseVal)).toInt() else 0
+                val zeros = if (abs(baseVal) >= 1.0) floor(log10(abs(baseVal))).toInt() else 0
                 val digits = zeros + 1
                 "• כתיב מדעי: ${BidiFmt.ltr(formatSmartValue(baseVal, 4))}\n• מספר ספרות שלמות: ${BidiFmt.ltr(digits.toString())} (כ-${BidiFmt.ltr(zeros.toString())} אפסים אחרי הספרה הראשונה)"
             }
@@ -561,7 +594,7 @@ object ProExtendedUnitConverters {
             }
         )
 
-        // 112: פרמיטיביות ופרמאביליות — 2 תת-קטגוריות מופרדות פיזיקלית!
+        // 112: פרמיטיביות ופרמאביליות — 2 תת-קטגוריות מופרדות פיזיקלית
         112 -> ExtUnitToolSpec(
             tabIndex = 112,
             title = "פרמיטיביות (ε) ופרמאביליות (µ)",
@@ -651,7 +684,7 @@ object ProExtendedUnitConverters {
             }
         )
 
-        // 114: צפיפות חום וקיבול חום — 2 תת-קטגוריות מופרדות פיזיקלית!
+        // 114: צפיפות חום וקיבול חום — 2 תת-קטגוריות מופרדות פיזיקלית
         114 -> ExtUnitToolSpec(
             tabIndex = 114,
             title = "צפיפות חום וקיבול חום (תרמודינמיקה)",
@@ -741,7 +774,7 @@ object ProExtendedUnitConverters {
             }
         )
 
-        // 116: מהירות ותאוצה זוויתית — 2 תת-קטגוריות מופרדות פיזיקלית!
+        // 116: מהירות ותאוצה זוויתית — 2 תת-קטגוריות מופרדות פיזיקלית
         116 -> ExtUnitToolSpec(
             tabIndex = 116,
             title = "מהירות זוויתית (ω) ותאוצה זוויתית (α)",
@@ -800,7 +833,7 @@ object ProExtendedUnitConverters {
             )
         )
 
-        // 117: צפיפות זרם, מוליכות ומטען — 3 תת-קטגוריות מופרדות לחלוטין!
+        // 117: צפיפות זרם, מוליכות ומטען — 3 תת-קטגוריות מופרדות לחלוטין
         else -> ExtUnitToolSpec(
             tabIndex = 117,
             title = "צפיפות זרם, מוליכות ומטען (J / G / Q)",
@@ -1311,7 +1344,7 @@ private class ExtUnitHeroCanvasView(
                     canvas.drawLine(tx, yBar - 7f * d, tx, yBar + 7f * d, strokeP)
                     canvas.drawText(labels[i], tx, yBar - 12f * d, textP)
                 }
-                val expClamped = if (liveBaseVal > 0) log10(abs(liveBaseVal)).toFloat().coerceIn(-9f, 9f) else 0f
+                val expClamped = if (liveBaseVal != 0.0) log10(abs(liveBaseVal)).toFloat().coerceIn(-9f, 9f) else 0f
                 val px = w * (0.50f + (expClamped / 9f) * 0.38f) + sin(phase * 1.4f) * 3f * d
                 fillP.color = c2
                 canvas.drawCircle(px, yBar, 7.5f * d, fillP)
@@ -1563,7 +1596,9 @@ private class ExtUnitHeroCanvasView(
         strokeP.clearShadowLayer()
         val inStr = ProExtendedUnitConverters.formatSmartValue(liveInputVal, 4)
         val outStr = ProExtendedUnitConverters.formatSmartValue(liveResultVal, 5)
-        val summary = "\u200E$inStr $liveFromSym  =  $outStr $liveToSym"
+        val lhs = ProExtendedUnitConverters.formatValueWithUnit(inStr, liveFromSym)
+        val rhs = ProExtendedUnitConverters.formatValueWithUnit(outStr, liveToSym)
+        val summary = "\u200E$lhs  =  $rhs"
         textP.textSize = 12.5f * d
         textP.color = ink
         canvas.drawText(summary, cx, h - 11f * d, textP)
@@ -1672,7 +1707,9 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
     root.addView(presetScroll)
 
     // 5. תיבת קלט ובחירת יחידות
-    val inputBox = createInputBox("הזן ערך להמרה (${currentGroup().units[fromIdx].symbol})").apply {
+    val initFromU = currentGroup().units[fromIdx]
+    val initHintLabel = if (initFromU.symbol.isBlank()) initFromU.name.substringBefore(" —") else initFromU.symbol
+    val inputBox = createInputBox("הזן ערך להמרה ($initHintLabel)").apply {
         tag = "HAS_CUSTOM_LIVE_WATCHER"
         setText(ProExtendedUnitConverters.formatSmartValue(currentGroup().defaultValue, 4))
     }
@@ -1681,7 +1718,7 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
     lateinit var fromBtn: TextView
     lateinit var toBtn: TextView
 
-    // עטיפת תיבת התוצאה בתוך LinearLayout כדי שבמצב מינימליסטי תישאר כרטיס מרובע-מעוגל נקי ולא קפסולה עגולה
+    // כרטיס התוצאה עטוף ב-LinearLayout כדי לשמור על עיצוב כרטיס נקי גם במצב המינימליסטי
     val resultCard = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(16f), dp(14f), dp(16f), dp(14f))
@@ -1725,10 +1762,11 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
         val fromU = grp.units[fromIdx]
         val toU = grp.units[toIdx]
 
+        val hintLbl = if (fromU.symbol.isBlank()) fromU.name.substringBefore(" —") else fromU.symbol
         formulaTv.text = "\u200E${grp.formulaHint}"
         fromBtn.text = "מיחידה: ${ProExtendedUnitConverters.formatUnitDisplayLabel(fromU)}"
         toBtn.text = "ליחידה: ${ProExtendedUnitConverters.formatUnitDisplayLabel(toU)}"
-        inputBox.hint = "\u200Fהזן ערך להמרה (${fromU.symbol})"
+        inputBox.hint = "\u200Fהזן ערך להמרה ($hintLbl)"
 
         val rawVal = inputBox.text.toString().replace(",", ".").toDoubleOrNull() ?: 0.0
         val baseVal = fromU.toBase(rawVal)
@@ -1738,11 +1776,18 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
 
         val formattedIn = ProExtendedUnitConverters.formatSmartValue(rawVal, calcPrecision)
         val formattedOut = ProExtendedUnitConverters.formatSmartValue(resVal, calcPrecision)
+        val inWithSym = ProExtendedUnitConverters.formatValueWithUnit(formattedIn, fromU.symbol)
+        val outWithSym = ProExtendedUnitConverters.formatValueWithUnit(formattedOut, toU.symbol)
+        val outHeadline = if (toU.symbol.isBlank()) {
+            "${BidiFmt.ltr(formattedOut)} (${toU.name.substringBefore(" —")})"
+        } else {
+            BidiFmt.ltr(outWithSym)
+        }
         val insight = grp.insightProvider(rawVal, fromU, toU, baseVal, resVal)
 
         mainResultTv.text = BidiFmt.rtlParagraph(
-            "תוצאה: ${BidiFmt.ltr("$formattedOut ${toU.symbol}")}",
-            "המרה: ${BidiFmt.ltr("$formattedIn ${fromU.symbol}  =  $formattedOut ${toU.symbol}")}",
+            "תוצאה: $outHeadline",
+            "המרה: ${BidiFmt.ltr("$inWithSym  =  $outWithSym")}",
             "",
             "תובנה מקצועית:",
             insight
@@ -1762,6 +1807,7 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
         for ((idx, unit) in grp.units.withIndex()) {
             val convVal = unit.fromBase(baseVal)
             val convStr = ProExtendedUnitConverters.formatSmartValue(convVal, calcPrecision.coerceAtMost(6))
+            val convWithUnit = ProExtendedUnitConverters.formatValueWithUnit(convStr, unit.symbol)
             val isTarget = (idx == toIdx)
             val rowBg = when {
                 isMin && isTarget -> MinimalistTheme.ACCENT_MUTED_GREEN
@@ -1784,12 +1830,13 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
                 }
                 setOnClickListener {
                     feedback(it)
-                    copyToClipboard("$convStr ${unit.symbol}")
+                    copyToClipboard(convWithUnit)
                 }
             }
 
             val valTv = TextView(this).apply {
-                text = "\u200E$convStr ${unit.symbol}"
+                text = "\u200E$convWithUnit"
+                textDirection = View.TEXT_DIRECTION_LTR
                 setTextColor(MinimalistTheme.ensureReadableTextOnBg(if (isTarget && !isMin) accentCol else textPrimary, rowBg, 2.2))
                 textSize = 14.5f
                 typeface = Typeface.DEFAULT_BOLD
