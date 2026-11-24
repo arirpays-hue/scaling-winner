@@ -211,7 +211,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         "📶 בדיקת מהירות אינטרנט (Speed Test)",      // 97
         "📐 קלינומטר ומד שיפוע דיגיטלי",             // 98
         "🌐 פרטי רשת וכתובת IP (Network)"            // 99
-    )
+    ) + ProExtendedUnitConverters.extraCategories
 
     val drawerSections = listOf(
         Triple(301, "📐 מתמטיקה ומדע", listOf(0, 1, 8, 15, 16, 7, 28, 22)),
@@ -225,7 +225,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         Triple(309, "🔬 Pro: מדע, אטום, מורס, הצפנה, טקסט וצבעים", listOf(44, 45, 46, 77, 47, 81, 73, 74)),
         Triple(310, "📊 Pro: השקעות, משכנתא, פיקדונות, מניות ופרישה", listOf(48, 49, 50, 51, 64, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95)),
         Triple(311, "🧮 Pro: אלגברה, סדרות, פרופורציות, גאומטריה וענן", listOf(52, 53, 54, 65, 82, 83, 84, 85, 55)),
-        Triple(312, "🛠️ Pro: כלי עזר, מטרונום, פתקים ומידות", listOf(69, 70, 78, 79, 80))
+        Triple(312, "🛠️ Pro: כלי עזר, מטרונום, פתקים ומידות", listOf(69, 70, 78, 79, 80)),
+        Triple(313, "📏 Pro: ממירי יחידות מורחבים (18 כלים)", (100..117).toList())
     )
 
     // ממפה אוטומטית את אינדקס 79 (מדידת טבעת) לסמל הטבעת (80) ואת 80 (מידות בגדים/נעליים) לסמל הלבוש (81)
@@ -407,7 +408,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 setBackgroundColor(Color.TRANSPARENT)
             }
             sectionDividersMap[secIconCode] = catSep
-            if (secIconCode in 305..312) proSectionDividers[secIconCode] = catSep
+            if (secIconCode in 305..313) proSectionDividers[secIconCode] = catSep
             drawerSeparators.add(catSep)
             drawerMenu?.addView(catSep)
             drawerMenu?.addView(sectionItemsContainer)
@@ -438,12 +439,12 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         CompassHomeWidgetHelper.renderCurrentStateToWidgets(this)
     }
 
-        override fun onResume() {
+    override fun onResume() {
         super.onResume()
         CompassHomeWidgetHelper.renderCurrentStateToWidgets(this)
         ProCanvasAnimations.onActivityResume()
         ProFloatingMiniCalc.onHostActivityResumed(this)
-        }
+    }
 
     override fun onPause() {
         ProCanvasAnimations.onActivityPause()
@@ -1238,7 +1239,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
             val hasVisibleCalculators = secItemIndices.any { isCalculatorVisibleInDrawer(it) }
 
-            if (secIconCode in 305..312 && !proActive) {
+            if (secIconCode in 305..313 && !proActive) {
                 headerTv.visibility = View.GONE
                 proSectionDividers[secIconCode]?.visibility = View.GONE
                 container.visibility = View.GONE
@@ -1278,6 +1279,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
             // 4 שפות אייקונים מובחנות לכותרות הקטגוריות (מינימליסטי / זוהר / זכוכית / קלאסי)
             val secIcon = when {
+                secIconCode == ProExtendedUnitConverters.SECTION_ICON_CODE ->
+                    ProExtendedUnitConverters.createSectionIcon(this, headerIconCol, 22f)
                 isMinimalistMode -> MinimalistTheme.createMinimalistVectorIcon(this, secIconCode, headerIconCol, 22f)
                 isAuroraMode -> AuroraBorealisTheme.createVectorIcon(this, secIconCode, headerIconCol, 22f, true)
                 isIosGlassMode -> ProUnifiedThemeIcons.wrapForLiquidGlass(
@@ -1332,8 +1335,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
             tv.text = IosGlassTheme.cleanCategoryTitle(categories[i], true)
 
-            // 4 שפות אייקונים מובחנות לכל 100 הכלים והמחשבונים (0..99)
+            // 4 שפות אייקונים מובחנות לכל הכלים והמחשבונים (0..117)
             val icon = when {
+                i in ProExtendedUnitConverters.FIRST_TAB_INDEX..ProExtendedUnitConverters.LAST_TAB_INDEX ->
+                    ProExtendedUnitConverters.createToolIcon(this, i, itemIconCol, 20f)
                 i == 73 || i in 81..99 -> ProUnifiedThemeIcons.createToolIcon(
                     this, i, itemIconCol, 20f, isMinimalistMode, isIosGlassMode, isAuroraMode
                 )
@@ -1684,7 +1689,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         val proActive = ProState.isProEnabled(prefs)
         val availableSections = drawerSections.filter { (secCode, _, _) ->
-            proActive || secCode !in 305..312
+            proActive || secCode !in 305..313
         }
         val allSelectableIndices = availableSections.flatMap { it.third }
         val visibleCount = allSelectableIndices.count { isCalculatorVisibleInDrawer(it) }
@@ -1894,8 +1899,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     if (!hasProBtn) {
                         val proEnabled = ProState.isProEnabled(prefs)
                         val proBtn = createActionBtn(
-                            if (proEnabled) "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-100 כלים): מופעל 🟢"
-                            else "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-100 כלים): כבוי 🔴",
+                            if (proEnabled) "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-118 כלים): מופעל 🟢"
+                            else "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-118 כלים): כבוי 🔴",
                             proEnabled
                         ) {
                             val nextState = !ProState.isProEnabled(prefs)
@@ -1950,7 +1955,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             28 -> createHexConverter()
             29 -> createSavingsCalculator()
             30 -> createDateAnniversaryCalculator()
-            // --- כל מסכי ה-Pro המעוצבים בקנבה (31..99) ---
+            // --- כל מסכי ה-Pro המעוצבים בקנבה (31..117) ---
             31 -> createPro87UnitConverter()
             32 -> createProPlumbingAndFluidsScreen()
             33 -> createProMedicalDosageScreen()
@@ -2020,6 +2025,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             97 -> createProSpeedTestScreen()
             98 -> createProClinometerScreen()
             99 -> createProNetworkInspectorScreen()
+            in 100..117 -> createProExtendedUnitScreen(index)
             else -> createBasicCalculator()
         }
 
@@ -2031,7 +2037,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             CalculatorGestureManager.applyGestureButtonIcon(rawView, this)
         }
 
-        if (index !in listOf(0, 1, 19, 73, 78, 81, 96, 97, 98, 99)) {
+        if (index !in listOf(0, 1, 19, 73, 78, 81, 96, 97, 98, 99) && index !in 100..117) {
             BidiFmt.attachUniversalLiveVisualizer(rawView)
         }
 
