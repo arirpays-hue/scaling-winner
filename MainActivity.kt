@@ -286,9 +286,16 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
         }
 
-        pipBtn = TextView(this).apply { text = "🧮"; textSize = 21f; gravity = Gravity.CENTER; setPadding(dp(6f), dp(6f), dp(8f), dp(6f)); setOnClickListener { feedback(it)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) { enterPictureInPictureMode(PictureInPictureParams.Builder().setAspectRatio(Rational(3, 4)).build()) } else { Toast.makeText(this@MainActivity, "חלון צף נתמך רק באנדרואיד 8 ומעלה", Toast.LENGTH_SHORT).show() }
-        } }
+        pipBtn = TextView(this).apply {
+            text = "🧮"
+            textSize = 21f
+            gravity = Gravity.CENTER
+            setPadding(dp(6f), dp(6f), dp(8f), dp(6f))
+            setOnClickListener {
+                feedback(it)
+                ProFloatingMiniCalc.launchOrRequestPermission(this@MainActivity)
+            }
+        }
         historyBtn = TextView(this).apply { text = "🕒"; textSize = 20f; gravity = Gravity.CENTER; setPadding(dp(6f), dp(6f), dp(4f), dp(6f)); setOnClickListener { feedback(it); showHistoryDialog() } }
 
         contentFrame = FrameLayout(this).apply { layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f) }
@@ -431,11 +438,12 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         CompassHomeWidgetHelper.renderCurrentStateToWidgets(this)
     }
 
-    override fun onResume() {
+        override fun onResume() {
         super.onResume()
         CompassHomeWidgetHelper.renderCurrentStateToWidgets(this)
         ProCanvasAnimations.onActivityResume()
-    }
+        ProFloatingMiniCalc.onHostActivityResumed(this)
+        }
 
     override fun onPause() {
         ProCanvasAnimations.onActivityPause()
