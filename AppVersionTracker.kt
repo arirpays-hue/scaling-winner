@@ -28,10 +28,9 @@ data class VersionReleaseNote(
 object AppVersionTracker {
 
     const val DEVELOPER_NAME = "Harry"
-    const val CURRENT_SEMANTIC_VERSION = "5.2.0 Pro"
-    const val CURRENT_BUILD_NUMBER = 52
-    const val CURRENT_RELEASE_DATE = "19/11/2026"
-
+        const val CURRENT_SEMANTIC_VERSION = "5.3.0 Pro"
+    const val CURRENT_BUILD_NUMBER = 53
+    const val CURRENT_RELEASE_DATE = "24/11/2026"
     private const val PREF_LAST_SEEN_BUILD = "app_tracker_last_seen_build"
     private const val PREF_LAST_PKG_UPDATE_TIME = "app_tracker_last_pkg_update_time"
     private const val PREF_UPDATE_COUNT = "app_tracker_update_count"
@@ -39,6 +38,18 @@ object AppVersionTracker {
     private const val PREF_CUSTOM_NOTES = "app_tracker_custom_notes_v1"
 
     val changelogHistory: List<VersionReleaseNote> = listOf(
+               VersionReleaseNote(
+            versionCode = 53,
+            versionName = "v5.3.0 Pro",
+            releaseDate = "24/11/2026",
+            title = "מחשבון מיני צף פעיל, 18 ממירי יחידות חדשים ומנוע אנימציות אישי לכל כלי",
+            highlights = listOf(
+                "החלפת מצב ה-PiP הלא-לחיץ במחשבון מיני צף אמיתי ואינטראקטיבי מעל כל אפליקציה (ProFloatingMiniCalc.kt) — כולל מקלדת עובדת, גרירה חופשית לכל פינה במסך, מזעור לבועה עגולה, סנכרון תוצאות והיסטוריה והתאמה לכל 4 ערכות הנושא",
+                "הוספת 18 ממירי יחידות מורחבים וייעודיים בקטגוריה חדשה (Tabs 100..117 — סה״כ 118 כלים): קידומות SI (10s), שטח קרקע (דונם/אקר/הקטר), מספרים גדולים (לאק/קרור/גוגול), זמן עברי ותרבותי (חלקים/יובל), צפיפות חוט (Tex/Denier/Ne), קלוריות מזון, משקל זהב (טרוי/טולה/קראט), נפח עץ (Board Foot/Cord), כושר קירור (TR/BTU), זרימת אוויר (CFM), קשיות מים (°dH/ppm), מתח פנים, פרמיטיביות ופרמאביליות, מומנט אינרציה, צפיפות וקיבול חום, נפח סגולי וצפיפות, מהירות ותאוצה זוויתית וצפיפות זרם/מוליכות/מטען",
+                "עיצוב מסך אישי, קנבס מונפש חי, טבלת המרה מקבילה לכל היחידות, תובנות מקצועיות ו-4 שפות סמלים וקטוריים לכל אחד מ-18 הממירים החדשים (ProExtendedUnitConverters.kt)",
+                "בניית מנוע 'אנימציות ואפקטים' בקנבס (ProCanvasAnimations.kt) המעניק לכל אחד מ-118 הכלים אנימציית רקע ומעבר ייחודית המשתנה לפי ערכת הנושא (פסטל מינימליסטי, הברקות זכוכית, ניאון זוהר צפוני וקלאסי), כולל כפתור הפעלה/כיבוי ייעודי בהגדרות"
+            )
+        ),
         VersionReleaseNote(
             versionCode = 52,
             versionName = "v5.2.0 Pro",
