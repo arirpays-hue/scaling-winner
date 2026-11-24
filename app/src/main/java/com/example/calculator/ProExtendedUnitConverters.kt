@@ -16,8 +16,7 @@ import kotlin.math.*
 
 // =========================================================================
 // 18 ממירי יחידות מורחבים וייחודיים (Tabs 100..117)
-// לכל ממיר: מנוע חישוב עצמאי, תובנות הנדסיות/מעשיות, קנבס מונפש אישי
-// וסמל וקטורי מותאם אישית לכל אחת מ-4 ערכות הנושא
+// תמיכה בתת-קטגוריות מופרדות פיזיקלית, קנבס מונפש אישי וסמלים ל-4 ערכות הנושא
 // =========================================================================
 
 data class ExtUnitDef(
@@ -34,10 +33,8 @@ data class ExtUnitPreset(
     val toIdx: Int
 )
 
-data class ExtUnitToolSpec(
-    val tabIndex: Int,
-    val title: String,
-    val subtitle: String,
+data class ExtUnitGroup(
+    val label: String,
     val formulaHint: String,
     val units: List<ExtUnitDef>,
     val presets: List<ExtUnitPreset>,
@@ -45,6 +42,13 @@ data class ExtUnitToolSpec(
     val defaultTo: Int = 1,
     val defaultValue: Double = 1.0,
     val insightProvider: (value: Double, from: ExtUnitDef, to: ExtUnitDef, baseVal: Double, resultVal: Double) -> String
+)
+
+data class ExtUnitToolSpec(
+    val tabIndex: Int,
+    val title: String,
+    val subtitle: String,
+    val groups: List<ExtUnitGroup>
 )
 
 private fun linearUnit(name: String, symbol: String, factorToBase: Double): ExtUnitDef =
@@ -57,6 +61,35 @@ private fun inverseUnit(name: String, symbol: String, numerator: Double): ExtUni
         { if (it == 0.0) 0.0 else numerator / it },
         { if (it == 0.0) 0.0 else numerator / it }
     )
+
+private fun singleGroupSpec(
+    tabIndex: Int,
+    title: String,
+    subtitle: String,
+    formulaHint: String,
+    units: List<ExtUnitDef>,
+    presets: List<ExtUnitPreset>,
+    defaultFrom: Int = 0,
+    defaultTo: Int = 1,
+    defaultValue: Double = 1.0,
+    insightProvider: (Double, ExtUnitDef, ExtUnitDef, Double, Double) -> String
+): ExtUnitToolSpec = ExtUnitToolSpec(
+    tabIndex = tabIndex,
+    title = title,
+    subtitle = subtitle,
+    groups = listOf(
+        ExtUnitGroup(
+            label = title,
+            formulaHint = formulaHint,
+            units = units,
+            presets = presets,
+            defaultFrom = defaultFrom,
+            defaultTo = defaultTo,
+            defaultValue = defaultValue,
+            insightProvider = insightProvider
+        )
+    )
+)
 
 object ProExtendedUnitConverters {
 
@@ -100,33 +133,41 @@ object ProExtendedUnitConverters {
         }
     }
 
+    fun formatUnitDisplayLabel(u: ExtUnitDef): String {
+        return if (u.name.contains("(${u.symbol})") || u.name.contains(" ${u.symbol})") || u.name == u.symbol) {
+            u.name
+        } else {
+            "${u.name} (${u.symbol})"
+        }
+    }
+
     fun getSpec(tabIndex: Int): ExtUnitToolSpec = when (tabIndex) {
         // 100: קידומות SI (10s)
-        100 -> ExtUnitToolSpec(
+        100 -> singleGroupSpec(
             tabIndex = 100,
             title = "קידומות SI וחזקות של 10",
             subtitle = "המרה מדויקת בין כל קידומות השיטה המטרית (10⁻³⁰ עד 10³⁰)",
             formulaHint = "Value_to = Value_from × 10^(exp₁ − exp₂)",
             units = listOf(
-                linearUnit("יחידה בסיסית (10⁰)", "1", 1.0),
-                linearUnit("קילו (Kilo · 10³)", "k", 1e3),
-                linearUnit("מגה (Mega · 10⁶)", "M", 1e6),
-                linearUnit("גיגה (Giga · 10⁹)", "G", 1e9),
-                linearUnit("טרה (Tera · 10¹²)", "T", 1e12),
-                linearUnit("פטה (Peta · 10¹⁵)", "P", 1e15),
-                linearUnit("אקסה (Exa · 10¹⁸)", "E", 1e18),
-                linearUnit("זטה (Zetta · 10²¹)", "Z", 1e21),
-                linearUnit("יוטה (Yotta · 10²⁴)", "Y", 1e24),
-                linearUnit("קווטה (Quetta · 10³⁰)", "Q", 1e30),
-                linearUnit("דצי (Deci · 10⁻¹)", "d", 1e-1),
-                linearUnit("סנטי (Centi · 10⁻²)", "c", 1e-2),
-                linearUnit("מילי (Milli · 10⁻³)", "m", 1e-3),
-                linearUnit("מיקרו (Micro · 10⁻⁶)", "µ", 1e-6),
-                linearUnit("ננו (Nano · 10⁻⁹)", "n", 1e-9),
-                linearUnit("פיקו (Pico · 10⁻¹²)", "p", 1e-12),
-                linearUnit("פמטו (Femto · 10⁻¹⁵)", "f", 1e-15),
-                linearUnit("אטו (Atto · 10⁻¹⁸)", "a", 1e-18),
-                linearUnit("קווקטו (Quecto · 10⁻³⁰)", "q", 1e-30)
+                linearUnit("יחידה בסיסית — 10⁰", "1", 1.0),
+                linearUnit("קילו — Kilo 10³", "k", 1e3),
+                linearUnit("מגה — Mega 10⁶", "M", 1e6),
+                linearUnit("גיגה — Giga 10⁹", "G", 1e9),
+                linearUnit("טרה — Tera 10¹²", "T", 1e12),
+                linearUnit("פטה — Peta 10¹⁵", "P", 1e15),
+                linearUnit("אקסה — Exa 10¹⁸", "E", 1e18),
+                linearUnit("זטה — Zetta 10²¹", "Z", 1e21),
+                linearUnit("יוטה — Yotta 10²⁴", "Y", 1e24),
+                linearUnit("קווטה — Quetta 10³⁰", "Q", 1e30),
+                linearUnit("דצי — Deci 10⁻¹", "d", 1e-1),
+                linearUnit("סנטי — Centi 10⁻²", "c", 1e-2),
+                linearUnit("מילי — Milli 10⁻³", "m", 1e-3),
+                linearUnit("מיקרו — Micro 10⁻⁶", "µ", 1e-6),
+                linearUnit("ננו — Nano 10⁻⁹", "n", 1e-9),
+                linearUnit("פיקו — Pico 10⁻¹²", "p", 1e-12),
+                linearUnit("פמטו — Femto 10⁻¹⁵", "f", 1e-15),
+                linearUnit("אטו — Atto 10⁻¹⁸", "a", 1e-18),
+                linearUnit("קווקטו — Quecto 10⁻³⁰", "q", 1e-30)
             ),
             presets = listOf(
                 ExtUnitPreset("1 G → M", 1.0, 3, 2),
@@ -140,12 +181,12 @@ object ProExtendedUnitConverters {
             insightProvider = { _, from, to, baseVal, res ->
                 val expBase = if (baseVal > 0) floor(log10(abs(baseVal))).toInt() else 0
                 val ratio = if (res != 0.0 && baseVal != 0.0) log10(abs(from.toBase(1.0) / to.toBase(1.0))).roundToInt() else 0
-                "• סדר גודל בסיסי: 10^$expBase\n• הפרש חזקות בין ${from.symbol} ל-${to.symbol}: 10^$ratio (כפל פי ${formatSmartValue(10.0.pow(ratio), 4)})"
+                "• סדר גודל בסיסי: ${BidiFmt.ltr("10^$expBase")}\n• הפרש חזקות בין ${BidiFmt.ltr(from.symbol)} ל-${BidiFmt.ltr(to.symbol)}: ${BidiFmt.ltr("10^$ratio")} (כפל פי ${BidiFmt.ltr(formatSmartValue(10.0.pow(ratio), 4))})"
             }
         )
 
         // 101: שטח קרקע
-        101 -> ExtUnitToolSpec(
+        101 -> singleGroupSpec(
             tabIndex = 101,
             title = "ממיר שטח קרקע ומדידות נדל״ן",
             subtitle = "דונם ישראלי/עות'מאני, הקטר, אקר, מ״ר ויחידות עולמיות",
@@ -154,13 +195,13 @@ object ProExtendedUnitConverters {
                 linearUnit("דונם ישראלי / מטרי", "דונם", 1000.0),
                 linearUnit("מטר רבוע", "m²", 1.0),
                 linearUnit("דונם עות׳מאני (טורקי)", "דונם עות׳", 919.3),
-                linearUnit("הקטר (Hectare)", "ha", 10_000.0),
-                linearUnit("אקר (Acre)", "ac", 4046.8564224),
+                linearUnit("הקטר — Hectare", "ha", 10_000.0),
+                linearUnit("אקר — Acre", "ac", 4046.8564224),
                 linearUnit("קילומטר רבוע", "km²", 1_000_000.0),
                 linearUnit("רגל רבועה", "ft²", 0.09290304),
                 linearUnit("יארד רבוע", "yd²", 0.83612736),
-                linearUnit("פדאן (Feddan)", "feddan", 4200.833),
-                linearUnit("צובו יפני (Tsubo)", "tsubo", 3.305785)
+                linearUnit("פדאן — Feddan", "feddan", 4200.833),
+                linearUnit("צובו יפני — Tsubo", "tsubo", 3.305785)
             ),
             presets = listOf(
                 ExtUnitPreset("1 דונם → m²", 1.0, 0, 1),
@@ -175,28 +216,28 @@ object ProExtendedUnitConverters {
                 val sideM = sqrt(abs(sqm))
                 val footballFields = sqm / 7140.0
                 val apt100 = sqm / 100.0
-                "• ריבוע שווה-שטח: צלע של ${formatSmartValue(sideM, 2)} מטר (היקף ${formatSmartValue(sideM * 4, 1)} מ׳)\n• שווה ערך ל-${formatSmartValue(footballFields, 3)} מגרשי כדורגל או ${formatSmartValue(apt100, 1)} דירות 100 מ״ר"
+                "• ריבוע שווה-שטח: צלע של ${BidiFmt.ltr("${formatSmartValue(sideM, 2)} m")} (היקף ${BidiFmt.ltr("${formatSmartValue(sideM * 4, 1)} m")})\n• שווה ערך ל-${BidiFmt.ltr(formatSmartValue(footballFields, 3))} מגרשי כדורגל או ${BidiFmt.ltr(formatSmartValue(apt100, 1))} דירות 100 מ״ר"
             }
         )
 
         // 102: מספרים גדולים
-        102 -> ExtUnitToolSpec(
+        102 -> singleGroupSpec(
             tabIndex = 102,
             title = "ממיר מספרים גדולים ושיטות ספירה",
             subtitle = "סולם מערבי (מיליון/מיליארד/טריליון), סולם הודי (Lakh/Crore) וגוגול",
             formulaHint = "1 Crore = 10⁷  |  1 Billion = 10⁹  |  1 Googol = 10¹⁰⁰",
             units = listOf(
-                linearUnit("יחידות (10⁰)", "1", 1.0),
-                linearUnit("אלף (Thousand · 10³)", "K", 1e3),
-                linearUnit("לאק הודי (Lakh · 10⁵)", "Lakh", 1e5),
-                linearUnit("מיליון (Million · 10⁶)", "M", 1e6),
-                linearUnit("קרור הודי (Crore · 10⁷)", "Cr", 1e7),
-                linearUnit("מיליארד (Billion · 10⁹)", "B", 1e9),
-                linearUnit("טריליון (Trillion · 10¹²)", "T", 1e12),
-                linearUnit("קוודריליון (Quadrillion · 10¹⁵)", "Qa", 1e15),
-                linearUnit("קווינטיליון (Quintillion · 10¹⁸)", "Qi", 1e18),
-                linearUnit("סקסטיליון (Sextillion · 10²¹)", "Sx", 1e21),
-                linearUnit("גוגול (Googol · 10¹⁰⁰)", "Googol", 1e100)
+                linearUnit("יחידות — 10⁰", "1", 1.0),
+                linearUnit("אלף — Thousand 10³", "K", 1e3),
+                linearUnit("לאק הודי — Lakh 10⁵", "Lakh", 1e5),
+                linearUnit("מיליון — Million 10⁶", "M", 1e6),
+                linearUnit("קרור הודי — Crore 10⁷", "Cr", 1e7),
+                linearUnit("מיליארד — Billion 10⁹", "B", 1e9),
+                linearUnit("טריליון — Trillion 10¹²", "T", 1e12),
+                linearUnit("קוודריליון — Quadrillion 10¹⁵", "Qa", 1e15),
+                linearUnit("קווינטיליון — Quintillion 10¹⁸", "Qi", 1e18),
+                linearUnit("סקסטיליון — Sextillion 10²¹", "Sx", 1e21),
+                linearUnit("גוגול — Googol 10¹⁰⁰", "Googol", 1e100)
             ),
             presets = listOf(
                 ExtUnitPreset("1 מיליארד → מיליון", 1.0, 5, 3),
@@ -210,30 +251,30 @@ object ProExtendedUnitConverters {
             insightProvider = { _, _, _, baseVal, _ ->
                 val zeros = if (baseVal >= 1.0) floor(log10(baseVal)).toInt() else 0
                 val digits = zeros + 1
-                "• כתיב מדעי: ${formatSmartValue(baseVal, 4)}\n• מספר ספרות שלמות: $digits (כ-$zeros אפסים אחרי הספרה הראשונה)"
+                "• כתיב מדעי: ${BidiFmt.ltr(formatSmartValue(baseVal, 4))}\n• מספר ספרות שלמות: ${BidiFmt.ltr(digits.toString())} (כ-${BidiFmt.ltr(zeros.toString())} אפסים אחרי הספרה הראשונה)"
             }
         )
 
         // 103: זמן תרבותי ומסורתי
-        103 -> ExtUnitToolSpec(
+        103 -> singleGroupSpec(
             tabIndex = 103,
             title = "ממיר זמן תרבותי, עברי ומסורתי",
             subtitle = "חלקים, רגעים, שעה, יום, שבוע, שמיטה, יובל ומחזורי זמן היסטוריים",
             formulaHint = "1 שעה = 1,080 חלקים  |  1 חלק = 3⅓ שניות = 76 רגעים",
             units = listOf(
-                linearUnit("חלק עברי (3⅓ שניות)", "חלק", 10.0 / 3.0),
-                linearUnit("רגע עברי (1/76 חלק)", "רגע", (10.0 / 3.0) / 76.0),
-                linearUnit("שנייה (SI)", "s", 1.0),
-                linearUnit("דקה (18 חלקים)", "min", 60.0),
-                linearUnit("שעה (1,080 חלקים)", "hr", 3600.0),
-                linearUnit("עונה תלמודית (1/24 שעה)", "עונה", 150.0),
-                linearUnit("יממה (24 שעות)", "יום", 86_400.0),
-                linearUnit("שבוע (7 ימים)", "שבוע", 604_800.0),
-                linearUnit("חודש עברי מולד (29.53 יום)", "חודש עברי", 2_551_443.333),
-                linearUnit("שנה סולארית (365.2422 יום)", "שנה", 31_556_926.0),
-                linearUnit("מחזור שמיטה (7 שנים)", "שמיטה", 31_556_926.0 * 7.0),
-                linearUnit("יובל (50 שנים)", "יובל", 31_556_926.0 * 50.0),
-                linearUnit("מאה (Century)", "מאה", 31_556_926.0 * 100.0)
+                linearUnit("חלק עברי — 3⅓ שניות", "חלק", 10.0 / 3.0),
+                linearUnit("רגע עברי — 1/76 חלק", "רגע", (10.0 / 3.0) / 76.0),
+                linearUnit("שנייה תקנית", "s", 1.0),
+                linearUnit("דקה — 18 חלקים", "min", 60.0),
+                linearUnit("שעה — 1,080 חלקים", "hr", 3600.0),
+                linearUnit("עונה תלמודית — 1/24 שעה", "עונה", 150.0),
+                linearUnit("יממה — 24 שעות", "יום", 86_400.0),
+                linearUnit("שבוע — 7 ימים", "שבוע", 604_800.0),
+                linearUnit("חודש עברי מולד — 29.53 יום", "חודש עברי", 2_551_443.333),
+                linearUnit("שנה סולארית — 365.24 יום", "שנה", 31_556_926.0),
+                linearUnit("מחזור שמיטה — 7 שנים", "שמיטה", 31_556_926.0 * 7.0),
+                linearUnit("יובל — 50 שנים", "יובל", 31_556_926.0 * 50.0),
+                linearUnit("מאה — Century", "מאה", 31_556_926.0 * 100.0)
             ),
             presets = listOf(
                 ExtUnitPreset("1 שעה → חלקים", 1.0, 4, 0),
@@ -247,25 +288,25 @@ object ProExtendedUnitConverters {
             insightProvider = { _, _, _, sec, _ ->
                 val halakim = sec / (10.0 / 3.0)
                 val days = sec / 86_400.0
-                "• בספירה עברית מסורתית: ${formatSmartValue(halakim, 2)} חלקים\n• שווה ערך ל-${formatSmartValue(days, 4)} יממות (${formatSmartValue(sec / 3600.0, 3)} שעות)"
+                "• בספירה עברית מסורתית: ${BidiFmt.ltr(formatSmartValue(halakim, 2))} חלקים\n• שווה ערך ל-${BidiFmt.ltr(formatSmartValue(days, 4))} יממות (${BidiFmt.ltr(formatSmartValue(sec / 3600.0, 3))} שעות)"
             }
         )
 
         // 104: צפיפות חוט וטקסטיל
-        104 -> ExtUnitToolSpec(
+        104 -> singleGroupSpec(
             tabIndex = 104,
             title = "ממיר צפיפות חוט וטקסטיל",
             subtitle = "שיטות ישירות (Tex, Denier, dtex) ועקיפות (Nm, Ne כותנה)",
             formulaHint = "Denier = 9 × Tex  |  Nm = 1000 / Tex  |  Ne = 590.54 / Tex",
             units = listOf(
-                linearUnit("טקס (Tex · גרם/1,000 מ׳)", "tex", 1.0),
-                linearUnit("דצי-טקס (Decitex)", "dtex", 0.1),
-                linearUnit("דנייר (Denier · גרם/9,000 מ׳)", "den", 1.0 / 9.0),
-                linearUnit("מילי-טקס (Millitex)", "mtex", 0.001),
-                linearUnit("קילו-טקס (Kilotes)", "ktex", 1000.0),
-                inverseUnit("ספירה מטרית (Metric Count · Nm)", "Nm", 1000.0),
-                inverseUnit("ספירת כותנה אנגלית (Cotton · Ne)", "Ne", 590.541),
-                inverseUnit("ספירת פשתן (Linen · Lea)", "Lea", 1653.52)
+                linearUnit("טקס — גרם ל-1,000 מ׳", "tex", 1.0),
+                linearUnit("דצי-טקס — Decitex", "dtex", 0.1),
+                linearUnit("דנייר — גרם ל-9,000 מ׳", "den", 1.0 / 9.0),
+                linearUnit("מילי-טקס — Millitex", "mtex", 0.001),
+                linearUnit("קילו-טקס — Kilotex", "ktex", 1000.0),
+                inverseUnit("ספירה מטרית — Metric Count", "Nm", 1000.0),
+                inverseUnit("ספירת כותנה אנגלית — Cotton", "Ne", 590.541),
+                inverseUnit("ספירת פשתן — Linen", "Lea", 1653.52)
             ),
             presets = listOf(
                 ExtUnitPreset("20 tex → Denier", 20.0, 0, 2),
@@ -285,24 +326,24 @@ object ProExtendedUnitConverters {
                     else -> "חוט כבד / חבל תעשייתי (שטיחים וריפוד)"
                 }
                 val nm = if (tex > 0) 1000.0 / tex else 0.0
-                "• סיווג עובי סיב: $grade\n• אורך בק״ג חוט (Nm): ${formatSmartValue(nm, 2)} מטר לגרם"
+                "• סיווג עובי סיב: $grade\n• אורך בגרם חוט (${BidiFmt.ltr("Nm")}): ${BidiFmt.ltr("${formatSmartValue(nm, 2)} m/g")}"
             }
         )
 
         // 105: קלוריות מזון
-        105 -> ExtUnitToolSpec(
+        105 -> singleGroupSpec(
             tabIndex = 105,
             title = "ממיר קלוריות מזון ואנרגיה תזונתית",
             subtitle = "קק״ל (kcal), קילו-ג׳אול (kJ), קלוריות קטנות ואנרגיית שריפה",
             formulaHint = "1 kcal (קלוריית מזון) = 4.184 kJ = 1,000 cal",
             units = listOf(
-                linearUnit("קילו-קלוריה / קלוריית מזון", "kcal", 4184.0),
-                linearUnit("קילו-ג׳אול (תקן תוויות מזון)", "kJ", 1000.0),
-                linearUnit("קלוריה קטנה (תרמוכימית)", "cal", 4.184),
-                linearUnit("ג׳אול (Joule)", "J", 1.0),
-                linearUnit("מגה-ג׳אול (MJ)", "MJ", 1_000_000.0),
-                linearUnit("ואט-שעה (Wh)", "Wh", 3600.0),
-                linearUnit("יחידת חום בריטית (BTU)", "BTU", 1055.05585)
+                linearUnit("קילו-קלוריה — קלוריית מזון", "kcal", 4184.0),
+                linearUnit("קילו-ג׳אול — תקן תוויות מזון", "kJ", 1000.0),
+                linearUnit("קלוריה קטנה — תרמוכימית", "cal", 4.184),
+                linearUnit("ג׳אול — Joule", "J", 1.0),
+                linearUnit("מגה-ג׳אול", "MJ", 1_000_000.0),
+                linearUnit("ואט-שעה", "Wh", 3600.0),
+                linearUnit("יחידת חום בריטית", "BTU", 1055.05585)
             ),
             presets = listOf(
                 ExtUnitPreset("250 kcal → kJ", 250.0, 0, 1),
@@ -318,26 +359,26 @@ object ProExtendedUnitConverters {
                 val walkMin = kcal / 4.5
                 val runMin = kcal / 10.5
                 val dailyPct = (kcal / 2000.0) * 100.0
-                "• אחוז מתפריט יומי (2,000 קק״ל): ${formatSmartValue(dailyPct, 1)}%\n• שריפה משוערת: ${formatSmartValue(walkMin, 0)} דק׳ הליכה מהירה או ${formatSmartValue(runMin, 0)} דק׳ ריצה"
+                "• אחוז מתפריט יומי (2,000 קק״ל): ${BidiFmt.ltr("${formatSmartValue(dailyPct, 1)}%")}\n• שריפה משוערת: ${BidiFmt.ltr(formatSmartValue(walkMin, 0))} דק׳ הליכה מהירה או ${BidiFmt.ltr(formatSmartValue(runMin, 0))} דק׳ ריצה"
             }
         )
 
         // 106: משקל זהב
-        106 -> ExtUnitToolSpec(
+        106 -> singleGroupSpec(
             tabIndex = 106,
             title = "ממיר משקל זהב ומתכות יקרות",
             subtitle = "גרם, אונקיית טרוי (oz t), קראט, טולה הודית, פניוויט וגריין",
             formulaHint = "1 אונקיית טרוי = 31.1034768 g  |  1 טולה = 11.6638 g",
             units = listOf(
-                linearUnit("גרם (Gram)", "g", 1.0),
-                linearUnit("אונקיית טרוי (Troy Ounce)", "oz t", 31.1034768),
-                linearUnit("קראט (Carat · 0.2g)", "ct", 0.2),
-                linearUnit("טולה (Tola · 3/8 oz t)", "tola", 11.6638038),
-                linearUnit("פניוויט (Pennyweight)", "dwt", 1.55517384),
-                linearUnit("גריין (Grain)", "gr", 0.06479891),
-                linearUnit("טאל הונג-קונג (Tael)", "tael", 37.429),
-                linearUnit("בהט זהב תאילנדי (Baht)", "baht", 15.244),
-                linearUnit("קילוגרם (מטיל זהב)", "kg", 1000.0)
+                linearUnit("גרם — Gram", "g", 1.0),
+                linearUnit("אונקיית טרוי — Troy Ounce", "oz t", 31.1034768),
+                linearUnit("קראט — Carat 0.2g", "ct", 0.2),
+                linearUnit("טולה — Tola", "tola", 11.6638038),
+                linearUnit("פניוויט — Pennyweight", "dwt", 1.55517384),
+                linearUnit("גריין — Grain", "gr", 0.06479891),
+                linearUnit("טאל הונג-קונג — Tael", "tael", 37.429),
+                linearUnit("בהט זהב תאילנדי — Baht", "baht", 15.244),
+                linearUnit("קילוגרם — מטיל זהב", "kg", 1000.0)
             ),
             presets = listOf(
                 ExtUnitPreset("1 oz t → גרם", 1.0, 1, 0),
@@ -351,24 +392,24 @@ object ProExtendedUnitConverters {
             insightProvider = { _, _, _, grams, _ ->
                 val g18 = grams * 0.75
                 val g14 = grams * (14.0 / 24.0)
-                "• תכולת זהב טהור (24K): ${formatSmartValue(grams, 3)} גרם\n• אם התכשיט ב-18K: ${formatSmartValue(g18, 3)}g זהב נקי | ב-14K: ${formatSmartValue(g14, 3)}g"
+                "• תכולת זהב טהור (${BidiFmt.ltr("24K")}): ${BidiFmt.ltr("${formatSmartValue(grams, 3)} g")}\n• אם התכשיט ב-${BidiFmt.ltr("18K")}: ${BidiFmt.ltr("${formatSmartValue(g18, 3)} g")} זהב נקי | ב-${BidiFmt.ltr("14K")}: ${BidiFmt.ltr("${formatSmartValue(g14, 3)} g")}"
             }
         )
 
         // 107: נפח עץ
-        107 -> ExtUnitToolSpec(
+        107 -> singleGroupSpec(
             tabIndex = 107,
             title = "ממיר נפח עץ, לוחות ונגרות",
             subtitle = "קוב עץ (m³), רגל לוח (Board Foot), Cord, Stere ויחידות יערנות",
             formulaHint = "1 Board Foot (FBM) = 144 in³ = 0.0023597 m³",
             units = listOf(
-                linearUnit("מטר מעוקב (קוב עץ)", "m³", 1.0),
-                linearUnit("רגל לוח (Board Foot · FBM)", "FBM", 0.0023597372),
-                linearUnit("אלף רגלי לוח (MBF)", "MBF", 2.3597372),
-                linearUnit("רגל מעוקבת (Cubic Foot)", "ft³", 0.0283168466),
-                linearUnit("קורד עץ הסקה (Cord · 128 ft³)", "cord", 3.62455636),
-                linearUnit("סטר (Stere)", "st", 1.0),
-                linearUnit("הופוס רגל (Hoppus Foot)", "h ft", 0.036054),
+                linearUnit("מטר מעוקב — קוב עץ", "m³", 1.0),
+                linearUnit("רגל לוח — Board Foot", "FBM", 0.0023597372),
+                linearUnit("אלף רגלי לוח", "MBF", 2.3597372),
+                linearUnit("רגל מעוקבת — Cubic Foot", "ft³", 0.0283168466),
+                linearUnit("קורד עץ הסקה — 128 ft³", "cord", 3.62455636),
+                linearUnit("סטר — Stere", "st", 1.0),
+                linearUnit("הופוס רגל — Hoppus Foot", "h ft", 0.036054),
                 linearUnit("ליטר / דצימטר מעוקב", "L", 0.001)
             ),
             presets = listOf(
@@ -383,22 +424,22 @@ object ProExtendedUnitConverters {
             insightProvider = { _, _, _, m3, _ ->
                 val pineKg = m3 * 520.0
                 val oakKg = m3 * 740.0
-                "• משקל משוער לעץ אורן יבש (~520 kg/m³): ${formatSmartValue(pineKg, 1)} ק״ג\n• משקל משוער לעץ אלון (~740 kg/m³): ${formatSmartValue(oakKg, 1)} ק״ג"
+                "• משקל משוער לעץ אורן יבש (~520 kg/m³): ${BidiFmt.ltr("${formatSmartValue(pineKg, 1)} kg")}\n• משקל משוער לעץ אלון (~740 kg/m³): ${BidiFmt.ltr("${formatSmartValue(oakKg, 1)} kg")}"
             }
         )
 
         // 108: כושר קירור
-        108 -> ExtUnitToolSpec(
+        108 -> singleGroupSpec(
             tabIndex = 108,
             title = "ממיר כושר קירור ומיזוג אוויר",
             subtitle = "טון קירור (TR), BTU לשעה, קילוואט תרמי וכוח סוס מיזוג",
             formulaHint = "1 טון קירור (TR) = 12,000 BTU/h = 3.51685 kW",
             units = listOf(
                 linearUnit("BTU לשעה", "BTU/h", 0.29307107),
-                linearUnit("טון קירור אמריקאי (TR)", "TR", 3516.85284),
-                linearUnit("קילוואט קירור (kW)", "kW", 1000.0),
-                linearUnit("ואט תרמי (W)", "W", 1.0),
-                linearUnit("כוח סוס מיזוג (ישראלי ~9,000 BTU)", "כ״ס", 2637.6396),
+                linearUnit("טון קירור אמריקאי", "TR", 3516.85284),
+                linearUnit("קילוואט קירור", "kW", 1000.0),
+                linearUnit("ואט תרמי", "W", 1.0),
+                linearUnit("כוח סוס מיזוג — תקן ישראלי", "כ״ס", 2637.6396),
                 linearUnit("קילו-קלוריה לשעה", "kcal/h", 1.163),
                 linearUnit("מגה-ג׳אול לשעה", "MJ/h", 277.77778)
             ),
@@ -415,24 +456,24 @@ object ProExtendedUnitConverters {
                 val btuh = watts / 0.29307107
                 val roomSqmMin = btuh / 700.0
                 val roomSqmMax = btuh / 550.0
-                "• מתאים לקירור חדר בשטח משוער של ${formatSmartValue(roomSqmMin, 1)}–${formatSmartValue(roomSqmMax, 1)} מ״ר\n• שקול ל-${formatSmartValue(btuh / 9000.0, 2)} כ״ס מזגן בתקינה ביתית"
+                "• מתאים לקירור חדר בשטח משוער של ${BidiFmt.ltr("${formatSmartValue(roomSqmMin, 1)}–${formatSmartValue(roomSqmMax, 1)} m²")}\n• שקול ל-${BidiFmt.ltr(formatSmartValue(btuh / 9000.0, 2))} כ״ס מזגן בתקינה ביתית"
             }
         )
 
         // 109: זרימת אוויר
-        109 -> ExtUnitToolSpec(
+        109 -> singleGroupSpec(
             tabIndex = 109,
             title = "ממיר זרימת אוויר (HVAC ואוורור)",
             subtitle = "CFM, מק״ש (m³/h), ליטר לשנייה (L/s) ורגל מעוקבת לשנייה",
             formulaHint = "1 CFM = 1.69901 m³/h = 0.47195 L/s",
             units = listOf(
-                linearUnit("רגל מעוקבת לדקה (CFM)", "CFM", 0.00047194745),
-                linearUnit("מטר מעוקב לשעה (מק״ש)", "m³/h", 1.0 / 3600.0),
+                linearUnit("רגל מעוקבת לדקה", "CFM", 0.00047194745),
+                linearUnit("מטר מעוקב לשעה — מק״ש", "m³/h", 1.0 / 3600.0),
                 linearUnit("ליטר לשנייה", "L/s", 0.001),
                 linearUnit("ליטר לדקה", "L/min", 1.0 / 60_000.0),
-                linearUnit("מטר מעוקב לדקה (CMM)", "m³/min", 1.0 / 60.0),
+                linearUnit("מטר מעוקב לדקה", "m³/min", 1.0 / 60.0),
                 linearUnit("מטר מעוקב לשנייה", "m³/s", 1.0),
-                linearUnit("רגל מעוקבת לשנייה (CFS)", "CFS", 0.0283168466)
+                linearUnit("רגל מעוקבת לשנייה", "CFS", 0.0283168466)
             ),
             presets = listOf(
                 ExtUnitPreset("100 CFM → m³/h", 100.0, 0, 1),
@@ -446,24 +487,24 @@ object ProExtendedUnitConverters {
             insightProvider = { _, _, _, m3s, _ ->
                 val m3h = m3s * 3600.0
                 val achRoom50 = m3h / 50.0
-                "• ספיקה שעתית: ${formatSmartValue(m3h, 1)} מ״ק/שעה\n• בחדר ממוצע (50 מ״ק): ${formatSmartValue(achRoom50, 1)} החלפות אוויר בשעה (ACH)"
+                "• ספיקה שעתית: ${BidiFmt.ltr("${formatSmartValue(m3h, 1)} m³/h")}\n• בחדר ממוצע (50 מ״ק): ${BidiFmt.ltr("${formatSmartValue(achRoom50, 1)} ACH")} החלפות אוויר בשעה"
             }
         )
 
         // 110: קשיות מים
-        110 -> ExtUnitToolSpec(
+        110 -> singleGroupSpec(
             tabIndex = 110,
             title = "ממיר קשיות מים וריכוז אבנית",
             subtitle = "ppm CaCO₃, מעלות גרמניות (°dH), צרפתיות (°fH), אנגליות ו-mmol/L",
             formulaHint = "1 °dH = 17.848 ppm CaCO₃  |  1 mmol/L = 100.09 ppm",
             units = listOf(
-                linearUnit("חלקים למיליון CaCO₃ (mg/L)", "ppm", 1.0),
-                linearUnit("מעלות גרמניות (°dH)", "°dH", 17.848),
-                linearUnit("מעלות צרפתיות (°fH)", "°fH", 10.0),
-                linearUnit("מעלות אנגליות / קלארק (°e)", "°e", 14.2857),
-                linearUnit("מילימול לליטר (mmol/L CaCO₃)", "mmol/L", 100.0869),
-                linearUnit("גריינים לגלון אמריקאי (gpg)", "gpg", 17.118),
-                linearUnit("מיליאקוויוולנט לליטר (meq/L)", "meq/L", 50.04345)
+                linearUnit("חלקים למיליון CaCO₃", "ppm", 1.0),
+                linearUnit("מעלות גרמניות", "°dH", 17.848),
+                linearUnit("מעלות צרפתיות", "°fH", 10.0),
+                linearUnit("מעלות אנגליות / קלארק", "°e", 14.2857),
+                linearUnit("מילימול לליטר CaCO₃", "mmol/L", 100.0869),
+                linearUnit("גריינים לגלון אמריקאי", "gpg", 17.118),
+                linearUnit("מיליאקוויוולנט לליטר", "meq/L", 50.04345)
             ),
             presets = listOf(
                 ExtUnitPreset("מי ברז ישראל 250 ppm", 250.0, 0, 1),
@@ -481,20 +522,20 @@ object ProExtendedUnitConverters {
                     ppm < 180.0 -> "מים קשים (הצטברות אבנית מתונה)"
                     else -> "מים קשים מאוד (מומלץ מסנן אבנית/סיליפוס למכונת כביסה וקומקום)"
                 }
-                "• סיווג איכות קשיות (USGS): $level\n• שווה ערך ל-${formatSmartValue(ppm / 17.848, 2)} °dH"
+                "• סיווג איכות קשיות (USGS): $level\n• שווה ערך ל-${BidiFmt.ltr("${formatSmartValue(ppm / 17.848, 2)} °dH")}"
             }
         )
 
         // 111: מתח פנים
-        111 -> ExtUnitToolSpec(
+        111 -> singleGroupSpec(
             tabIndex = 111,
             title = "ממיר מתח פנים של נוזלים",
             subtitle = "מילי-ניוטון למטר (mN/m), דין לס״מ (dyn/cm) ואנרגיית שטח",
             formulaHint = "1 mN/m = 1 dyn/cm = 0.001 N/m (מים ב-20°C ≈ 72.8 mN/m)",
             units = listOf(
                 linearUnit("מילי-ניוטון למטר", "mN/m", 0.001),
-                linearUnit("דין לסנטימטר (CGS)", "dyn/cm", 0.001),
-                linearUnit("ניוטון למטר (SI)", "N/m", 1.0),
+                linearUnit("דין לסנטימטר — CGS", "dyn/cm", 0.001),
+                linearUnit("ניוטון למטר — SI", "N/m", 1.0),
                 linearUnit("ארג לסמ״ר", "erg/cm²", 0.001),
                 linearUnit("ג׳אול למ״ר", "J/m²", 1.0),
                 linearUnit("גרם-כוח לסנטימטר", "gf/cm", 0.980665),
@@ -516,55 +557,76 @@ object ProExtendedUnitConverters {
                     mnm < 85.0 -> "בטווח של מים טהורים (72.8 mN/m ב-20°C)"
                     else -> "מתח פנים גבוה מאוד (דומה למתכות נוזליות / כספית)"
                 }
-                "• השוואה מעבדתית: $ref\n• ביחידות CGS: ${formatSmartValue(mnm, 3)} dyn/cm"
+                "• השוואה מעבדתית: $ref\n• ביחידות CGS: ${BidiFmt.ltr("${formatSmartValue(mnm, 3)} dyn/cm")}"
             }
         )
 
-        // 112: פרמיטיביות ופרמאביליות
+        // 112: פרמיטיביות ופרמאביליות — 2 תת-קטגוריות מופרדות פיזיקלית!
         112 -> ExtUnitToolSpec(
             tabIndex = 112,
             title = "פרמיטיביות (ε) ופרמאביליות (µ)",
-            subtitle = "מקדם דיאלקטרי, קבוע הריק ε₀, חלחול מגנטי µ₀ ויחידות CGS",
-            formulaHint = "ε₀ = 8.854×10⁻¹² F/m  |  µ₀ = 4π×10⁻⁷ H/m",
-            units = listOf(
-                linearUnit("פיקו-פאראד למטר (פרמיטיביות)", "pF/m", 1e-12),
-                linearUnit("פרמיטיביות יחסית לריק (εᵣ)", "ε₀", 8.854187817e-12),
-                linearUnit("פאראד למטר (SI · ε)", "F/m", 1.0),
-                linearUnit("ננו-פאראד למטר", "nF/m", 1e-9),
-                linearUnit("מיקרו-פאראד למטר", "µF/m", 1e-6),
-                linearUnit("הנרי למטר (פרמאביליות · µ)", "H/m", 1.0),
-                linearUnit("פרמאביליות יחסית לריק (µᵣ)", "µ₀", 1.2566370614e-6),
-                linearUnit("מיקרו-הנרי למטר", "µH/m", 1e-6)
-            ),
-            presets = listOf(
-                ExtUnitPreset("1 ε₀ → pF/m", 1.0, 1, 0),
-                ExtUnitPreset("מים (εᵣ=80) → pF/m", 80.0, 1, 0),
-                ExtUnitPreset("1 µ₀ → µH/m", 1.0, 6, 7),
-                ExtUnitPreset("זכוכית (εᵣ=4.7)", 4.7, 1, 0)
-            ),
-            defaultFrom = 1,
-            defaultTo = 0,
-            defaultValue = 1.0,
-            insightProvider = { value, from, _, baseVal, _ ->
-                if (from.symbol.contains("H") || from.symbol == "µ₀") {
-                    val muR = baseVal / 1.2566370614e-6
-                    "• פרמאביליות יחסית משוערת (µᵣ): ${formatSmartValue(muR, 4)}\n• קבוע הריק המגנטי µ₀ ≈ 1.2566 µH/m"
-                } else {
-                    val epsR = baseVal / 8.854187817e-12
-                    val vLightFrac = if (epsR > 0) 1.0 / sqrt(epsR) else 0.0
-                    "• מקדם דיאלקטרי יחסי (εᵣ): ${formatSmartValue(epsR, 4)}\n• מהירות גל אלקטרומגנטי בתווך: ${formatSmartValue(vLightFrac * 100.0, 2)}% ממהירות האור (c)"
-                }
-            }
+            subtitle = "בחר בין פרמיטיביות דיאלקטרית (ε) לבין פרמאביליות מגנטית (µ)",
+            groups = listOf(
+                ExtUnitGroup(
+                    label = "פרמיטיביות (ε)",
+                    formulaHint = "ε₀ = 8.8541878×10⁻¹² F/m  |  ε = εᵣ · ε₀",
+                    units = listOf(
+                        linearUnit("פרמיטיביות יחסית לריק — εᵣ", "ε₀", 8.854187817e-12),
+                        linearUnit("פיקו-פאראד למטר", "pF/m", 1e-12),
+                        linearUnit("ננו-פאראד למטר", "nF/m", 1e-9),
+                        linearUnit("מיקרו-פאראד למטר", "µF/m", 1e-6),
+                        linearUnit("פאראד למטר — SI", "F/m", 1.0)
+                    ),
+                    presets = listOf(
+                        ExtUnitPreset("ריק (1 ε₀ → pF/m)", 1.0, 0, 1),
+                        ExtUnitPreset("מים (εᵣ=80)", 80.0, 0, 1),
+                        ExtUnitPreset("זכוכית (εᵣ=4.7)", 4.7, 0, 1),
+                        ExtUnitPreset("100 pF/m → ε₀", 100.0, 1, 0)
+                    ),
+                    defaultFrom = 0,
+                    defaultTo = 1,
+                    defaultValue = 1.0,
+                    insightProvider = { _, _, _, baseVal, _ ->
+                        val epsR = baseVal / 8.854187817e-12
+                        val vLightPct = if (epsR > 0) (1.0 / sqrt(epsR)) * 100.0 else 0.0
+                        "• מקדם דיאלקטרי יחסי (${BidiFmt.ltr("εᵣ")}): ${BidiFmt.ltr(formatSmartValue(epsR, 4))}\n• מהירות גל אלקטרומגנטי בתווך: ${BidiFmt.ltr("${formatSmartValue(vLightPct, 2)}%")} ממהירות האור"
+                    }
+                ),
+                ExtUnitGroup(
+                    label = "פרמאביליות (µ)",
+                    formulaHint = "µ₀ = 4π×10⁻⁷ H/m ≈ 1.2566 µH/m  |  µ = µᵣ · µ₀",
+                    units = listOf(
+                        linearUnit("פרמאביליות יחסית לריק — µᵣ", "µ₀", 1.2566370614e-6),
+                        linearUnit("מיקרו-הנרי למטר", "µH/m", 1e-6),
+                        linearUnit("ננו-הנרי למטר", "nH/m", 1e-9),
+                        linearUnit("מילי-הנרי למטר", "mH/m", 1e-3),
+                        linearUnit("הנרי למטר — SI", "H/m", 1.0)
+                    ),
+                    presets = listOf(
+                        ExtUnitPreset("ריק (1 µ₀ → µH/m)", 1.0, 0, 1),
+                        ExtUnitPreset("ברזל (µᵣ=5000)", 5000.0, 0, 3),
+                        ExtUnitPreset("ניקל (µᵣ=600)", 600.0, 0, 1),
+                        ExtUnitPreset("10 µH/m → µ₀", 10.0, 1, 0)
+                    ),
+                    defaultFrom = 0,
+                    defaultTo = 1,
+                    defaultValue = 1.0,
+                    insightProvider = { _, _, _, baseVal, _ ->
+                        val muR = baseVal / 1.2566370614e-6
+                        "• פרמאביליות מגנטית יחסית (${BidiFmt.ltr("µᵣ")}): ${BidiFmt.ltr(formatSmartValue(muR, 4))}\n• הגברת שטף מגנטי לעומת ריק: פי ${BidiFmt.ltr(formatSmartValue(muR, 2))}"
+                    }
+                )
+            )
         )
 
         // 113: מומנט אינרציה
-        113 -> ExtUnitToolSpec(
+        113 -> singleGroupSpec(
             tabIndex = 113,
             title = "ממיר מומנט אינרציה (Rotational Inertia)",
             subtitle = "התנגדות גוף לשינוי תאוצה זוויתית במכניקה, מנועים וגלגלי תנופה",
             formulaHint = "I = ∑ m·r²  |  E_rot = ½·I·ω²",
             units = listOf(
-                linearUnit("קילוגרם·מטר רבוע (SI)", "kg·m²", 1.0),
+                linearUnit("קילוגרם·מטר רבוע — SI", "kg·m²", 1.0),
                 linearUnit("גרם·סנטימטר רבוע", "g·cm²", 1e-7),
                 linearUnit("קילוגרם·סנטימטר רבוע", "kg·cm²", 1e-4),
                 linearUnit("קילוגרם·מילימטר רבוע", "kg·mm²", 1e-6),
@@ -585,60 +647,82 @@ object ProExtendedUnitConverters {
             insightProvider = { _, _, _, kgm2, _ ->
                 val omega1000 = 1000.0 * 2.0 * PI / 60.0
                 val eRot = 0.5 * kgm2 * omega1000 * omega1000
-                "• אנרגיית סיבוב ב-1,000 RPM (½Iω²): ${formatSmartValue(eRot, 2)} ג׳אול (${formatSmartValue(eRot / 1000.0, 3)} kJ)\n• מומנט נדרש להאצה ב-10 rad/s²: ${formatSmartValue(kgm2 * 10.0, 3)} N·m"
+                "• אנרגיית סיבוב ב-${BidiFmt.ltr("1,000 RPM")}: ${BidiFmt.ltr("${formatSmartValue(eRot, 2)} J")} (${BidiFmt.ltr("${formatSmartValue(eRot / 1000.0, 3)} kJ")})\n• מומנט נדרש להאצה ב-${BidiFmt.ltr("10 rad/s²")}: ${BidiFmt.ltr("${formatSmartValue(kgm2 * 10.0, 3)} N·m")}"
             }
         )
 
-        // 114: צפיפות חום וקיבול חום
+        // 114: צפיפות חום וקיבול חום — 2 תת-קטגוריות מופרדות פיזיקלית!
         114 -> ExtUnitToolSpec(
             tabIndex = 114,
             title = "צפיפות חום וקיבול חום (תרמודינמיקה)",
-            subtitle = "אנרגיית חום ליחידת שטח (J/m², cal/cm²) וקיבול חום (J/K, BTU/°F)",
-            formulaHint = "1 cal/cm² = 41,840 J/m²  |  1 BTU/ft² = 11,356.5 J/m²",
-            units = listOf(
-                linearUnit("ג׳אול למ״ר (צפיפות חום)", "J/m²", 1.0),
-                linearUnit("קילו-ג׳אול למ״ר", "kJ/m²", 1000.0),
-                linearUnit("קלוריה לסמ״ר (Langley)", "cal/cm²", 41_840.0),
-                linearUnit("BTU לרגל רבועה", "BTU/ft²", 11_356.5267),
-                linearUnit("ואט-שעה למ״ר", "Wh/m²", 3600.0),
-                linearUnit("ג׳אול לקלווין (קיבול חום)", "J/K", 1.0),
-                linearUnit("קילו-ג׳אול לקלווין", "kJ/K", 1000.0),
-                linearUnit("קלוריה למעלת צלזיוס", "cal/°C", 4.184),
-                linearUnit("BTU למעלת פרנהייט", "BTU/°F", 1899.1005)
-            ),
-            presets = listOf(
-                ExtUnitPreset("1 cal/cm² → kJ/m²", 1.0, 2, 1),
-                ExtUnitPreset("100 Wh/m² → kJ/m²", 100.0, 4, 1),
-                ExtUnitPreset("4.184 kJ/K (ליטר מים)", 4.184, 6, 7),
-                ExtUnitPreset("10 BTU/ft² → kJ/m²", 10.0, 3, 1)
-            ),
-            defaultFrom = 2,
-            defaultTo = 1,
-            defaultValue = 1.0,
-            insightProvider = { _, from, _, baseVal, _ ->
-                if (from.symbol.contains("K") || from.symbol.contains("°")) {
-                    val waterLiters = baseVal / 4184.0
-                    "• קיבול חום זה שקול לחימום ${formatSmartValue(waterLiters, 3)} ליטר מים במעלה אחת (°C)"
-                } else {
-                    val langley = baseVal / 41_840.0
-                    "• שווה ערך ל-${formatSmartValue(langley, 4)} Langley (יחידת קרינת שמש מטאורולוגית)"
-                }
-            }
+            subtitle = "בחר בין צפיפות אנרגיית חום לשטח (J/m²) לבין קיבול חום (J/K)",
+            groups = listOf(
+                ExtUnitGroup(
+                    label = "צפיפות חום (J/m²)",
+                    formulaHint = "1 cal/cm² (Langley) = 41,840 J/m²  |  1 Wh/m² = 3,600 J/m²",
+                    units = listOf(
+                        linearUnit("קלוריה לסמ״ר — Langley", "cal/cm²", 41_840.0),
+                        linearUnit("קילו-ג׳אול למ״ר", "kJ/m²", 1000.0),
+                        linearUnit("ג׳אול למ״ר — SI", "J/m²", 1.0),
+                        linearUnit("ואט-שעה למ״ר", "Wh/m²", 3600.0),
+                        linearUnit("BTU לרגל רבועה", "BTU/ft²", 11_356.5267),
+                        linearUnit("מגה-ג׳אול למ״ר", "MJ/m²", 1_000_000.0)
+                    ),
+                    presets = listOf(
+                        ExtUnitPreset("1 cal/cm² → kJ/m²", 1.0, 0, 1),
+                        ExtUnitPreset("100 Wh/m² → kJ/m²", 100.0, 3, 1),
+                        ExtUnitPreset("10 BTU/ft² → kJ/m²", 10.0, 4, 1),
+                        ExtUnitPreset("1 MJ/m² → Wh/m²", 1.0, 5, 3)
+                    ),
+                    defaultFrom = 0,
+                    defaultTo = 1,
+                    defaultValue = 1.0,
+                    insightProvider = { _, _, _, jm2, _ ->
+                        val langley = jm2 / 41_840.0
+                        "• שווה ערך ל-${BidiFmt.ltr("${formatSmartValue(langley, 4)} Langley")} (יחידת קרינת שמש מטאורולוגית)\n• ביחידות פאנל סולארי: ${BidiFmt.ltr("${formatSmartValue(jm2 / 3600.0, 3)} Wh/m²")}"
+                    }
+                ),
+                ExtUnitGroup(
+                    label = "קיבול חום (J/K)",
+                    formulaHint = "1 kJ/K = 1,000 J/K  |  ליטר מים ≈ 4.184 kJ/K",
+                    units = listOf(
+                        linearUnit("קילו-ג׳אול לקלווין", "kJ/K", 1000.0),
+                        linearUnit("ג׳אול לקלווין — SI", "J/K", 1.0),
+                        linearUnit("קלוריה למעלת צלזיוס", "cal/°C", 4.184),
+                        linearUnit("קילו-קלוריה למעלת צלזיוס", "kcal/°C", 4184.0),
+                        linearUnit("BTU למעלת פרנהייט", "BTU/°F", 1899.1005),
+                        linearUnit("ואט-שעה לקלווין", "Wh/K", 3600.0)
+                    ),
+                    presets = listOf(
+                        ExtUnitPreset("ליטר מים (4.184 kJ/K)", 4.184, 0, 3),
+                        ExtUnitPreset("1000 J/K → cal/°C", 1000.0, 1, 2),
+                        ExtUnitPreset("1 BTU/°F → kJ/K", 1.0, 4, 0),
+                        ExtUnitPreset("10 kcal/°C → Wh/K", 10.0, 3, 5)
+                    ),
+                    defaultFrom = 0,
+                    defaultTo = 3,
+                    defaultValue = 4.184,
+                    insightProvider = { _, _, _, jk, _ ->
+                        val waterLiters = jk / 4184.0
+                        "• קיבול חום זה שקול לחימום ${BidiFmt.ltr("${formatSmartValue(waterLiters, 3)} L")} מים במעלה אחת (${BidiFmt.ltr("1°C")})"
+                    }
+                )
+            )
         )
 
-        // 115: נפח סגולי וצפיפות
-        115 -> ExtUnitToolSpec(
+        // 115: נפח סגולי וצפיפות (קשר הדדי אמיתי v = 1/ρ)
+        115 -> singleGroupSpec(
             tabIndex = 115,
             title = "נפח סגולי (v) וצפיפות חומר (ρ)",
-            subtitle = "המרה דו-כיוונית בין נפח ליחידת מסה (m³/kg) לבין צפיפות (kg/m³)",
+            subtitle = "המרה דו-כיוונית אמיתית בין נפח סגולי (m³/kg) לבין צפיפות (kg/m³)",
             formulaHint = "v = 1 / ρ  |  מים ב-4°C: ρ = 1,000 kg/m³, v = 0.001 m³/kg",
             units = listOf(
-                linearUnit("מ״ק לקילוגרם (נפח סגולי · SI)", "m³/kg", 1.0),
-                linearUnit("ליטר לקילוגרם", "L/kg", 0.001),
-                linearUnit("סמ״ק לגרם", "cm³/g", 0.001),
+                linearUnit("מ״ק לקילוגרם — נפח סגולי", "m³/kg", 1.0),
+                linearUnit("ליטר לקילוגרם — נפח סגולי", "L/kg", 0.001),
+                linearUnit("סמ״ק לגרם — נפח סגולי", "cm³/g", 0.001),
                 linearUnit("רגל מעוקבת לפאונד", "ft³/lb", 0.06242796),
-                inverseUnit("קילוגרם למ״ק (צפיפות · ρ)", "kg/m³", 1.0),
-                inverseUnit("גרם לסמ״ק (צפיפות סגולית)", "g/cm³", 0.001),
+                inverseUnit("קילוגרם למ״ק — צפיפות ρ", "kg/m³", 1.0),
+                inverseUnit("גרם לסמ״ק — צפיפות סגולית", "g/cm³", 0.001),
                 inverseUnit("פאונד לרגל מעוקבת", "lb/ft³", 0.06242796)
             ),
             presets = listOf(
@@ -653,85 +737,158 @@ object ProExtendedUnitConverters {
             insightProvider = { _, _, _, m3kg, _ ->
                 val rho = if (m3kg > 0) 1.0 / m3kg else 0.0
                 val floats = if (rho > 0 && rho < 1000.0) "צף על פני מים (קל ממים)" else if (rho > 1000.0) "שוקע במים (כבד ממים)" else "זהה לצפיפות המים"
-                "• צפיפות מקבילה (ρ): ${formatSmartValue(rho, 3)} kg/m³ (${formatSmartValue(rho / 1000.0, 4)} g/cm³)\n• ציפה במים: $floats"
+                "• צפיפות מקבילה (${BidiFmt.ltr("ρ")}): ${BidiFmt.ltr("${formatSmartValue(rho, 3)} kg/m³")} (${BidiFmt.ltr("${formatSmartValue(rho / 1000.0, 4)} g/cm³")})\n• ציפה במים: $floats"
             }
         )
 
-        // 116: מהירות ותאוצה זוויתית
+        // 116: מהירות ותאוצה זוויתית — 2 תת-קטגוריות מופרדות פיזיקלית!
         116 -> ExtUnitToolSpec(
             tabIndex = 116,
             title = "מהירות זוויתית (ω) ותאוצה זוויתית (α)",
-            subtitle = "סל״ד (RPM), רדיאנים לשנייה, מעלות לשנייה, הרץ ותאוצה סיבובית",
-            formulaHint = "ω (rad/s) = RPM × 2π / 60  |  1 Hz = 60 RPM",
-            units = listOf(
-                linearUnit("סיבובים לדקה (RPM)", "RPM", 2.0 * PI / 60.0),
-                linearUnit("רדיאן לשנייה (SI · ω)", "rad/s", 1.0),
-                linearUnit("מעלות לשנייה", "deg/s", PI / 180.0),
-                linearUnit("סיבובים לשנייה / הרץ", "Hz", 2.0 * PI),
-                linearUnit("רדיאן לשנייה בריבוע (α)", "rad/s²", 1.0),
-                linearUnit("מעלות לשנייה בריבוע (α)", "deg/s²", PI / 180.0),
-                linearUnit("סיבובים לדקה בריבוע", "rev/min²", 2.0 * PI / 3600.0)
-            ),
-            presets = listOf(
-                ExtUnitPreset("1000 RPM → rad/s", 1000.0, 0, 1),
-                ExtUnitPreset("60 RPM → Hz", 60.0, 0, 3),
-                ExtUnitPreset("360 deg/s → RPM", 360.0, 2, 0),
-                ExtUnitPreset("10 rad/s² → deg/s²", 10.0, 4, 5)
-            ),
-            defaultFrom = 0,
-            defaultTo = 1,
-            defaultValue = 1200.0,
-            insightProvider = { _, _, _, rads, _ ->
-                val rpm = rads * 60.0 / (2.0 * PI)
-                val periodMs = if (rads != 0.0) (2.0 * PI / abs(rads)) * 1000.0 else 0.0
-                "• זמן מחזור לסיבוב מלא (T): ${formatSmartValue(periodMs, 2)} מילישניות\n• מהירות קווית בקצה גלגל ברדיוס 1 מטר: ${formatSmartValue(abs(rads), 2)} m/s (${formatSmartValue(rpm, 1)} RPM)"
-            }
+            subtitle = "בחר בין מהירות סיבוב (RPM / rad/s) לבין תאוצה סיבובית (rad/s²)",
+            groups = listOf(
+                ExtUnitGroup(
+                    label = "מהירות זוויתית (ω)",
+                    formulaHint = "ω (rad/s) = RPM × 2π / 60  |  1 Hz = 60 RPM",
+                    units = listOf(
+                        linearUnit("סיבובים לדקה", "RPM", 2.0 * PI / 60.0),
+                        linearUnit("רדיאן לשנייה — SI", "rad/s", 1.0),
+                        linearUnit("מעלות לשנייה", "deg/s", PI / 180.0),
+                        linearUnit("סיבובים לשנייה / הרץ", "Hz", 2.0 * PI),
+                        linearUnit("רדיאן לדקה", "rad/min", 1.0 / 60.0),
+                        linearUnit("מעלות לדקה", "deg/min", PI / 10800.0)
+                    ),
+                    presets = listOf(
+                        ExtUnitPreset("1000 RPM → rad/s", 1000.0, 0, 1),
+                        ExtUnitPreset("60 RPM → Hz", 60.0, 0, 3),
+                        ExtUnitPreset("360 deg/s → RPM", 360.0, 2, 0),
+                        ExtUnitPreset("50 Hz → RPM", 50.0, 3, 0)
+                    ),
+                    defaultFrom = 0,
+                    defaultTo = 1,
+                    defaultValue = 1200.0,
+                    insightProvider = { _, _, _, rads, _ ->
+                        val rpm = rads * 60.0 / (2.0 * PI)
+                        val periodMs = if (rads != 0.0) (2.0 * PI / abs(rads)) * 1000.0 else 0.0
+                        "• זמן מחזור לסיבוב מלא: ${BidiFmt.ltr("${formatSmartValue(periodMs, 2)} ms")}\n• מהירות קווית בקצה גלגל ברדיוס 1 מ׳: ${BidiFmt.ltr("${formatSmartValue(abs(rads), 2)} m/s")} (${BidiFmt.ltr("${formatSmartValue(rpm, 1)} RPM")})"
+                    }
+                ),
+                ExtUnitGroup(
+                    label = "תאוצה זוויתית (α)",
+                    formulaHint = "α = dω / dt  |  1 rev/s² = 2π rad/s²",
+                    units = listOf(
+                        linearUnit("רדיאן לשנייה בריבוע — SI", "rad/s²", 1.0),
+                        linearUnit("מעלות לשנייה בריבוע", "deg/s²", PI / 180.0),
+                        linearUnit("סיבובים לשנייה בריבוע", "rev/s²", 2.0 * PI),
+                        linearUnit("סל״ד לשנייה", "RPM/s", 2.0 * PI / 60.0),
+                        linearUnit("סיבובים לדקה בריבוע", "rev/min²", 2.0 * PI / 3600.0)
+                    ),
+                    presets = listOf(
+                        ExtUnitPreset("10 rad/s² → deg/s²", 10.0, 0, 1),
+                        ExtUnitPreset("100 RPM/s → rad/s²", 100.0, 3, 0),
+                        ExtUnitPreset("1 rev/s² → rad/s²", 1.0, 2, 0),
+                        ExtUnitPreset("360 deg/s² → rev/s²", 360.0, 1, 2)
+                    ),
+                    defaultFrom = 0,
+                    defaultTo = 1,
+                    defaultValue = 10.0,
+                    insightProvider = { _, _, _, rads2, _ ->
+                        val rpmAfter5s = abs(rads2) * 5.0 * 60.0 / (2.0 * PI)
+                        "• בתאוצה קבועה זו, לאחר 5 שניות ממנוחה תגיע ל-${BidiFmt.ltr("${formatSmartValue(rpmAfter5s, 1)} RPM")}"
+                    }
+                )
+            )
         )
 
-        // 117: צפיפות זרם, מוליכות ומטען
+        // 117: צפיפות זרם, מוליכות ומטען — 3 תת-קטגוריות מופרדות לחלוטין!
         else -> ExtUnitToolSpec(
             tabIndex = 117,
-            title = "צפיפות זרם (J), מוליכות (G) ומטען (Q)",
-            subtitle = "A/mm² למוליכי נחושת, סימנס (S), קולון (C), mAh ופאראדיי",
-            formulaHint = "1 A/mm² = 10⁶ A/m²  |  1 Ah = 3,600 C  |  1 S = 1/Ω",
-            units = listOf(
-                linearUnit("אמפר לממ״ר (חיווט חשמלי · J)", "A/mm²", 1e6),
-                linearUnit("אמפר למ״ר (SI · J)", "A/m²", 1.0),
-                linearUnit("אמפר לסמ״ר", "A/cm²", 1e4),
-                linearUnit("סימנס (מוליכות · G = 1/Ω)", "S", 1.0),
-                linearUnit("מילי-סימנס (mS)", "mS", 1e-3),
-                linearUnit("מיקרו-סימנס (µS)", "µS", 1e-6),
-                linearUnit("קולון (מטען חשמלי · C)", "C", 1.0),
-                linearUnit("מילי-אמפר שעה (סוללות · mAh)", "mAh", 3.6),
-                linearUnit("אמפר-שעה (Ah)", "Ah", 3600.0),
-                linearUnit("פאראדיי (Faraday · F)", "F", 96_485.33212)
-            ),
-            presets = listOf(
-                ExtUnitPreset("4 A/mm² → A/m²", 4.0, 0, 1),
-                ExtUnitPreset("5000 mAh → קולון", 5000.0, 7, 6),
-                ExtUnitPreset("100 mS → S", 100.0, 4, 3),
-                ExtUnitPreset("1 Ah → mAh", 1.0, 8, 7)
-            ),
-            defaultFrom = 7,
-            defaultTo = 6,
-            defaultValue = 5000.0,
-            insightProvider = { value, from, _, baseVal, _ ->
-                when {
-                    from.symbol.contains("/") -> {
-                        val amm2 = baseVal / 1e6
-                        val safety = if (amm2 <= 4.0) "תקין ובטוח לחיווט נחושת ביתי" else if (amm2 <= 7.0) "עומס גבוה — נדרש אוורור/כבל עבה" else "סכנת התחממות מוליך!"
-                        "• צפיפות זרם במוליך: ${formatSmartValue(amm2, 2)} A/mm² ($safety)"
+            title = "צפיפות זרם, מוליכות ומטען (J / G / Q)",
+            subtitle = "בחר את הגודל החשמלי להמרה נקייה בין יחידות תואמות בלבד",
+            groups = listOf(
+                ExtUnitGroup(
+                    label = "מטען (Q)",
+                    formulaHint = "1 Ah = 1,000 mAh = 3,600 C  |  1 Faraday = 96,485 C",
+                    units = listOf(
+                        linearUnit("מילי-אמפר שעה — סוללות", "mAh", 3.6),
+                        linearUnit("קולון — SI", "C", 1.0),
+                        linearUnit("אמפר-שעה", "Ah", 3600.0),
+                        linearUnit("מילי-קולון", "mC", 1e-3),
+                        linearUnit("מיקרו-קולון", "µC", 1e-6),
+                        linearUnit("קילו-קולון", "kC", 1000.0),
+                        linearUnit("פאראדיי — כימיה חשמלית", "F", 96_485.33212)
+                    ),
+                    presets = listOf(
+                        ExtUnitPreset("5000 mAh → קולון", 5000.0, 0, 1),
+                        ExtUnitPreset("1 Ah → mAh", 1.0, 2, 0),
+                        ExtUnitPreset("1 Faraday → C", 1.0, 6, 1),
+                        ExtUnitPreset("3600 C → Ah", 3600.0, 1, 2)
+                    ),
+                    defaultFrom = 0,
+                    defaultTo = 1,
+                    defaultValue = 5000.0,
+                    insightProvider = { _, _, _, coulombs, _ ->
+                        val electrons = abs(coulombs) / 1.602176634e-19
+                        val whAt37V = (abs(coulombs) / 3600.0) * 3.7
+                        "• מספר אלקטרונים במטען זה: ${BidiFmt.ltr(formatSmartValue(electrons, 3))} אלקטרונים\n• אנרגיית סוללת ליתיום (${BidiFmt.ltr("3.7V")}): ${BidiFmt.ltr("${formatSmartValue(whAt37V, 2)} Wh")}"
                     }
-                    from.symbol.endsWith("S") -> {
-                        val ohm = if (baseVal != 0.0) 1.0 / baseVal else 0.0
-                        "• התנגדות שקולה (R = 1/G): ${formatSmartValue(ohm, 4)} Ω"
+                ),
+                ExtUnitGroup(
+                    label = "צפיפות זרם (J)",
+                    formulaHint = "J = I / A  |  1 A/mm² = 100 A/cm² = 10⁶ A/m²",
+                    units = listOf(
+                        linearUnit("אמפר לממ״ר — חיווט חשמלי", "A/mm²", 1e6),
+                        linearUnit("אמפר למ״ר — SI", "A/m²", 1.0),
+                        linearUnit("אמפר לסמ״ר", "A/cm²", 1e4),
+                        linearUnit("מילי-אמפר לממ״ר", "mA/mm²", 1e3),
+                        linearUnit("קילו-אמפר למ״ר", "kA/m²", 1e3),
+                        linearUnit("אמפר לאינץ׳ רבוע", "A/in²", 1550.0031)
+                    ),
+                    presets = listOf(
+                        ExtUnitPreset("4 A/mm² → A/m²", 4.0, 0, 1),
+                        ExtUnitPreset("6 A/mm² → A/cm²", 6.0, 0, 2),
+                        ExtUnitPreset("100 A/cm² → A/mm²", 100.0, 2, 0),
+                        ExtUnitPreset("1000 A/in² → A/mm²", 1000.0, 5, 0)
+                    ),
+                    defaultFrom = 0,
+                    defaultTo = 1,
+                    defaultValue = 4.0,
+                    insightProvider = { _, _, _, am2, _ ->
+                        val amm2 = abs(am2) / 1e6
+                        val safety = when {
+                            amm2 <= 4.0 -> "תקין ובטוח לחיווט נחושת ביתי"
+                            amm2 <= 7.0 -> "עומס גבוה — מומלץ כבל עבה יותר או אוורור"
+                            else -> "סכנת התחממות מוליך נחושת!"
+                        }
+                        "• צפיפות זרם במוליך: ${BidiFmt.ltr("${formatSmartValue(amm2, 2)} A/mm²")}\n• הערכת בטיחות: $safety"
                     }
-                    else -> {
-                        val electrons = abs(baseVal) / 1.602176634e-19
-                        "• מספר אלקטרונים במטען זה: ${formatSmartValue(electrons, 3)} e⁻"
+                ),
+                ExtUnitGroup(
+                    label = "מוליכות (G)",
+                    formulaHint = "G = 1 / R  |  1 S (סימנס) = 1,000 mS = 1 ℧ (mho)",
+                    units = listOf(
+                        linearUnit("סימנס — SI", "S", 1.0),
+                        linearUnit("מילי-סימנס", "mS", 1e-3),
+                        linearUnit("מיקרו-סימנס", "µS", 1e-6),
+                        linearUnit("ננו-סימנס", "nS", 1e-9),
+                        linearUnit("קילו-סימנס", "kS", 1e3),
+                        linearUnit("מהו — mho", "℧", 1.0)
+                    ),
+                    presets = listOf(
+                        ExtUnitPreset("100 mS → S", 100.0, 1, 0),
+                        ExtUnitPreset("500 µS → mS", 500.0, 2, 1),
+                        ExtUnitPreset("1 S → mS", 1.0, 0, 1),
+                        ExtUnitPreset("2.5 kS → S", 2.5, 4, 0)
+                    ),
+                    defaultFrom = 1,
+                    defaultTo = 0,
+                    defaultValue = 100.0,
+                    insightProvider = { _, _, _, siemens, _ ->
+                        val ohm = if (siemens != 0.0) 1.0 / abs(siemens) else 0.0
+                        "• התנגדות שקולה (${BidiFmt.ltr("R = 1/G")}): ${BidiFmt.ltr("${formatSmartValue(ohm, 4)} Ω")}"
                     }
-                }
-            }
+                )
+            )
         )
     }
 
@@ -835,23 +992,23 @@ object ProExtendedUnitConverters {
                 }
 
                 when (iconCode) {
-                    100 -> { // קידומות SI: "10s"
+                    100 -> {
                         fillP.textSize = r * 0.96f
                         canvas.drawText("10ˢ", cx, cy + r * 0.34f, fillP)
                     }
-                    101 -> { // שטח קרקע: מסגרת חלקה + סמן מיקום
+                    101 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.78f, cy - r * 0.62f, cx + r * 0.78f, cy + r * 0.62f), r * 0.16f, r * 0.16f, strokeP)
                         canvas.drawCircle(cx + r * 0.18f, cy - r * 0.08f, r * 0.20f, strokeP)
                         canvas.drawLine(cx - r * 0.50f, cy + r * 0.25f, cx - r * 0.05f, cy - r * 0.20f, strokeP)
                     }
-                    102 -> { // מספרים גדולים: חשבונייה (Abacus)
+                    102 -> {
                         canvas.drawRoundRect(RectF(cx - r * 0.76f, cy - r * 0.68f, cx + r * 0.76f, cy + r * 0.68f), r * 0.14f, r * 0.14f, strokeP)
                         canvas.drawLine(cx - r * 0.76f, cy - r * 0.22f, cx + r * 0.76f, cy - r * 0.22f, strokeP)
                         canvas.drawLine(cx - r * 0.76f, cy + r * 0.24f, cx + r * 0.76f, cy + r * 0.24f, strokeP)
                         canvas.drawCircle(cx - r * 0.32f, cy - r * 0.22f, r * 0.12f, fillP)
                         canvas.drawCircle(cx + r * 0.28f, cy + r * 0.24f, r * 0.12f, fillP)
                     }
-                    103 -> { // זמן תרבותי: שעון חול
+                    103 -> {
                         canvas.drawLine(cx - r * 0.62f, cy - r * 0.74f, cx + r * 0.62f, cy - r * 0.74f, strokeP)
                         canvas.drawLine(cx - r * 0.62f, cy + r * 0.74f, cx + r * 0.62f, cy + r * 0.74f, strokeP)
                         val hg = Path().apply {
@@ -865,7 +1022,7 @@ object ProExtendedUnitConverters {
                         }
                         canvas.drawPath(hg, strokeP)
                     }
-                    104 -> { // צפיפות חוט: סיב מתפתל
+                    104 -> {
                         val yarn = Path().apply {
                             moveTo(cx - r * 0.78f, cy + r * 0.22f)
                             cubicTo(cx - r * 0.32f, cy - r * 0.65f, cx + r * 0.32f, cy + r * 0.65f, cx + r * 0.78f, cy - r * 0.22f)
@@ -874,12 +1031,12 @@ object ProExtendedUnitConverters {
                         canvas.drawCircle(cx - r * 0.78f, cy + r * 0.22f, r * 0.11f, fillP)
                         canvas.drawCircle(cx + r * 0.78f, cy - r * 0.22f, r * 0.11f, fillP)
                     }
-                    105 -> { // קלוריות מזון: צלחת/המבורגר + להבת אנרגיה
+                    105 -> {
                         canvas.drawArc(RectF(cx - r * 0.74f, cy - r * 0.66f, cx + r * 0.74f, cy + r * 0.24f), 180f, 180f, true, strokeP)
                         canvas.drawLine(cx - r * 0.80f, cy + r * 0.10f, cx + r * 0.80f, cy + r * 0.10f, strokeP)
                         canvas.drawRoundRect(RectF(cx - r * 0.72f, cy + r * 0.32f, cx + r * 0.72f, cy + r * 0.68f), r * 0.18f, r * 0.18f, strokeP)
                     }
-                    106 -> { // משקל זהב: פירמידת מטילי זהב
+                    106 -> {
                         val bot = Path().apply {
                             moveTo(cx - r * 0.62f, cy + r * 0.14f)
                             lineTo(cx + r * 0.62f, cy + r * 0.14f)
@@ -897,14 +1054,14 @@ object ProExtendedUnitConverters {
                         canvas.drawPath(bot, strokeP)
                         canvas.drawPath(top, strokeP)
                     }
-                    107 -> { // נפח עץ: גזע עץ / מסור נגרות
+                    107 -> {
                         canvas.drawCircle(cx - r * 0.30f, cy, r * 0.50f, strokeP)
                         canvas.drawCircle(cx - r * 0.30f, cy, r * 0.18f, strokeP)
                         canvas.drawLine(cx - r * 0.30f, cy - r * 0.50f, cx + r * 0.74f, cy - r * 0.50f, strokeP)
                         canvas.drawLine(cx - r * 0.30f, cy + r * 0.50f, cx + r * 0.74f, cy + r * 0.50f, strokeP)
                         canvas.drawArc(RectF(cx + r * 0.44f, cy - r * 0.50f, cx + r * 0.84f, cy + r * 0.50f), -90f, 180f, false, strokeP)
                     }
-                    108 -> { // כושר קירור: פתית שלג קריסטלי
+                    108 -> {
                         for (i in 0 until 3) {
                             val a = Math.toRadians((i * 60).toDouble())
                             canvas.drawLine(
@@ -915,14 +1072,14 @@ object ProExtendedUnitConverters {
                         }
                         canvas.drawCircle(cx, cy, r * 0.22f, strokeP)
                     }
-                    109 -> { // זרימת אוויר: 3 קווי רוח מתעגלים
+                    109 -> {
                         for (off in listOf(-0.44f, 0f, 0.44f)) {
                             val y = cy + r * off
                             canvas.drawLine(cx - r * 0.78f, y, cx + r * (0.48f - abs(off) * 0.5f), y, strokeP)
                         }
                         canvas.drawArc(RectF(cx + r * 0.20f, cy - r * 0.76f, cx + r * 0.72f, cy - r * 0.24f), -130f, 220f, false, strokeP)
                     }
-                    110 -> { // קשיות מים: טיפת מים חצויה בגבישים
+                    110 -> {
                         val drop = Path().apply {
                             moveTo(cx, cy - r * 0.82f)
                             quadTo(cx + r * 0.74f, cy + r * 0.14f, cx, cy + r * 0.80f)
@@ -932,7 +1089,7 @@ object ProExtendedUnitConverters {
                         canvas.drawCircle(cx - r * 0.12f, cy + r * 0.24f, r * 0.11f, fillP)
                         canvas.drawCircle(cx + r * 0.16f, cy + r * 0.04f, r * 0.09f, fillP)
                     }
-                    111 -> { // מתח פנים: 3 גלים אופקיים מקבילים
+                    111 -> {
                         for (off in listOf(-0.42f, 0f, 0.42f)) {
                             val y = cy + r * off
                             val wv = Path().apply {
@@ -943,7 +1100,7 @@ object ProExtendedUnitConverters {
                             canvas.drawPath(wv, strokeP)
                         }
                     }
-                    112 -> { // פרמיטיביות ופרמאביליות: קבל + קו שדה
+                    112 -> {
                         canvas.drawLine(cx - r * 0.16f, cy - r * 0.68f, cx - r * 0.16f, cy + r * 0.68f, strokeP)
                         canvas.drawLine(cx + r * 0.16f, cy - r * 0.68f, cx + r * 0.16f, cy + r * 0.68f, strokeP)
                         canvas.drawLine(cx - r * 0.80f, cy, cx - r * 0.16f, cy, strokeP)
@@ -951,19 +1108,19 @@ object ProExtendedUnitConverters {
                         canvas.drawCircle(cx - r * 0.56f, cy, r * 0.10f, fillP)
                         canvas.drawCircle(cx + r * 0.56f, cy, r * 0.10f, fillP)
                     }
-                    113 -> { // אינרציה: חץ סיבוב סביב ציר
+                    113 -> {
                         canvas.drawArc(RectF(cx - r * 0.68f, cy - r * 0.68f, cx + r * 0.68f, cy + r * 0.68f), -50f, 280f, false, strokeP)
                         canvas.drawCircle(cx, cy, r * 0.18f, fillP)
                         canvas.drawLine(cx + r * 0.44f, cy - r * 0.52f, cx + r * 0.76f, cy - r * 0.46f, strokeP)
                     }
-                    114 -> { // צפיפות חום וקיבול חום: מדחום מעל גלי חום
+                    114 -> {
                         canvas.drawLine(cx, cy - r * 0.74f, cx, cy + r * 0.18f, strokeP)
                         canvas.drawCircle(cx, cy + r * 0.26f, r * 0.22f, strokeP)
                         canvas.drawLine(cx - r * 0.68f, cy + r * 0.68f, cx + r * 0.68f, cy + r * 0.68f, strokeP)
                         canvas.drawLine(cx + r * 0.34f, cy - r * 0.46f, cx + r * 0.66f, cy - r * 0.46f, strokeP)
                         canvas.drawLine(cx + r * 0.34f, cy - r * 0.16f, cx + r * 0.58f, cy - r * 0.16f, strokeP)
                     }
-                    115 -> { // נפח סגולי וצפיפות: חיצים מתכנסים לקו מרכזי
+                    115 -> {
                         canvas.drawLine(cx - r * 0.74f, cy, cx + r * 0.74f, cy, strokeP)
                         canvas.drawLine(cx, cy - r * 0.78f, cx, cy - r * 0.22f, strokeP)
                         canvas.drawLine(cx - r * 0.24f, cy - r * 0.44f, cx, cy - r * 0.22f, strokeP)
@@ -972,12 +1129,12 @@ object ProExtendedUnitConverters {
                         canvas.drawLine(cx - r * 0.24f, cy + r * 0.44f, cx, cy + r * 0.22f, strokeP)
                         canvas.drawLine(cx + r * 0.24f, cy + r * 0.44f, cx, cy + r * 0.22f, strokeP)
                     }
-                    116 -> { // מהירות ותאוצה זוויתית: קשת זווית + מחוג
+                    116 -> {
                         canvas.drawArc(RectF(cx - r * 0.74f, cy - r * 0.74f, cx + r * 0.74f, cy + r * 0.74f), -140f, 220f, false, strokeP)
                         canvas.drawLine(cx, cy, cx + r * 0.56f, cy - r * 0.38f, strokeP)
                         canvas.drawCircle(cx, cy, r * 0.14f, fillP)
                     }
-                    117 -> { // צפיפות זרם, מוליכות ומטען: קובייה תלת-ממדית עם פולס
+                    117 -> {
                         val hex = Path().apply {
                             moveTo(cx, cy - r * 0.78f)
                             lineTo(cx + r * 0.68f, cy - r * 0.38f)
@@ -992,7 +1149,7 @@ object ProExtendedUnitConverters {
                         canvas.drawLine(cx - r * 0.18f, cy + r * 0.04f, cx + r * 0.16f, cy + r * 0.04f, strokeP)
                         canvas.drawLine(cx + r * 0.16f, cy + r * 0.04f, cx - r * 0.10f, cy + r * 0.38f, strokeP)
                     }
-                    else -> { // 313: כותרת קטגוריית 18 הממירים המורחבים (סרגל מדורג)
+                    else -> {
                         canvas.save()
                         canvas.rotate(-40f, cx, cy)
                         canvas.drawRoundRect(RectF(cx - r * 0.86f, cy - r * 0.30f, cx + r * 0.86f, cy + r * 0.30f), r * 0.12f, r * 0.12f, strokeP)
@@ -1017,18 +1174,19 @@ object ProExtendedUnitConverters {
 // =========================================================================
 private class ExtUnitHeroCanvasView(
     private val activity: MainActivity,
-    private val spec: ExtUnitToolSpec
+    private val tabIndex: Int,
+    initialGroup: ExtUnitGroup
 ) : View(activity) {
 
     private val d = resources.displayMetrics.density
     private var phase = 0f
     private var animator: ValueAnimator? = null
 
-    var liveInputVal: Double = spec.defaultValue
-    var liveBaseVal: Double = spec.units[spec.defaultFrom].toBase(spec.defaultValue)
-    var liveResultVal: Double = spec.units[spec.defaultTo].fromBase(liveBaseVal)
-    var liveFromSym: String = spec.units[spec.defaultFrom].symbol
-    var liveToSym: String = spec.units[spec.defaultTo].symbol
+    var liveInputVal: Double = initialGroup.defaultValue
+    var liveBaseVal: Double = initialGroup.units[initialGroup.defaultFrom].toBase(initialGroup.defaultValue)
+    var liveResultVal: Double = initialGroup.units[initialGroup.defaultTo].fromBase(liveBaseVal)
+    var liveFromSym: String = initialGroup.units[initialGroup.defaultFrom].symbol
+    var liveToSym: String = initialGroup.units[initialGroup.defaultTo].symbol
 
     private val strokeP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -1091,7 +1249,6 @@ private class ExtUnitHeroCanvasView(
         val c3 = pal.accent3
         val ink = if (pal.isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
 
-        // רקע כרטיס קנבס מותאם לכל אחת מ-4 ערכות הנושא
         rect.set(2f * d, 2f * d, w - 2f * d, h - 2f * d)
         val corner = 20f * d
         when (style) {
@@ -1126,7 +1283,6 @@ private class ExtUnitHeroCanvasView(
                 fillP.shader = null
                 fillP.color = Utils.lightenColor(activity.bgColor, 0.08f)
                 canvas.drawRoundRect(rect, corner, corner, fillP)
-                // רשת הנדסית עדינה
                 strokeP.clearShadowLayer()
                 strokeP.strokeWidth = 0.7f * d
                 strokeP.color = withAlpha(c1, 24)
@@ -1143,9 +1299,8 @@ private class ExtUnitHeroCanvasView(
         val animGlow = (style == ProCanvasAnimations.ThemeRenderStyle.AURORA_NEON)
         if (animGlow) strokeP.setShadowLayer(5f * d, 0f, 0f, withAlpha(c1, 165)) else strokeP.clearShadowLayer()
 
-        // ציור ייעודי מונפש לכל אחד מ-18 הכלים
-        when (spec.tabIndex) {
-            100 -> { // סקאלת חזקות SI מונפשת
+        when (tabIndex) {
+            100 -> {
                 val yBar = cy
                 strokeP.strokeWidth = 2.4f * d; strokeP.color = withAlpha(c1, 165)
                 canvas.drawLine(w * 0.10f, yBar, w * 0.90f, yBar, strokeP)
@@ -1161,8 +1316,7 @@ private class ExtUnitHeroCanvasView(
                 fillP.color = c2
                 canvas.drawCircle(px, yBar, 7.5f * d, fillP)
             }
-
-            101 -> { // חלקת קרקע טופוגרפית פרופורציונלית
+            101 -> {
                 val ratio = (sqrt(abs(liveBaseVal).coerceIn(10.0, 50_000.0)) / sqrt(50_000.0)).toFloat().coerceIn(0.22f, 0.92f)
                 val pw = w * 0.56f * ratio
                 val ph = h * 0.50f * ratio
@@ -1171,13 +1325,11 @@ private class ExtUnitHeroCanvasView(
                 canvas.drawRoundRect(rect, 8f * d, 8f * d, fillP)
                 strokeP.strokeWidth = 2.2f * d; strokeP.color = pal.positive
                 canvas.drawRoundRect(rect, 8f * d, 8f * d, strokeP)
-                // קו סריקת מדידה
                 val scanX = rect.left + ((sin(phase) * 0.5f + 0.5f) * rect.width())
                 strokeP.strokeWidth = 1.4f * d; strokeP.color = withAlpha(c1, 160)
                 canvas.drawLine(scanX, rect.top, scanX, rect.bottom, strokeP)
             }
-
-            102 -> { // מגדלי סדרי גודל (10^3 .. 10^15)
+            102 -> {
                 val bars = 6
                 val bw = w * 0.08f
                 val startX = w * 0.18f
@@ -1189,8 +1341,7 @@ private class ExtUnitHeroCanvasView(
                     canvas.drawRoundRect(rect, 4f * d, 4f * d, fillP)
                 }
             }
-
-            103 -> { // שעון חול + גלגל חלקים עברי מונפש
+            103 -> {
                 val r = min(w, h) * 0.28f
                 strokeP.strokeWidth = 2f * d; strokeP.color = c1
                 canvas.drawCircle(cx, cy, r, strokeP)
@@ -1202,8 +1353,7 @@ private class ExtUnitHeroCanvasView(
                 fillP.color = c3
                 canvas.drawCircle(cx, cy, 4f * d, fillP)
             }
-
-            104 -> { // סיב טקסטיל מוגדל שעוביו מגיב ל-Tex
+            104 -> {
                 val texNorm = (abs(liveBaseVal).coerceIn(1.0, 100.0) / 100.0).toFloat()
                 val fiberW = (3.5f + texNorm * 14f) * d
                 path.reset()
@@ -1218,8 +1368,7 @@ private class ExtUnitHeroCanvasView(
                 strokeP.strokeWidth = 2f * d; strokeP.color = c2
                 canvas.drawPath(path, strokeP)
             }
-
-            105 -> { // טבעת אנרגיה תזונתית (kcal)
+            105 -> {
                 val kcal = abs(liveBaseVal) / 4184.0
                 val pct = (kcal / 2000.0).toFloat().coerceIn(0.06f, 1.0f)
                 val r = min(w, h) * 0.30f
@@ -1232,8 +1381,7 @@ private class ExtUnitHeroCanvasView(
                 fillP.color = c1
                 canvas.drawCircle(cx + (cos(dotA) * r).toFloat(), cy + (sin(dotA) * r).toFloat(), 5.5f * d, fillP)
             }
-
-            106 -> { // מטיל זהב מבריק תלת-ממדי מונפש
+            106 -> {
                 val gold = Color.parseColor("#FFD54F")
                 val goldDark = Color.parseColor("#FFB300")
                 path.reset()
@@ -1251,15 +1399,13 @@ private class ExtUnitHeroCanvasView(
                 textP.textSize = 11f * d; textP.color = Color.parseColor("#4E342E")
                 canvas.drawText("999.9 FINE GOLD", cx, cy + 6f * d, textP)
             }
-
-            107 -> { // פרוסת גזע עץ + טבעות שנתיות + קורות חתוכות
+            107 -> {
                 val r = 28f * d
                 val lx = cx - 36f * d
                 fillP.color = withAlpha(Color.parseColor("#D7A86E"), 95)
                 canvas.drawCircle(lx, cy, r, fillP)
                 strokeP.strokeWidth = 1.6f * d; strokeP.color = Color.parseColor("#8D6E63")
                 for (k in 1..4) canvas.drawCircle(lx, cy, r * (k / 4f), strokeP)
-                // 3 לוחות עץ מימין
                 for (b in 0 until 3) {
                     val ox = sin(phase * 1.2f + b) * 4f * d
                     rect.set(cx + 6f * d + ox, cy - 24f * d + b * 17f * d, cx + 82f * d + ox, cy - 11f * d + b * 17f * d)
@@ -1268,8 +1414,7 @@ private class ExtUnitHeroCanvasView(
                     canvas.drawRoundRect(rect, 3f * d, 3f * d, strokeP)
                 }
             }
-
-            108 -> { // מאוורר קירור ופתית שלג מסתובב + גלי קור
+            108 -> {
                 val r = 26f * d
                 canvas.save()
                 canvas.rotate(phase * 45f, cx, cy)
@@ -1286,8 +1431,7 @@ private class ExtUnitHeroCanvasView(
                     canvas.drawLine(cx + 38f * d + off * 0.5f, y, cx + 74f * d + off * 0.5f, y, strokeP)
                 }
             }
-
-            109 -> { // מנהרת רוח עם חלקיקי אוויר זורמים
+            109 -> {
                 val speed = (1f + log10(abs(liveBaseVal * 3600.0).coerceAtLeast(1.0)).toFloat() * 0.5f).coerceIn(0.8f, 3.2f)
                 strokeP.strokeWidth = 2f * d
                 for (i in 0 until 5) {
@@ -1297,8 +1441,7 @@ private class ExtUnitHeroCanvasView(
                     canvas.drawLine(x, y, x + 36f * d, y, strokeP)
                 }
             }
-
-            110 -> { // טיפת מים עם יוני סידן/מגנזיום לפי דרגת הקשיות
+            110 -> {
                 val ppm = abs(liveBaseVal)
                 val dropCol = when {
                     ppm < 60.0 -> Color.parseColor("#4FC3F7")
@@ -1321,20 +1464,17 @@ private class ExtUnitHeroCanvasView(
                     canvas.drawCircle(ix, iy, 2.6f * d, fillP)
                 }
             }
-
-            111 -> { // מניסקוס נוזל ווקטורי מתח פנים
+            111 -> {
                 path.reset()
                 path.moveTo(w * 0.14f, cy - 16f * d)
                 path.quadTo(cx, cy + 16f * d + sin(phase * 1.8f) * 7f * d, w * 0.86f, cy - 16f * d)
                 strokeP.strokeWidth = 3f * d; strokeP.color = c3
                 canvas.drawPath(path, strokeP)
-                // חצי מתח פנים בצדדים
                 strokeP.strokeWidth = 2f * d; strokeP.color = c1
                 canvas.drawLine(w * 0.24f, cy - 10f * d, w * 0.40f, cy - 10f * d, strokeP)
                 canvas.drawLine(w * 0.76f, cy - 10f * d, w * 0.60f, cy - 10f * d, strokeP)
             }
-
-            112 -> { // לוחות קבל וקווי שדה חשמלי/מגנטי נעים
+            112 -> {
                 val lx = cx - 44f * d; val rx = cx + 44f * d
                 strokeP.strokeWidth = 4f * d; strokeP.color = c1
                 canvas.drawLine(lx, cy - 28f * d, lx, cy + 28f * d, strokeP)
@@ -1349,8 +1489,7 @@ private class ExtUnitHeroCanvasView(
                     canvas.drawCircle(px, y, 2.8f * d, fillP)
                 }
             }
-
-            113 -> { // גלגל תנופה (Flywheel) מסתובב עם משקולות
+            113 -> {
                 val r = 30f * d
                 canvas.save()
                 canvas.rotate(phase * 52f, cx, cy)
@@ -1363,8 +1502,7 @@ private class ExtUnitHeroCanvasView(
                 canvas.drawCircle(cx + r, cy, 5.5f * d, fillP)
                 canvas.restore()
             }
-
-            114 -> { // גלי חום תרמיים עולים מפלטה לוהטת
+            114 -> {
                 strokeP.strokeWidth = 3.5f * d; strokeP.color = pal.warning
                 canvas.drawLine(w * 0.22f, cy + 24f * d, w * 0.78f, cy + 24f * d, strokeP)
                 strokeP.strokeWidth = 2f * d
@@ -1382,8 +1520,7 @@ private class ExtUnitHeroCanvasView(
                     canvas.drawPath(path, strokeP)
                 }
             }
-
-            115 -> { // תא מולקולות (צפיפות מול נפח סגולי)
+            115 -> {
                 rect.set(cx - 56f * d, cy - 26f * d, cx + 56f * d, cy + 26f * d)
                 strokeP.strokeWidth = 1.8f * d; strokeP.color = c1
                 canvas.drawRoundRect(rect, 10f * d, 10f * d, strokeP)
@@ -1396,8 +1533,7 @@ private class ExtUnitHeroCanvasView(
                     canvas.drawCircle(px, py, 3.2f * d, fillP)
                 }
             }
-
-            116 -> { // רוטור מד-סיבובים (Tachometer) מונפש
+            116 -> {
                 val r = 30f * d
                 val spd = (1f + log10(abs(liveBaseVal).coerceAtLeast(1.0)).toFloat()).coerceIn(1f, 4f)
                 strokeP.strokeWidth = 2.4f * d; strokeP.color = withAlpha(c1, 130)
@@ -1409,8 +1545,7 @@ private class ExtUnitHeroCanvasView(
                 fillP.color = c1
                 canvas.drawCircle(cx, cy, 4.5f * d, fillP)
             }
-
-            else -> { // 117: חתך מוליך נחושת עם מטענים זורמים
+            else -> {
                 val r = 28f * d
                 strokeP.strokeWidth = 3f * d; strokeP.color = pal.warning
                 fillP.color = withAlpha(pal.warning, 42)
@@ -1425,7 +1560,6 @@ private class ExtUnitHeroCanvasView(
             }
         }
 
-        // שורת תוצאה חיה בתחתית הקנבס
         strokeP.clearShadowLayer()
         val inStr = ProExtendedUnitConverters.formatSmartValue(liveInputVal, 4)
         val outStr = ProExtendedUnitConverters.formatSmartValue(liveResultVal, 5)
@@ -1457,7 +1591,10 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
     }
     scroll.addView(root)
 
-    // 1. כותרת ותיאור תחום
+    var activeGroupIdx = 0
+    fun currentGroup(): ExtUnitGroup = spec.groups[activeGroupIdx.coerceIn(0, spec.groups.lastIndex)]
+
+    // 1. כרטיס כותרת + נוסחה דינמית לפי תת-הקטגוריה הפעילה
     val headerCard = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(16f), dp(14f), dp(16f), dp(14f))
@@ -1471,7 +1608,7 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
             }
         }
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-            bottomMargin = dp(12f)
+            bottomMargin = dp(10f)
         }
     }
 
@@ -1489,17 +1626,29 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
         gravity = Gravity.RIGHT
         setPadding(0, dp(3f), 0, dp(4f))
     })
-    headerCard.addView(TextView(this).apply {
-        text = "\u200E${spec.formulaHint}"
+    val formulaTv = TextView(this).apply {
+        text = "\u200E${currentGroup().formulaHint}"
         setTextColor(if (isMin) MinimalistTheme.TEXT_CHARCOAL else accentCol)
         textSize = 12.2f
         typeface = Typeface.MONOSPACE
         gravity = Gravity.RIGHT
-    })
+    }
+    headerCard.addView(formulaTv)
     root.addView(headerCard)
 
-    // 2. קנבס אינטראקטיבי מונפש אישי לכלי
-    val heroCanvas = ExtUnitHeroCanvasView(this, spec).apply {
+    // 2. סרגל תת-קטגוריות (מופיע רק בכלים עם יותר מגודל פיזיקלי אחד: 112, 114, 116, 117)
+    val subGroupTabsRow = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER
+        visibility = if (spec.groups.size > 1) View.VISIBLE else View.GONE
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+            bottomMargin = dp(10f)
+        }
+    }
+    root.addView(subGroupTabsRow)
+
+    // 3. קנבס מונפש אישי לכלי
+    val heroCanvas = ExtUnitHeroCanvasView(this, spec.tabIndex, currentGroup()).apply {
         layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
             dp(136f)
@@ -1507,10 +1656,11 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
     }
     root.addView(heroCanvas)
 
-    var fromIdx = spec.defaultFrom.coerceIn(0, spec.units.lastIndex)
-    var toIdx = spec.defaultTo.coerceIn(0, spec.units.lastIndex)
+    var fromIdx = currentGroup().defaultFrom.coerceIn(0, currentGroup().units.lastIndex)
+    var toIdx = currentGroup().defaultTo.coerceIn(0, currentGroup().units.lastIndex)
+    var isProgrammaticText = false
 
-    // 3. שורת דוגמאות מהירות (Presets)
+    // 4. שורת דוגמאות מהירות (Presets) — מתעדכנת לפי תת-הקטגוריה
     val presetScroll = HorizontalScrollView(this).apply {
         isHorizontalScrollBarEnabled = false
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
@@ -1521,17 +1671,20 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
     presetScroll.addView(presetRow)
     root.addView(presetScroll)
 
-    // 4. תיבת קלט ובחירת יחידות מקור/יעד
-    val inputBox = createInputBox("הזן ערך להמרה (${spec.units[fromIdx].symbol})").apply {
+    // 5. תיבת קלט ובחירת יחידות
+    val inputBox = createInputBox("הזן ערך להמרה (${currentGroup().units[fromIdx].symbol})").apply {
         tag = "HAS_CUSTOM_LIVE_WATCHER"
-        setText(ProExtendedUnitConverters.formatSmartValue(spec.defaultValue, 4))
+        setText(ProExtendedUnitConverters.formatSmartValue(currentGroup().defaultValue, 4))
     }
     root.addView(inputBox)
 
     lateinit var fromBtn: TextView
     lateinit var toBtn: TextView
-    val mainResultTv = createResultTextView().apply {
-        setPadding(dp(14f), dp(14f), dp(14f), dp(14f))
+
+    // עטיפת תיבת התוצאה בתוך LinearLayout כדי שבמצב מינימליסטי תישאר כרטיס מרובע-מעוגל נקי ולא קפסולה עגולה
+    val resultCard = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(dp(16f), dp(14f), dp(16f), dp(14f))
         background = when {
             isMin -> MinimalistTheme.createMinimalistCardDrawable(this@createProExtendedUnitScreen, 20f, 0)
             isCleanGlassActive -> IosGlassTheme.createGlassCardDrawable(this@createProExtendedUnitScreen, 20f)
@@ -1546,16 +1699,35 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
         }
     }
 
+    val mainResultTv = createResultTextView().apply {
+        background = null
+        setPadding(0, 0, 0, 0)
+        textSize = 16.5f
+        setLineSpacing(dp(3f).toFloat(), 1.06f)
+    }
+    resultCard.addView(mainResultTv)
+    resultCard.setOnClickListener {
+        if (mainResultTv.text.isNotEmpty()) {
+            feedback(it)
+            copyToClipboard(mainResultTv.text.toString())
+        }
+    }
+
     val allUnitsContainer = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
     }
 
     fun recalculateAll() {
-        val fromU = spec.units[fromIdx]
-        val toU = spec.units[toIdx]
-        fromBtn.text = "מיחידה: ${fromU.name} (${fromU.symbol})"
-        toBtn.text = "ליחידה: ${toU.name} (${toU.symbol})"
+        val grp = currentGroup()
+        fromIdx = fromIdx.coerceIn(0, grp.units.lastIndex)
+        toIdx = toIdx.coerceIn(0, grp.units.lastIndex)
+        val fromU = grp.units[fromIdx]
+        val toU = grp.units[toIdx]
+
+        formulaTv.text = "\u200E${grp.formulaHint}"
+        fromBtn.text = "מיחידה: ${ProExtendedUnitConverters.formatUnitDisplayLabel(fromU)}"
+        toBtn.text = "ליחידה: ${ProExtendedUnitConverters.formatUnitDisplayLabel(toU)}"
         inputBox.hint = "\u200Fהזן ערך להמרה (${fromU.symbol})"
 
         val rawVal = inputBox.text.toString().replace(",", ".").toDoubleOrNull() ?: 0.0
@@ -1566,20 +1738,20 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
 
         val formattedIn = ProExtendedUnitConverters.formatSmartValue(rawVal, calcPrecision)
         val formattedOut = ProExtendedUnitConverters.formatSmartValue(resVal, calcPrecision)
-        val insight = spec.insightProvider(rawVal, fromU, toU, baseVal, resVal)
+        val insight = grp.insightProvider(rawVal, fromU, toU, baseVal, resVal)
 
         mainResultTv.text = BidiFmt.rtlParagraph(
             "תוצאה: ${BidiFmt.ltr("$formattedOut ${toU.symbol}")}",
             "המרה: ${BidiFmt.ltr("$formattedIn ${fromU.symbol}  =  $formattedOut ${toU.symbol}")}",
             "",
-            "💡 תובנה מקצועית:",
+            "תובנה מקצועית:",
             insight
         )
 
-        // טבלת השוואה חיה לכל היחידות בקטגוריה
+        // טבלת השוואה מקבילה ליחידות התואמות פיזיקלית בלבד
         allUnitsContainer.removeAllViews()
         allUnitsContainer.addView(TextView(this).apply {
-            text = "📊 המרה מקבילה לכל ${spec.units.size} היחידות (לחץ להעתקה):"
+            text = "המרה מקבילה לכל ${grp.units.size} היחידות (לחץ להעתקה):"
             setTextColor(textSecondary)
             textSize = 13.5f
             typeface = Typeface.DEFAULT_BOLD
@@ -1587,7 +1759,7 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
             setPadding(dp(4f), dp(4f), dp(4f), dp(8f))
         })
 
-        for ((idx, unit) in spec.units.withIndex()) {
+        for ((idx, unit) in grp.units.withIndex()) {
             val convVal = unit.fromBase(baseVal)
             val convStr = ProExtendedUnitConverters.formatSmartValue(convVal, calcPrecision.coerceAtMost(6))
             val isTarget = (idx == toIdx)
@@ -1625,11 +1797,11 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             }
             val nameTv = TextView(this).apply {
-                text = "\u200F${unit.name}"
+                text = "\u200F${ProExtendedUnitConverters.formatUnitDisplayLabel(unit)}"
                 setTextColor(MinimalistTheme.ensureReadableTextOnBg(textSecondary, rowBg, 2.0))
                 textSize = 13.5f
                 gravity = Gravity.RIGHT
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.1f)
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.15f)
             }
             rowCard.addView(valTv)
             rowCard.addView(nameTv)
@@ -1637,11 +1809,94 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
         }
     }
 
-    val unitLabels = spec.units.map { "${it.name} (${it.symbol})" }
+    fun rebuildPresetsBar() {
+        presetRow.removeAllViews()
+        val grp = currentGroup()
+        for (p in grp.presets) {
+            val chipBg = if (isMin) MinimalistTheme.NEUTRAL_SECONDARY_BG else Color.argb(45, Color.red(accentCol), Color.green(accentCol), Color.blue(accentCol))
+            val chip = TextView(this).apply {
+                tag = "PRO_STAR_CHIP"
+                text = p.label
+                setTextColor(MinimalistTheme.ensureReadableTextOnBg(textPrimary, chipBg, 2.3))
+                textSize = 13f
+                typeface = Typeface.DEFAULT_BOLD
+                setPadding(dp(14f), dp(8f), dp(14f), dp(8f))
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(999f).toFloat()
+                    setColor(chipBg)
+                    setStroke(dp(1f), accentCol)
+                }
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    setMargins(dp(4f), 0, dp(4f), 0)
+                }
+                setOnClickListener {
+                    feedback(it)
+                    fromIdx = p.fromIdx.coerceIn(0, grp.units.lastIndex)
+                    toIdx = p.toIdx.coerceIn(0, grp.units.lastIndex)
+                    isProgrammaticText = true
+                    inputBox.setText(ProExtendedUnitConverters.formatSmartValue(p.value, 4))
+                    isProgrammaticText = false
+                    recalculateAll()
+                }
+            }
+            presetRow.addView(chip)
+        }
+    }
 
-    fromBtn = createActionBtn("מיחידה: ${unitLabels[fromIdx]}", false) {
-        showItemPicker("בחר יחידת מקור", unitLabels) { picked ->
-            val idx = unitLabels.indexOf(picked)
+    fun rebuildSubGroupTabs() {
+        if (spec.groups.size <= 1) return
+        subGroupTabsRow.removeAllViews()
+        for ((idx, grp) in spec.groups.withIndex()) {
+            val isSel = (idx == activeGroupIdx)
+            val tabBg = when {
+                isSel -> accentCol
+                isMin -> MinimalistTheme.NEUTRAL_SECONDARY_BG
+                else -> Color.argb(38, 255, 255, 255)
+            }
+            val tabTxt = MinimalistTheme.ensureReadableTextOnBg(
+                if (isSel && !isMin && !isAuroraMode) Color.parseColor("#08090C") else textPrimary,
+                tabBg,
+                2.3
+            )
+            val tabChip = TextView(this).apply {
+                tag = "PRO_STAR_CHIP"
+                text = grp.label
+                setTextColor(tabTxt)
+                textSize = 13.5f
+                typeface = if (isSel) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+                gravity = Gravity.CENTER
+                setPadding(dp(10f), dp(10f), dp(10f), dp(10f))
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(999f).toFloat()
+                    setColor(tabBg)
+                    setStroke(dp(if (isSel) 1.5f else 1f), if (isSel) accentCol else Color.argb(55, 128, 128, 128))
+                }
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    setMargins(dp(3f), 0, dp(3f), 0)
+                }
+                setOnClickListener {
+                    if (activeGroupIdx == idx) return@setOnClickListener
+                    feedback(it)
+                    activeGroupIdx = idx
+                    val nextGrp = currentGroup()
+                    fromIdx = nextGrp.defaultFrom.coerceIn(0, nextGrp.units.lastIndex)
+                    toIdx = nextGrp.defaultTo.coerceIn(0, nextGrp.units.lastIndex)
+                    isProgrammaticText = true
+                    inputBox.setText(ProExtendedUnitConverters.formatSmartValue(nextGrp.defaultValue, 4))
+                    isProgrammaticText = false
+                    rebuildSubGroupTabs()
+                    rebuildPresetsBar()
+                    recalculateAll()
+                }
+            }
+            subGroupTabsRow.addView(tabChip)
+        }
+    }
+
+    fromBtn = createActionBtn("מיחידה: ${ProExtendedUnitConverters.formatUnitDisplayLabel(currentGroup().units[fromIdx])}", false) {
+        val labels = currentGroup().units.map { ProExtendedUnitConverters.formatUnitDisplayLabel(it) }
+        showItemPicker("בחר יחידת מקור (${currentGroup().label})", labels) { picked ->
+            val idx = labels.indexOf(picked)
             if (idx >= 0) { fromIdx = idx; recalculateAll() }
         }
     }
@@ -1651,54 +1906,30 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
         recalculateAll()
     }
 
-    toBtn = createActionBtn("ליחידה: ${unitLabels[toIdx]}", false) {
-        showItemPicker("בחר יחידת יעד", unitLabels) { picked ->
-            val idx = unitLabels.indexOf(picked)
+    toBtn = createActionBtn("ליחידה: ${ProExtendedUnitConverters.formatUnitDisplayLabel(currentGroup().units[toIdx])}", false) {
+        val labels = currentGroup().units.map { ProExtendedUnitConverters.formatUnitDisplayLabel(it) }
+        showItemPicker("בחר יחידת יעד (${currentGroup().label})", labels) { picked ->
+            val idx = labels.indexOf(picked)
             if (idx >= 0) { toIdx = idx; recalculateAll() }
         }
-    }
-
-    // כפתורי Presets מהירים
-    for (p in spec.presets) {
-        val chipBg = if (isMin) MinimalistTheme.NEUTRAL_SECONDARY_BG else Color.argb(45, Color.red(accentCol), Color.green(accentCol), Color.blue(accentCol))
-        val chip = TextView(this).apply {
-            tag = "PRO_STAR_CHIP"
-            text = p.label
-            setTextColor(MinimalistTheme.ensureReadableTextOnBg(textPrimary, chipBg, 2.3))
-            textSize = 13f
-            typeface = Typeface.DEFAULT_BOLD
-            setPadding(dp(14f), dp(8f), dp(14f), dp(8f))
-            background = GradientDrawable().apply {
-                cornerRadius = dp(999f).toFloat()
-                setColor(chipBg)
-                setStroke(dp(1f), accentCol)
-            }
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                setMargins(dp(4f), 0, dp(4f), 0)
-            }
-            setOnClickListener {
-                feedback(it)
-                fromIdx = p.fromIdx.coerceIn(0, spec.units.lastIndex)
-                toIdx = p.toIdx.coerceIn(0, spec.units.lastIndex)
-                inputBox.setText(ProExtendedUnitConverters.formatSmartValue(p.value, 4))
-                recalculateAll()
-            }
-        }
-        presetRow.addView(chip)
     }
 
     root.addView(fromBtn)
     root.addView(swapBtn)
     root.addView(toBtn)
-    root.addView(mainResultTv)
+    root.addView(resultCard)
     root.addView(allUnitsContainer)
 
     inputBox.addTextChangedListener(object : TextWatcher {
-        override fun afterTextChanged(s: Editable?) { recalculateAll() }
+        override fun afterTextChanged(s: Editable?) {
+            if (!isProgrammaticText) recalculateAll()
+        }
         override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
         override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
     })
 
+    rebuildSubGroupTabs()
+    rebuildPresetsBar()
     recalculateAll()
     return scroll
 }
