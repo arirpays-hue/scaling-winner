@@ -263,7 +263,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         mainContent = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT) }
 
         topHeader = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(16f), dp(18f), dp(16f), dp(14f)) }
-        menuBtn = TextView(this).apply { text = "☰"; setTextColor(Color.WHITE); textSize = 26f; setPadding(dp(8f), 0, dp(8f), 0); setOnClickListener { feedback(it); if (isDrawerOpen) closeDrawer() else openDrawer() } }
+        menuBtn = TextView(this).apply {
+            text = "☰"; setTextColor(Color.WHITE); textSize = 26f; setPadding(dp(8f), 0, dp(8f), 0)
+            setOnClickListener {
+                feedback(it)
+                ProUiMotionEngine.animateHeaderIconTap(this@MainActivity, it, "menu")
+                if (isDrawerOpen) closeDrawer() else openDrawer()
+            }
+        }
         titleText = TextView(this).apply { text = "מחשבון פרימיום"; setTextColor(Color.WHITE); textSize = 20f; typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL); layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(dp(8f), 0, dp(8f), 0) } }
 
         favHeaderBtn = TextView(this).apply {
@@ -273,6 +280,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             setPadding(dp(6f), dp(6f), dp(6f), dp(6f))
             setOnClickListener {
                 feedback(it)
+                ProUiMotionEngine.animateHeaderIconTap(this@MainActivity, it, "fav")
                 if (currentTabIndex == ProFavoritesEngine.FAVORITES_CENTER_TAB_INDEX) {
                     return@setOnClickListener
                 }
@@ -282,6 +290,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
             setOnLongClickListener {
                 feedback(it)
+                ProUiMotionEngine.animateHeaderIconTap(this@MainActivity, it, "fav")
                 if (isDrawerOpen) closeDrawer()
                 switchTab(ProFavoritesEngine.FAVORITES_CENTER_TAB_INDEX)
                 true
@@ -295,10 +304,18 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             setPadding(dp(6f), dp(6f), dp(8f), dp(6f))
             setOnClickListener {
                 feedback(it)
+                ProUiMotionEngine.animateHeaderIconTap(this@MainActivity, it, "pip")
                 ProFloatingMiniCalc.launchOrRequestPermission(this@MainActivity)
             }
         }
-        historyBtn = TextView(this).apply { text = "🕒"; textSize = 20f; gravity = Gravity.CENTER; setPadding(dp(6f), dp(6f), dp(4f), dp(6f)); setOnClickListener { feedback(it); showHistoryDialog() } }
+        historyBtn = TextView(this).apply {
+            text = "🕒"; textSize = 20f; gravity = Gravity.CENTER; setPadding(dp(6f), dp(6f), dp(4f), dp(6f))
+            setOnClickListener {
+                feedback(it)
+                ProUiMotionEngine.animateHeaderIconTap(this@MainActivity, it, "history")
+                showHistoryDialog()
+            }
+        }
 
         contentFrame = FrameLayout(this).apply { layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f) }
         mainContent?.addView(topHeader); mainContent?.addView(contentFrame)
@@ -376,11 +393,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     } else {
                         expandedSections.add(secIconCode)
                         sectionItemsContainer.visibility = View.VISIBLE
-                        if (useAnimations) {
-                            sectionItemsContainer.alpha = 0f
-                            sectionItemsContainer.translationY = -dp(8f).toFloat()
-                            sectionItemsContainer.animate().alpha(1f).translationY(0f).setDuration(200).setInterpolator(DecelerateInterpolator()).start()
-                        }
+                        ProUiMotionEngine.animateSectionAccordionExpand(this@MainActivity, sectionItemsContainer)
                     }
                     updateDrawerSelection()
                 }
@@ -434,6 +447,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         drawerScroll.addView(drawerMenu); rootFrame.addView(mainContent); rootFrame.addView(dimView); rootFrame.addView(drawerScroll)
         ProCanvasAnimations.loadPrefs(prefs)
+        ProUiMotionEngine.loadPrefs(prefs)
         ProCanvasAnimations.installOverlay(this, rootFrame)
         updateHandednessLayout()
         setContentView(rootFrame); setupShortcuts(); handleIntent(intent)
@@ -748,6 +762,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         dlg.setContentView(root)
         dlg.show()
+        ProUiMotionEngine.animateDialogEntrance(this, root)
         val widthPx = (resources.displayMetrics.widthPixels * 0.90f).toInt()
         dlg.window?.setLayout(widthPx, WindowManager.LayoutParams.WRAP_CONTENT)
     }
@@ -846,6 +861,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         dlg.setContentView(root)
         dlg.show()
+        ProUiMotionEngine.animateDialogEntrance(this, root)
         val widthPx = (resources.displayMetrics.widthPixels * 0.90f).toInt()
         dlg.window?.setLayout(widthPx, WindowManager.LayoutParams.WRAP_CONTENT)
     }
@@ -968,18 +984,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             val targetView = if (isLandscape) createScientificCalculator() else if (currentTabIndex == 1) createScientificCalculator() else createBasicCalculator()
             ProCanvasAnimations.attachAmbientToContent(this, contentFrame, currentTabIndex)
             contentFrame.addView(targetView)
-            if (useAnimations) {
-                targetView.alpha = 0f
-                targetView.translationX = -dp(42f).toFloat()
-                targetView.scaleX = 0.94f
-                targetView.animate()
-                    .alpha(1f)
-                    .translationX(0f)
-                    .scaleX(1f)
-                    .setDuration(350)
-                    .setInterpolator(OvershootInterpolator(1.1f))
-                    .start()
-            }
+            ProUiMotionEngine.animateTabSwitch(this, targetView, titleText, currentTabIndex, false)
         }
     }
 
@@ -1001,6 +1006,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         IosGlassTheme.loadIosPrefs(prefs)
         MinimalistTheme.loadMinimalistPrefs(prefs)
         ProCanvasAnimations.loadPrefs(prefs)
+        ProUiMotionEngine.loadPrefs(prefs)
         calcPrecision = prefs?.getInt("calcPrecision", 8) ?: 8; buttonCornerStyle = prefs?.getFloat("buttonCornerStyle", 24f) ?: 24f
         primaryColor = prefs?.getInt("primaryColor", Color.parseColor("#64B5F6")) ?: Color.parseColor("#64B5F6"); bgColor = prefs?.getInt("bgColor", Color.parseColor("#08090C")) ?: Color.parseColor("#08090C")
         memoryValue = Double.fromBits(prefs?.getLong("memoryValue", 0L) ?: 0L); val savedHist = prefs?.getString("history", "") ?: ""
@@ -1183,20 +1189,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private fun openDrawer() {
         updateHandednessLayout()
         if (isCleanGlassActive && !isMinimalistMode) IosGlassTheme.applyRealtimeGlassBlur(mainContent, true)
-        dimView.visibility = View.VISIBLE; dimView.animate().alpha(1f).setDuration(250).start()
-        drawerScroll.animate().translationX(0f).setDuration(300)
-            .setInterpolator(DecelerateInterpolator())
-            .start()
+        ProUiMotionEngine.animateDrawerToggle(this, true, drawerScroll, dimView, mainContent, getDrawerWidthPx())
         isDrawerOpen = true
         ProCanvasAnimations.onDrawerStateChanged(this, true, drawerMenu)
     }
 
     private fun closeDrawer() {
         IosGlassTheme.applyRealtimeGlassBlur(mainContent, false)
-        val drawerW = getDrawerWidthPx()
-        val targetX = if (isRightHanded) drawerW.toFloat() else -drawerW.toFloat()
-        dimView.animate().alpha(0f).setDuration(250).withEndAction { dimView.visibility = View.GONE }.start()
-        drawerScroll.animate().translationX(targetX).setDuration(250).setInterpolator(AccelerateInterpolator()).start()
+        ProUiMotionEngine.animateDrawerToggle(this, false, drawerScroll, dimView, mainContent, getDrawerWidthPx())
         isDrawerOpen = false
         ProCanvasAnimations.onDrawerStateChanged(this, false, drawerMenu)
     }
@@ -1388,7 +1388,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val baseIconTint = MinimalistTheme.resolveDrawerIconColor(this, isSelected = false, isExpandedHeader = false)
 
         fun traverse(v: View) {
-            if (v.tag == "MINIMALIST_CUSTOMIZER_IGNORE" || v.tag == "THEME_MATCHED_PALETTES_BAR") return
+            if (v.tag == "MINIMALIST_CUSTOMIZER_IGNORE" || v.tag == "THEME_MATCHED_PALETTES_BAR" || v.tag == "PRO_UI_MOTION_TOGGLE_BTN") return
             if (v is HorizontalScrollView) return
 
             if (v is TextView && v.isClickable && v.background != null) {
@@ -1488,10 +1488,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             isColorCustomizerExpanded = true
             openCustomizerBtn.visibility = View.GONE
             customizerContainer.visibility = View.VISIBLE
-            if (useAnimations) {
-                customizerContainer.alpha = 0f
-                customizerContainer.animate().alpha(1f).setDuration(200).start()
-            }
+            ProUiMotionEngine.animateSectionAccordionExpand(this, customizerContainer)
         }.apply {
             tag = "PERSONALIZATION_SETTINGS_BTN"
             visibility = if (isColorCustomizerExpanded) View.GONE else View.VISIBLE
@@ -1733,10 +1730,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             isDrawerChecklistExpanded = true
             openChecklistBtn.visibility = View.GONE
             listContainer.visibility = View.VISIBLE
-            if (useAnimations) {
-                listContainer.alpha = 0f
-                listContainer.animate().alpha(1f).setDuration(200).start()
-            }
+            ProUiMotionEngine.animateSectionAccordionExpand(this, listContainer)
         }.apply {
             visibility = if (isDrawerChecklistExpanded) View.GONE else View.VISIBLE
         }
@@ -1936,6 +1930,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 container?.addView(createDrawerCalculatorsChecklistSection())
                 container?.addView(CalculatorGestureManager.createCollapsibleGesturesSettingsSection(this))
                 container?.addView(ProCanvasAnimations.createSettingsToggleButton(this))
+                container?.addView(ProUiMotionEngine.createSettingsToggleButton(this))
                 container?.addView(AppVersionTracker.createAboutSettingsButton(this))
 
                 unifyThemeSelectorAndCustomizerInSettings(settingsView)
@@ -2041,6 +2036,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         if (index == 19) {
             AppVersionTracker.applyAboutButtonIcon(rawView, this)
             CalculatorGestureManager.applyGestureButtonIcon(rawView, this)
+            ProUiMotionEngine.applySettingsButtonIcon(rawView, this)
         }
 
         if (index !in listOf(0, 1, 19, 73, 78, 81, 96, 97, 98, 99) && index !in 100..120) {
@@ -2050,10 +2046,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         ProCanvasAnimations.attachAmbientToContent(this, contentFrame, index)
         contentFrame.addView(rawView)
         ProCanvasAnimations.playTabTransition(this, rawView, index, wasInSettings)
-        if (useAnimations && !wasInSettings) {
-            rawView.alpha = 0f; rawView.translationY = dp(24f).toFloat()
-            rawView.animate().alpha(1f).translationY(0f).setDuration(260).setInterpolator(DecelerateInterpolator()).start()
-        }
+        ProUiMotionEngine.animateTabSwitch(this, rawView, titleText, index, wasInSettings)
     }
 
     private fun createBasicCalculator(): View {
@@ -2273,7 +2266,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                             IosGlassTheme.styleSymbolTextView(tv, this@MainActivity, symbol, true)
                             IosGlassTheme.apply3DElevation(tv, 2f)
                         }
-                        if (useAnimations) v.animate().scaleX(if (isCleanGlassActive) 0.95f else 0.84f).scaleY(if (isCleanGlassActive) 0.95f else 0.84f).setDuration(65).setInterpolator(DecelerateInterpolator()).start()
+                        ProUiMotionEngine.animateKeypadTouchDown(this@MainActivity, v, e.x, e.y, symbol)
                     }
                     MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                         if (isMinimalistMode) {
@@ -2284,7 +2277,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                             IosGlassTheme.styleSymbolTextView(tv, this@MainActivity, symbol, false)
                             IosGlassTheme.apply3DElevation(tv, 6f)
                         }
-                        if (useAnimations) v.animate().scaleX(1f).scaleY(1f).setDuration(300).setInterpolator(OvershootInterpolator(1.8f)).start()
+                        ProUiMotionEngine.animateKeypadTouchUp(this@MainActivity, v, symbol)
                         if (e.actionMasked == MotionEvent.ACTION_UP) onEquationButtonClick(symbol)
                     }
                 }
@@ -2302,7 +2295,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             "MC" -> { memoryValue = 0.0; savePreferences() }; "MR" -> { currentInput += Utils.formatResult(memoryValue, calcPrecision) }
             "M+" -> { try { memoryValue += Utils.evalMathExpression(if (currentInput.isEmpty()) "0" else currentInput); savePreferences(); justCalculated = true } catch (e: Exception) {} }
             "M-" -> { try { memoryValue -= Utils.evalMathExpression(if (currentInput.isEmpty()) "0" else currentInput); savePreferences(); justCalculated = true } catch (e: Exception) {} }
-            "AC" -> { currentInput = ""; expressionView?.text = ""; ProCanvasAnimations.triggerClearWave(this) }; "⌫" -> { if (currentInput.isNotEmpty()) currentInput = currentInput.dropLast(1) }
+            "AC" -> {
+                currentInput = ""
+                expressionView?.text = ""
+                ProCanvasAnimations.triggerClearWave(this)
+                ProUiMotionEngine.animateDisplayClear(this, currentView, expressionView)
+            }
+            "⌫" -> { if (currentInput.isNotEmpty()) currentInput = currentInput.dropLast(1) }
             "sin", "cos", "tan", "log", "ln" -> { currentInput += "$s(" }; "√" -> { currentInput += "√(" }; "x²" -> { currentInput += "^2" }; "x³" -> { currentInput += "^3" }; "x^y" -> { currentInput += "^" }
             "=" -> {
                 if (checkEasterEggs(currentInput)) return
@@ -2323,10 +2322,12 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val newText = if (currentInput.isEmpty()) "0" else currentInput
         if (currentView?.text != newText) {
             currentView?.text = newText
-            if (useAnimations) {
-                currentView?.alpha = 0.35f; currentView?.scaleX = 0.92f; currentView?.scaleY = 0.92f
-                currentView?.animate()?.alpha(1f)?.scaleX(1f)?.scaleY(1f)?.setDuration(220)?.setInterpolator(OvershootInterpolator(1.2f))?.start()
-            }
+            ProUiMotionEngine.animateDisplayChange(
+                this,
+                currentView,
+                isEquals = (s == "="),
+                isError = (newText == "Error")
+            )
         }
     }
 
@@ -2419,6 +2420,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
             isClickable = true
             if (isCleanGlassActive && !isMinimalistMode) IosGlassTheme.apply3DElevation(this, 5f)
+            ProUiMotionEngine.attachTactilePress(this@MainActivity, this)
             setOnClickListener {
                 feedback(it)
                 ProCanvasAnimations.triggerViewPulseRipple(this@MainActivity, it)
