@@ -174,8 +174,9 @@ object MiniGameEngine {
     internal var animalSimonBest = 0
     internal val animalSimonSeq = mutableListOf<Int>()
     internal var animalSimonInputPos = 0
+    internal val stageAnimals = mutableListOf("🐶", "🐱", "🐭", "🐹", "🐰")
     private val savedKeyLabels = mutableMapOf<String, CharSequence>()
-    private val animalEmojis = listOf(
+    private val animalPool = listOf(
         "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼",
         "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🐔"
     )
@@ -828,7 +829,7 @@ object MiniGameEngine {
         if (gameEnding) return
         gameEnding = true
         stopPreviousLoop()
-        stopRacerAudio() // שומר על צליל ההתרסקות מנגן עד הסוף!
+        stopRacerAudio()
         if (bestKey.isNotEmpty()) updateHighScore(activity, bestKey, score)
         crashAnimStartTime = System.currentTimeMillis()
         crashLane = carLane
@@ -865,17 +866,28 @@ object MiniGameEngine {
         animalSimonInputPos = 0
         animalBounceTime = System.currentTimeMillis()
 
-        val shuffled = animalEmojis.shuffled()
-        var idx = 0
+        // התאמה מדויקת של 5 החיות על הבמה לכפתורים 1–5
+        val pickedFive = animalPool.shuffled().take(5)
+        stageAnimals.clear()
+        stageAnimals.addAll(pickedFive)
+
+        val remainingPool = (animalPool - pickedFive.toSet()).shuffled()
+        var remIdx = 0
+        val digitToAnimalIndex = mapOf("1" to 0, "2" to 1, "3" to 2, "4" to 3, "5" to 4)
+
         for ((k, btn) in activity.keypadButtons) {
             savedKeyLabels[k] = btn.text
             when (k) {
                 "AC" -> {}
                 "=" -> btn.text = "🎵"
                 "0" -> btn.text = "🎉"
+                in digitToAnimalIndex.keys -> {
+                    val slot = digitToAnimalIndex[k]!!
+                    btn.text = "${k}${stageAnimals[slot]}"
+                }
                 else -> {
-                    btn.text = shuffled[idx % shuffled.size]
-                    idx++
+                    btn.text = remainingPool[remIdx % remainingPool.size]
+                    remIdx++
                 }
             }
         }
@@ -926,7 +938,7 @@ object MiniGameEngine {
     }
 
     // =========================================================================
-    // משחק 1: איקס-עיגול טקטי (קוד 1337) — 3 רמות קושי + 2 שחקנים + רמז
+    // משחק 1: איקס-עיגול טקטי (קוד 1337) — קושי אמיתי + 2 שחקנים + רמז
     // =========================================================================
     fun startTicTacToe(activity: MainActivity) {
         val keepScores = (currentGame == "TTT")
@@ -990,37 +1002,75 @@ object MiniGameEngine {
 
     private fun checkWinner(): String? = findWinningLine()?.first
 
-    private fun getBestMoveFor(mark: String, smartChance: Float): Int {
+    // הבדל אמיתי וברור בין רמות הקושי באיקס-עיגול:
+    // 0 (קל): בעיקר אקראי, חוסם לעיתים רחוקות מאוד (20%)
+    // 1 (בינוני): לוקח ניצחון מיידי, חוסם ב-55% מהמקרים, אחרת מהלך לא-אופטימלי (35%)
+    // 2 (מומחה): Minimax מלא עם עומק — ניצחון מהיר, חסימה עקבית ומשחק בלתי מנוצח
+    private fun getBestMoveFor(mark: String, mode: Int): Int {
         val opp = if (mark == "0") "×" else "0"
         val free = (0..8).filter { tttBoard[it] !in listOf("×", "0") }
         if (free.isEmpty()) return -1
-        if (Random.nextFloat() > smartChance) return free.random()
-        for (i in free) {
-            val orig = tttBoard[i]; tttBoard[i] = mark
-            if (checkWinner() == mark) { tttBoard[i] = orig; return i }
-            tttBoard[i] = orig
+
+        if (mode == 0) {
+            if (Random.nextFloat() < 0.20f) {
+                for (i in free) {
+                    val orig = tttBoard[i]; tttBoard[i] = opp
+                    if (checkWinner() == opp) { tttBoard[i] = orig; return i }
+                    tttBoard[i] = orig
+                }
+            }
+            return free.random()
         }
-        for (i in free) {
-            val orig = tttBoard[i]; tttBoard[i] = opp
-            if (checkWinner() == opp) { tttBoard[i] = orig; return i }
-            tttBoard[i] = orig
+
+        if (mode == 1) {
+            for (i in free) {
+                val orig = tttBoard[i]; tttBoard[i] = mark
+                if (checkWinner() == mark) { tttBoard[i] = orig; return i }
+                tttBoard[i] = orig
+            }
+            if (Random.nextFloat() < 0.55f) {
+                for (i in free) {
+                    val orig = tttBoard[i]; tttBoard[i] = opp
+                    if (checkWinner() == opp) { tttBoard[i] = orig; return i }
+                    tttBoard[i] = orig
+                }
+            }
+            if (Random.nextFloat() < 0.65f) {
+                var bestScore = Int.MIN_VALUE
+                var bestIdx = free.first()
+                for (i in free) {
+                    val orig = tttBoard[i]; tttBoard[i] = mark
+                    val s = minimaxFor(0, false, mark, opp)
+                    tttBoard[i] = orig
+                    if (s > bestScore) { bestScore = s; bestIdx = i }
+                }
+                return bestIdx
+            }
+            return free.random()
         }
+
+        // מצב 2 (מומחה / בלתי מנוצח) או רמז אופטימלי
         var bestScore = Int.MIN_VALUE
         val bestMoves = mutableListOf<Int>()
         for (i in free) {
             val orig = tttBoard[i]; tttBoard[i] = mark
             val score = minimaxFor(0, false, mark, opp)
             tttBoard[i] = orig
-            if (score > bestScore) { bestScore = score; bestMoves.clear(); bestMoves.add(i) }
-            else if (score == bestScore) bestMoves.add(i)
+            if (score > bestScore) {
+                bestScore = score
+                bestMoves.clear()
+                bestMoves.add(i)
+            } else if (score == bestScore) {
+                bestMoves.add(i)
+            }
         }
         return if (bestMoves.isNotEmpty()) bestMoves.random() else free.random()
     }
 
     private fun minimaxFor(depth: Int, isMax: Boolean, aiMark: String, humanMark: String): Int {
         when (checkWinner()) {
-            aiMark -> return 10 - depth
-            humanMark -> return depth - 10
+            aiMark -> return 100 - depth
+            humanMark -> return depth - 100
             "TIE" -> return 0
         }
         val free = (0..8).filter { tttBoard[it] !in listOf("×", "0") }
@@ -1229,7 +1279,7 @@ object MiniGameEngine {
                     when (reachedCar) {
                         "🚧", "🧱" -> {
                             if (now < racerInvulnUntil) {
-                                // חסינות זמנית אחרי פגיעה
+                                // חסינות זמנית קצרה לאחר פגיעה
                             } else if (racerShieldActive) {
                                 racerShieldActive = false
                                 racerInvulnUntil = now + 900L
@@ -1539,7 +1589,7 @@ object MiniGameEngine {
                     "÷" -> { tttMode = 3; startTicTacToe(activity); return true }
                     "0" -> {
                         if (!tttRoundLocked) {
-                            tttHintCell = getBestMoveFor(tttCurrentTurn, 1.0f)
+                            tttHintCell = getBestMoveFor(tttCurrentTurn, 2)
                             tttHintTime = System.currentTimeMillis()
                             invalidateStage()
                         }
@@ -1562,8 +1612,7 @@ object MiniGameEngine {
                         tttCurrentTurn = if (tttCurrentTurn == "×") "0" else "×"
                         updateTicTacToeUI(activity, "תור $tttCurrentTurn — בחר 1–9")
                     } else {
-                        val smartness = when (tttMode) { 0 -> 0.25f; 1 -> 0.68f; else -> 1.0f }
-                        val comp = getBestMoveFor("0", smartness)
+                        val comp = getBestMoveFor("0", tttMode)
                         if (comp != -1) {
                             tttBoard[comp] = "0"
                             tttCellAnimStart[comp] = System.currentTimeMillis()
@@ -1755,7 +1804,7 @@ object MiniGameEngine {
                         bombTimeLeft = (bombTimeLeft - 3).coerceAtLeast(1)
                         playRacerSoundEffect(activity, "CRASH")
                         spawnBurstNormalized(0.68f, 0.50f, pal.enemyColor, 12)
-                        spawnPopup("−3s ✕", 0.65f, 0.30f, pal.enemyColor)
+                        spawnPopup("−3s ($expectedOp)", 0.65f, 0.30f, pal.enemyColor)
                         activity.shakeScreen()
                         renderBombUI(activity)
                     }
@@ -2658,11 +2707,11 @@ private class MiniGameVectorStageView(
             fillP.color = Color.parseColor("#1F2937")
             canvas.drawCircle(cx, ay + r * 0.18f, r * 0.11f, fillP)
 
+            val glyph = MiniGameEngine.stageAnimals.getOrElse(i) { "🐾" }
             subTextP.textAlign = Paint.Align.CENTER
-            subTextP.textSize = 9f * d
+            subTextP.textSize = 9.5f * d
             subTextP.color = pal.inkSecondary
-            canvas.drawText("${i + 1}", cx, cy + r + 11f * d, subTextP)
+            canvas.drawText("${i + 1} $glyph", cx, cy + r + 11f * d, subTextP)
         }
     }
 }
-
