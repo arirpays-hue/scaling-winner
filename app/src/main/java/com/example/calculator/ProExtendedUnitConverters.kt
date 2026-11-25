@@ -16,8 +16,7 @@ import kotlin.math.*
 
 // =========================================================================
 // 18 ממירי יחידות מורחבים וייחודיים (Tabs 100..117)
-// תמיכה בתת-קטגוריות מופרדות פיזיקלית, Superscript אחיד לכל החזקות,
-// קנבס מונפש אישי וסמלים וקטוריים לכל 4 ערכות הנושא
+// כל 18 המסכים מגיבים ישירות בזמן אמת לקלט (גם במספרים ענקיים וגם כשמנוע האנימציות כבוי)
 // =========================================================================
 
 data class ExtUnitDef(
@@ -594,7 +593,7 @@ object ProExtendedUnitConverters {
             }
         )
 
-        // 112: פרמיטיביות ופרמאביליות — 2 תת-קטגוריות מופרדות פיזיקלית
+        // 112: פרמיטיביות ופרמאביליות
         112 -> ExtUnitToolSpec(
             tabIndex = 112,
             title = "פרמיטיביות (ε) ופרמאביליות (µ)",
@@ -611,9 +610,9 @@ object ProExtendedUnitConverters {
                         linearUnit("פאראד למטר — SI", "F/m", 1.0)
                     ),
                     presets = listOf(
-                        ExtUnitPreset("ריק (1 ε₀ → pF/m)", 1.0, 0, 1),
-                        ExtUnitPreset("מים (εᵣ=80)", 80.0, 0, 1),
-                        ExtUnitPreset("זכוכית (εᵣ=4.7)", 4.7, 0, 1),
+                        ExtUnitPreset("ריק 1 ε₀ → pF/m", 1.0, 0, 1),
+                        ExtUnitPreset("מים εᵣ=80", 80.0, 0, 1),
+                        ExtUnitPreset("זכוכית εᵣ=4.7", 4.7, 0, 1),
                         ExtUnitPreset("100 pF/m → ε₀", 100.0, 1, 0)
                     ),
                     defaultFrom = 0,
@@ -636,9 +635,9 @@ object ProExtendedUnitConverters {
                         linearUnit("הנרי למטר — SI", "H/m", 1.0)
                     ),
                     presets = listOf(
-                        ExtUnitPreset("ריק (1 µ₀ → µH/m)", 1.0, 0, 1),
-                        ExtUnitPreset("ברזל (µᵣ=5000)", 5000.0, 0, 3),
-                        ExtUnitPreset("ניקל (µᵣ=600)", 600.0, 0, 1),
+                        ExtUnitPreset("ריק 1 µ₀ → µH/m", 1.0, 0, 1),
+                        ExtUnitPreset("ברזל µᵣ=5000", 5000.0, 0, 3),
+                        ExtUnitPreset("ניקל µᵣ=600", 600.0, 0, 1),
                         ExtUnitPreset("10 µH/m → µ₀", 10.0, 1, 0)
                     ),
                     defaultFrom = 0,
@@ -684,7 +683,7 @@ object ProExtendedUnitConverters {
             }
         )
 
-        // 114: צפיפות חום וקיבול חום — 2 תת-קטגוריות מופרדות פיזיקלית
+        // 114: צפיפות חום וקיבול חום
         114 -> ExtUnitToolSpec(
             tabIndex = 114,
             title = "צפיפות חום וקיבול חום (תרמודינמיקה)",
@@ -727,7 +726,7 @@ object ProExtendedUnitConverters {
                         linearUnit("ואט-שעה לקלווין", "Wh/K", 3600.0)
                     ),
                     presets = listOf(
-                        ExtUnitPreset("ליטר מים (4.184 kJ/K)", 4.184, 0, 3),
+                        ExtUnitPreset("ליטר מים 4.184 kJ/K", 4.184, 0, 3),
                         ExtUnitPreset("1000 J/K → cal/°C", 1000.0, 1, 2),
                         ExtUnitPreset("1 BTU/°F → kJ/K", 1.0, 4, 0),
                         ExtUnitPreset("10 kcal/°C → Wh/K", 10.0, 3, 5)
@@ -743,7 +742,7 @@ object ProExtendedUnitConverters {
             )
         )
 
-        // 115: נפח סגולי וצפיפות (קשר הדדי אמיתי v = 1/ρ)
+        // 115: נפח סגולי וצפיפות
         115 -> singleGroupSpec(
             tabIndex = 115,
             title = "נפח סגולי (v) וצפיפות חומר (ρ)",
@@ -759,9 +758,9 @@ object ProExtendedUnitConverters {
                 inverseUnit("פאונד לרגל מעוקבת", "lb/ft³", 0.06242796)
             ),
             presets = listOf(
-                ExtUnitPreset("מים (1 L/kg → kg/m³)", 1.0, 1, 4),
-                ExtUnitPreset("אוויר (0.816 m³/kg)", 0.816, 0, 4),
-                ExtUnitPreset("ברזל (7.87 g/cm³)", 7.87, 5, 2),
+                ExtUnitPreset("מים 1 L/kg → kg/m³", 1.0, 1, 4),
+                ExtUnitPreset("אוויר 0.816 m³/kg", 0.816, 0, 4),
+                ExtUnitPreset("ברזל 7.87 g/cm³", 7.87, 5, 2),
                 ExtUnitPreset("1 m³/kg → ft³/lb", 1.0, 0, 3)
             ),
             defaultFrom = 1,
@@ -774,7 +773,7 @@ object ProExtendedUnitConverters {
             }
         )
 
-        // 116: מהירות ותאוצה זוויתית — 2 תת-קטגוריות מופרדות פיזיקלית
+        // 116: מהירות ותאוצה זוויתית
         116 -> ExtUnitToolSpec(
             tabIndex = 116,
             title = "מהירות זוויתית (ω) ותאוצה זוויתית (α)",
@@ -833,7 +832,7 @@ object ProExtendedUnitConverters {
             )
         )
 
-        // 117: צפיפות זרם, מוליכות ומטען — 3 תת-קטגוריות מופרדות לחלוטין
+        // 117: צפיפות זרם, מוליכות ומטען
         else -> ExtUnitToolSpec(
             tabIndex = 117,
             title = "צפיפות זרם, מוליכות ומטען (J / G / Q)",
@@ -1203,7 +1202,7 @@ object ProExtendedUnitConverters {
 }
 
 // =========================================================================
-// קנבס מונפש אישי לכל אחד מ-18 הממירים, מותאם ל-4 ערכות הנושא
+// קנבס אינטראקטיבי מגיב בזמן אמת לכל אחד מ-18 הממירים (מותאם ל-4 ערכות הנושא)
 // =========================================================================
 private class ExtUnitHeroCanvasView(
     private val activity: MainActivity,
@@ -1213,6 +1212,7 @@ private class ExtUnitHeroCanvasView(
 
     private val d = resources.displayMetrics.density
     private var phase = 0f
+    private var reactPulse = 0f
     private var animator: ValueAnimator? = null
 
     var liveInputVal: Double = initialGroup.defaultValue
@@ -1220,6 +1220,7 @@ private class ExtUnitHeroCanvasView(
     var liveResultVal: Double = initialGroup.units[initialGroup.defaultTo].fromBase(liveBaseVal)
     var liveFromSym: String = initialGroup.units[initialGroup.defaultFrom].symbol
     var liveToSym: String = initialGroup.units[initialGroup.defaultTo].symbol
+    var activeGroupIdx: Int = 0
 
     private val strokeP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -1234,12 +1235,22 @@ private class ExtUnitHeroCanvasView(
     private val path = Path()
     private val rect = RectF()
 
-    fun updateLiveData(inputV: Double, baseV: Double, resultV: Double, fromSym: String, toSym: String) {
+    fun updateLiveData(
+        inputV: Double,
+        baseV: Double,
+        resultV: Double,
+        fromSym: String,
+        toSym: String,
+        groupIdx: Int
+    ) {
+        val changed = (inputV != liveInputVal || baseV != liveBaseVal || groupIdx != activeGroupIdx)
         liveInputVal = inputV
         liveBaseVal = baseV
         liveResultVal = resultV
         liveFromSym = fromSym
         liveToSym = toSym
+        activeGroupIdx = groupIdx
+        if (changed) reactPulse = 1f
         invalidate()
     }
 
@@ -1253,6 +1264,7 @@ private class ExtUnitHeroCanvasView(
                 addUpdateListener {
                     phase += 0.025f
                     if (phase > 6283f) phase = 0f
+                    if (reactPulse > 0f) reactPulse = (reactPulse - 0.08f).coerceAtLeast(0f)
                     postInvalidateOnAnimation()
                 }
                 start()
@@ -1269,6 +1281,22 @@ private class ExtUnitHeroCanvasView(
     private fun withAlpha(color: Int, a: Int): Int =
         Color.argb(a.coerceIn(0, 255), Color.red(color), Color.green(color), Color.blue(color))
 
+    // נרמול לוגריתמי חלק (0..1) המגיב לכל טווח ערכים בלי להיתקע במספרים גדולים
+    private fun logNorm(v: Double, minExp: Double, maxExp: Double): Float {
+        val a = abs(v)
+        if (a <= 0.0 || a.isNaN() || a.isInfinite()) return 0f
+        val e = log10(a)
+        return ((e - minExp) / (maxExp - minExp)).toFloat().coerceIn(0f, 1f)
+    }
+
+    // זווית עדינה מהמנטיסה כך שגם כל ספרה נוספת מזיזה מיידית מחוג/תנועה
+    private fun mantissaFrac(v: Double): Float {
+        val a = abs(v)
+        if (a <= 0.0 || a.isNaN() || a.isInfinite()) return 0f
+        val lg = log10(a)
+        return (lg - floor(lg)).toFloat().coerceIn(0f, 1f)
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val w = width.toFloat()
@@ -1282,34 +1310,36 @@ private class ExtUnitHeroCanvasView(
         val c3 = pal.accent3
         val ink = if (pal.isMin) MinimalistTheme.TEXT_CHARCOAL else Color.WHITE
 
+        // רקע כרטיס מותאם לערכת הנושא + הבהוב גבול עדין בעת הקלדה
         rect.set(2f * d, 2f * d, w - 2f * d, h - 2f * d)
         val corner = 20f * d
+        val pulseStrokeExtra = reactPulse * 1.4f * d
         when (style) {
             ProCanvasAnimations.ThemeRenderStyle.MINIMALIST_PASTEL -> {
-                fillP.shader = LinearGradient(0f, 0f, w, h, MinimalistTheme.CARD_WHITE, withAlpha(c1, 36), Shader.TileMode.CLAMP)
+                fillP.shader = LinearGradient(0f, 0f, w, h, MinimalistTheme.CARD_WHITE, withAlpha(c1, 36 + (reactPulse * 24).toInt()), Shader.TileMode.CLAMP)
                 canvas.drawRoundRect(rect, corner, corner, fillP)
                 fillP.shader = null
                 strokeP.clearShadowLayer()
-                strokeP.strokeWidth = 1.2f * d
-                strokeP.color = MinimalistTheme.resolveBorderStrokeColor(activity, Color.parseColor("#E3DFD9"))
+                strokeP.strokeWidth = 1.2f * d + pulseStrokeExtra
+                strokeP.color = if (reactPulse > 0.1f) withAlpha(c1, 165) else MinimalistTheme.resolveBorderStrokeColor(activity, Color.parseColor("#E3DFD9"))
                 canvas.drawRoundRect(rect, corner, corner, strokeP)
             }
             ProCanvasAnimations.ThemeRenderStyle.LIQUID_GLASS -> {
-                fillP.shader = LinearGradient(0f, 0f, w, h, Color.argb(70, 255, 255, 255), withAlpha(c1, 38), Shader.TileMode.CLAMP)
+                fillP.shader = LinearGradient(0f, 0f, w, h, Color.argb(70, 255, 255, 255), withAlpha(c1, 38 + (reactPulse * 30).toInt()), Shader.TileMode.CLAMP)
                 canvas.drawRoundRect(rect, corner, corner, fillP)
                 fillP.shader = null
                 strokeP.clearShadowLayer()
-                strokeP.strokeWidth = 1.3f * d
-                strokeP.color = Color.argb(120, 255, 255, 255)
+                strokeP.strokeWidth = 1.3f * d + pulseStrokeExtra
+                strokeP.color = Color.argb((120 + reactPulse * 80).toInt().coerceAtMost(255), 255, 255, 255)
                 canvas.drawRoundRect(rect, corner, corner, strokeP)
             }
             ProCanvasAnimations.ThemeRenderStyle.AURORA_NEON -> {
-                fillP.shader = LinearGradient(0f, 0f, w, h, withAlpha(AuroraBorealisTheme.EMERALD_NIGHT, 235), withAlpha(c1, 45), Shader.TileMode.CLAMP)
+                fillP.shader = LinearGradient(0f, 0f, w, h, withAlpha(AuroraBorealisTheme.EMERALD_NIGHT, 235), withAlpha(c1, 45 + (reactPulse * 35).toInt()), Shader.TileMode.CLAMP)
                 canvas.drawRoundRect(rect, corner, corner, fillP)
                 fillP.shader = null
-                strokeP.strokeWidth = 1.4f * d
+                strokeP.strokeWidth = 1.4f * d + pulseStrokeExtra
                 strokeP.color = withAlpha(c1, 185)
-                strokeP.setShadowLayer(6f * d, 0f, 0f, withAlpha(c1, 160))
+                strokeP.setShadowLayer((6f + reactPulse * 4f) * d, 0f, 0f, withAlpha(c1, 175))
                 canvas.drawRoundRect(rect, corner, corner, strokeP)
             }
             ProCanvasAnimations.ThemeRenderStyle.CLASSIC_VECTOR -> {
@@ -1321,8 +1351,8 @@ private class ExtUnitHeroCanvasView(
                 strokeP.color = withAlpha(c1, 24)
                 var gx = 20f * d
                 while (gx < w - 10f * d) { canvas.drawLine(gx, 8f * d, gx, h - 8f * d, strokeP); gx += 20f * d }
-                strokeP.strokeWidth = 1.3f * d
-                strokeP.color = withAlpha(c1, 130)
+                strokeP.strokeWidth = 1.3f * d + pulseStrokeExtra
+                strokeP.color = withAlpha(c1, (130 + reactPulse * 95).toInt())
                 canvas.drawRoundRect(rect, corner, corner, strokeP)
             }
         }
@@ -1333,149 +1363,357 @@ private class ExtUnitHeroCanvasView(
         if (animGlow) strokeP.setShadowLayer(5f * d, 0f, 0f, withAlpha(c1, 165)) else strokeP.clearShadowLayer()
 
         when (tabIndex) {
+            // 100: קידומות SI — ציר חזקות מלא 10⁻³⁰ עד 10³⁰ + מילוי פעיל ותגית חזקה חיה
             100 -> {
-                val yBar = cy
-                strokeP.strokeWidth = 2.4f * d; strokeP.color = withAlpha(c1, 165)
-                canvas.drawLine(w * 0.10f, yBar, w * 0.90f, yBar, strokeP)
-                val labels = arrayOf("10⁻⁹", "10⁻⁶", "10⁻³", "10⁰", "10³", "10⁶", "10⁹")
-                textP.textSize = 10f * d; textP.color = withAlpha(ink, 180)
-                for (i in labels.indices) {
-                    val tx = w * (0.12f + i * (0.76f / (labels.size - 1)))
-                    canvas.drawLine(tx, yBar - 7f * d, tx, yBar + 7f * d, strokeP)
-                    canvas.drawText(labels[i], tx, yBar - 12f * d, textP)
+                val yBar = cy + 6f * d
+                val leftX = w * 0.10f
+                val rightX = w * 0.90f
+                val spanW = rightX - leftX
+                strokeP.strokeWidth = 2.4f * d; strokeP.color = withAlpha(ink, 45)
+                canvas.drawLine(leftX, yBar, rightX, yBar, strokeP)
+
+                val expVal = if (liveBaseVal != 0.0 && liveBaseVal.isFinite()) log10(abs(liveBaseVal)).toFloat() else 0f
+                val expClamped = expVal.coerceIn(-30f, 30f)
+                val zeroX = leftX + spanW * 0.5f
+                val px = leftX + ((expClamped + 30f) / 60f) * spanW
+
+                // פס מילוי מודגש מ-10⁰ אל החזקה הנוכחית
+                strokeP.strokeWidth = 4.2f * d; strokeP.color = c1
+                canvas.drawLine(zeroX, yBar, px, yBar, strokeP)
+
+                val ticks = listOf(-30, -18, -9, 0, 9, 18, 30)
+                textP.textSize = 9.2f * d; textP.color = withAlpha(ink, 175)
+                strokeP.strokeWidth = 1.6f * d; strokeP.color = withAlpha(ink, 95)
+                for (t in ticks) {
+                    val tx = leftX + ((t + 30f) / 60f) * spanW
+                    canvas.drawLine(tx, yBar - 6f * d, tx, yBar + 6f * d, strokeP)
+                    canvas.drawText("10${ProExtendedUnitConverters.toSuperscript(t)}", tx, yBar + 17f * d, textP)
                 }
-                val expClamped = if (liveBaseVal != 0.0) log10(abs(liveBaseVal)).toFloat().coerceIn(-9f, 9f) else 0f
-                val px = w * (0.50f + (expClamped / 9f) * 0.38f) + sin(phase * 1.4f) * 3f * d
+
+                // סמן חי + תגית חזקה מדויקת מעל הנקודה
                 fillP.color = c2
-                canvas.drawCircle(px, yBar, 7.5f * d, fillP)
+                canvas.drawCircle(px, yBar, (6.5f + reactPulse * 2.5f) * d, fillP)
+                textP.textSize = 11f * d; textP.color = ink
+                val expInt = expVal.roundToInt()
+                canvas.drawText("10${ProExtendedUnitConverters.toSuperscript(expInt)}", px.coerceIn(w * 0.14f, w * 0.86f), yBar - 13f * d, textP)
             }
+
+            // 101: שטח קרקע — חלקה פרופורציונלית לוגריתמית (מ-1 מ״ר עד 10¹⁰ מ״ר) + רשת מדידה וצלע חיה
             101 -> {
-                val ratio = (sqrt(abs(liveBaseVal).coerceIn(10.0, 50_000.0)) / sqrt(50_000.0)).toFloat().coerceIn(0.22f, 0.92f)
-                val pw = w * 0.56f * ratio
-                val ph = h * 0.50f * ratio
+                val n = logNorm(liveBaseVal, 0.0, 10.0).coerceIn(0.18f, 1.0f)
+                val pw = w * (0.20f + n * 0.54f)
+                val ph = h * (0.20f + n * 0.36f)
                 rect.set(cx - pw * 0.5f, cy - ph * 0.5f, cx + pw * 0.5f, cy + ph * 0.5f)
-                fillP.color = withAlpha(pal.positive, 55)
+                fillP.color = withAlpha(pal.positive, 48 + (n * 36).toInt())
                 canvas.drawRoundRect(rect, 8f * d, 8f * d, fillP)
                 strokeP.strokeWidth = 2.2f * d; strokeP.color = pal.positive
                 canvas.drawRoundRect(rect, 8f * d, 8f * d, strokeP)
+
+                val cols = (2 + (n * 5).toInt()).coerceIn(2, 7)
+                strokeP.strokeWidth = 0.9f * d; strokeP.color = withAlpha(pal.positive, 95)
+                for (i in 1 until cols) {
+                    val lx = rect.left + (rect.width() * i / cols)
+                    canvas.drawLine(lx, rect.top, lx, rect.bottom, strokeP)
+                }
                 val scanX = rect.left + ((sin(phase) * 0.5f + 0.5f) * rect.width())
-                strokeP.strokeWidth = 1.4f * d; strokeP.color = withAlpha(c1, 160)
+                strokeP.strokeWidth = 1.4f * d; strokeP.color = withAlpha(c1, 165)
                 canvas.drawLine(scanX, rect.top, scanX, rect.bottom, strokeP)
+
+                val sideStr = ProExtendedUnitConverters.formatSmartValue(sqrt(abs(liveBaseVal)), 2)
+                textP.textSize = 10f * d; textP.color = ink
+                canvas.drawText("\u200E√S ≈ $sideStr m", cx, rect.top - 5f * d, textP)
             }
+
+            // 102: מספרים גדולים — 6 עמודות סדרי גודל שמתמלאות וגדלות ישירות לפי הערך + מונה ספרות!
             102 -> {
+                val exp = if (abs(liveBaseVal) >= 1.0 && liveBaseVal.isFinite()) log10(abs(liveBaseVal)) else 0.0
+                val digitsCount = if (abs(liveBaseVal) >= 1.0 && liveBaseVal.isFinite()) floor(exp).toInt() + 1 else if (liveBaseVal == 0.0) 1 else 0
+                val baseTier = if (exp >= 18.0) ((floor(exp / 3.0).toInt() - 5) * 3).coerceAtLeast(0) else 0
                 val bars = 6
-                val bw = w * 0.08f
-                val startX = w * 0.18f
+                val bw = w * 0.095f
+                val gap = w * 0.125f
+                val startX = cx - ((bars - 1) * gap + bw) * 0.5f
+                val bottomY = cy + 28f * d
+                val maxBarH = 54f * d
+
                 for (i in 0 until bars) {
-                    val bh = (12f + i * 10f + sin(phase * 1.3f + i) * 4f) * d
-                    val bx = startX + i * w * 0.115f
-                    rect.set(bx, cy + 28f * d - bh, bx + bw, cy + 28f * d)
-                    fillP.color = withAlpha(if (i % 2 == 0) c1 else c2, 85 + i * 22)
-                    canvas.drawRoundRect(rect, 4f * d, 4f * d, fillP)
+                    val tierExp = (baseTier + i * 3).toDouble()
+                    val fillFrac = when {
+                        abs(liveBaseVal) <= 0.0 -> 0.08f
+                        exp >= tierExp + 3.0 -> 1.0f
+                        exp <= tierExp -> 0.12f
+                        else -> (0.12f + ((exp - tierExp) / 3.0).toFloat() * 0.88f)
+                    }
+                    val targetMax = maxBarH * (0.30f + i * 0.14f)
+                    val wobble = if (fillFrac > 0.15f) sin(phase * 1.4f + i) * 2.2f * d else 0f
+                    val bh = (targetMax * fillFrac + wobble).coerceAtLeast(6f * d)
+                    val bx = startX + i * gap
+                    rect.set(bx, bottomY - bh, bx + bw, bottomY)
+
+                    val isActiveBar = (exp >= tierExp && exp < tierExp + 3.0) || (i == bars - 1 && exp >= tierExp + 3.0)
+                    val barCol = when {
+                        isActiveBar -> c1
+                        exp >= tierExp + 3.0 -> pal.positive
+                        else -> ink
+                    }
+                    fillP.color = withAlpha(barCol, if (isActiveBar) 225 else if (exp >= tierExp) 140 else 36)
+                    canvas.drawRoundRect(rect, 5f * d, 5f * d, fillP)
+
+                    textP.textSize = 9f * d
+                    textP.color = withAlpha(ink, if (isActiveBar) 235 else 135)
+                    canvas.drawText("10${ProExtendedUnitConverters.toSuperscript(tierExp.toInt())}", bx + bw * 0.5f, bottomY + 11f * d, textP)
                 }
+
+                // תגית ספרות דינמית בראש הקנבס
+                textP.textSize = 10.5f * d; textP.color = c1
+                canvas.drawText("\u200F$digitsCount ספרות  •  10${ProExtendedUnitConverters.toSuperscript(floor(exp).toInt())}", cx, 18f * d, textP)
             }
+
+            // 103: זמן תרבותי ומסורתי — שעון וקשת מחזור שזזים ישירות עם כל ספרה שמוקלדת!
             103 -> {
-                val r = min(w, h) * 0.28f
-                strokeP.strokeWidth = 2f * d; strokeP.color = c1
+                val r = min(w, h) * 0.30f
+                val sec = abs(liveBaseVal)
+                val halakim = sec / (10.0 / 3.0)
+                val fracDay = ((sec % 86_400.0) / 86_400.0).toFloat()
+                val logCycle = logNorm(sec, -1.0, 14.0)
+
+                // טבעת רקע + שנתות 12 שעות
+                strokeP.strokeWidth = 2.2f * d; strokeP.color = withAlpha(ink, 45)
                 canvas.drawCircle(cx, cy, r, strokeP)
-                val a1 = phase * 1.1f
-                val a2 = phase * 0.25f
-                canvas.drawLine(cx, cy, cx + cos(a1) * r * 0.78f, cy + sin(a1) * r * 0.78f, strokeP)
-                strokeP.color = c2
-                canvas.drawLine(cx, cy, cx + cos(a2) * r * 0.52f, cy + sin(a2) * r * 0.52f, strokeP)
-                fillP.color = c3
-                canvas.drawCircle(cx, cy, 4f * d, fillP)
-            }
-            104 -> {
-                val texNorm = (abs(liveBaseVal).coerceIn(1.0, 100.0) / 100.0).toFloat()
-                val fiberW = (3.5f + texNorm * 14f) * d
-                path.reset()
-                var x = w * 0.10f
-                while (x <= w * 0.90f) {
-                    val y = cy + sin(x * 0.045f + phase * 1.8f) * 14f * d
-                    if (x == w * 0.10f) path.moveTo(x, y) else path.lineTo(x, y)
-                    x += 6f * d
+                for (t in 0 until 12) {
+                    val a = Math.toRadians(t * 30.0)
+                    canvas.drawLine(
+                        cx + (cos(a) * r * 0.84f).toFloat(), cy + (sin(a) * r * 0.84f).toFloat(),
+                        cx + (cos(a) * r).toFloat(), cy + (sin(a) * r).toFloat(),
+                        strokeP
+                    )
                 }
-                strokeP.strokeWidth = fiberW; strokeP.color = withAlpha(c1, 85)
-                canvas.drawPath(path, strokeP)
-                strokeP.strokeWidth = 2f * d; strokeP.color = c2
-                canvas.drawPath(path, strokeP)
+
+                // קשת התקדמות לפי סדר גודל הזמן
+                rect.set(cx - r, cy - r, cx + r, cy + r)
+                strokeP.strokeWidth = 4.2f * d; strokeP.color = pal.positive
+                canvas.drawArc(rect, -90f, (15f + logCycle * 345f), false, strokeP)
+
+                // מחוג גדול מגיב למחזור החלקים/שעות + מנטיסה כך שכל ספרה מזיזה אותו
+                val bigDeg = -90.0 + ((halakim % 1080.0) / 1080.0) * 360.0 + mantissaFrac(sec) * 360.0 + sin(phase) * 3.0
+                val bigRad = Math.toRadians(bigDeg)
+                strokeP.strokeWidth = 2.4f * d; strokeP.color = c1
+                canvas.drawLine(cx, cy, cx + (cos(bigRad) * r * 0.78f).toFloat(), cy + (sin(bigRad) * r * 0.78f).toFloat(), strokeP)
+
+                // מחוג קטן מגיב ליממה / סדר הגודל
+                val smallDeg = -90.0 + fracDay * 360.0 + logCycle * 720.0
+                val smallRad = Math.toRadians(smallDeg)
+                strokeP.strokeWidth = 3.0f * d; strokeP.color = c2
+                canvas.drawLine(cx, cy, cx + (cos(smallRad) * r * 0.50f).toFloat(), cy + (sin(smallRad) * r * 0.50f).toFloat(), strokeP)
+
+                fillP.color = c3
+                canvas.drawCircle(cx, cy, 4.2f * d, fillP)
+
+                // תווית תקופה משמאל לשעון
+                val eraLabel = when {
+                    sec < 60.0 -> "שניות / חלקים"
+                    sec < 86_400.0 -> "שעות"
+                    sec < 31_556_926.0 -> "ימים / חודשים"
+                    sec < 31_556_926.0 * 50.0 -> "שנים / שמיטות"
+                    else -> "יובלות ומאות"
+                }
+                textP.textSize = 10f * d; textP.color = withAlpha(ink, 190)
+                canvas.drawText(eraLabel, cx + r + 48f * d, cy + 4f * d, textP)
             }
+
+            // 104: צפיפות חוט וטקסטיל — עובי הסיב, תדירות הגל וחתך החוט מגיבים ל-Tex
+            104 -> {
+                val n = logNorm(liveBaseVal, -1.0, 4.0)
+                val fiberW = (2.5f + n * 16f) * d
+                val freq = 0.065f - n * 0.032f
+                path.reset()
+                var x = w * 0.24f
+                while (x <= w * 0.90f) {
+                    val y = cy + sin(x * freq + phase * 1.6f + n * 6f) * (10f + n * 9f) * d
+                    if (x == w * 0.24f) path.moveTo(x, y) else path.lineTo(x, y)
+                    x += 5f * d
+                }
+                strokeP.strokeWidth = fiberW; strokeP.color = withAlpha(c1, 80)
+                canvas.drawPath(path, strokeP)
+                strokeP.strokeWidth = (1.6f + n * 2.2f) * d; strokeP.color = c2
+                canvas.drawPath(path, strokeP)
+
+                // חתך רוחב של החוט משמאל
+                val crossR = (6f + n * 14f) * d
+                fillP.color = withAlpha(c1, 110)
+                canvas.drawCircle(w * 0.13f, cy, crossR, fillP)
+                strokeP.strokeWidth = 1.8f * d; strokeP.color = c2
+                canvas.drawCircle(w * 0.13f, cy, crossR, strokeP)
+            }
+
+            // 105: קלוריות מזון — טבעת תפריט יומי + אחוזים חיים במרכז וצבע דינמי
             105 -> {
                 val kcal = abs(liveBaseVal) / 4184.0
-                val pct = (kcal / 2000.0).toFloat().coerceIn(0.06f, 1.0f)
+                val dailyFrac = (kcal / 2000.0).toFloat()
+                val pct = dailyFrac.coerceIn(0f, 1.0f)
                 val r = min(w, h) * 0.30f
+                val ringCol = when {
+                    dailyFrac < 0.35f -> pal.positive
+                    dailyFrac <= 1.0f -> pal.warning
+                    else -> Color.parseColor("#EF5350")
+                }
                 rect.set(cx - r, cy - r, cx + r, cy + r)
                 strokeP.strokeWidth = 8f * d; strokeP.color = withAlpha(ink, 28)
                 canvas.drawCircle(cx, cy, r, strokeP)
-                strokeP.color = pal.warning
+                strokeP.color = ringCol
                 canvas.drawArc(rect, -90f, 360f * pct, false, strokeP)
-                val dotA = Math.toRadians((-90.0 + 360.0 * pct))
-                fillP.color = c1
-                canvas.drawCircle(cx + (cos(dotA) * r).toFloat(), cy + (sin(dotA) * r).toFloat(), 5.5f * d, fillP)
+                if (dailyFrac > 1.0f) {
+                    val extraR = r + 7f * d
+                    rect.set(cx - extraR, cy - extraR, cx + extraR, cy + extraR)
+                    strokeP.strokeWidth = 3f * d; strokeP.color = withAlpha(ringCol, 155)
+                    canvas.drawArc(rect, -90f, (dailyFrac - 1f).coerceIn(0.05f, 1f) * 360f, false, strokeP)
+                }
+                textP.textSize = 11f * d; textP.color = ink
+                val centerTxt = if (dailyFrac >= 10f) "×${ProExtendedUnitConverters.formatSmartValue(dailyFrac.toDouble(), 1)}" else "${(dailyFrac * 100f).roundToInt()}%"
+                canvas.drawText(centerTxt, cx, cy + 4f * d, textP)
             }
+
+            // 106: משקל זהב ומתכות — פירמידה דינמית של 1..6 מטילי זהב שגדלה ומתרחבת לפי המשקל!
             106 -> {
+                val grams = abs(liveBaseVal)
+                val n = logNorm(grams, -1.0, 12.0)
+                val barCount = if (grams <= 0.0) 1 else (1 + floor(n * 5.99f).toInt()).coerceIn(1, 6)
                 val gold = Color.parseColor("#FFD54F")
-                val goldDark = Color.parseColor("#FFB300")
-                path.reset()
-                path.moveTo(cx - 54f * d, cy + 20f * d)
-                path.lineTo(cx + 54f * d, cy + 20f * d)
-                path.lineTo(cx + 38f * d, cy - 22f * d)
-                path.lineTo(cx - 38f * d, cy - 22f * d)
-                path.close()
-                val shX = cx + sin(phase * 1.4f) * 45f * d
-                fillP.shader = LinearGradient(shX - 30f * d, cy - 22f * d, shX + 30f * d, cy + 20f * d, intArrayOf(goldDark, Color.WHITE, gold), floatArrayOf(0f, 0.5f, 1f), Shader.TileMode.CLAMP)
-                canvas.drawPath(path, fillP)
+                val goldDark = Color.parseColor("#F59E0B")
+
+                // מיקומי פירמידה (עד 3 בשורה תחתונה, 2 באמצע, 1 למעלה)
+                val barW = (52f + mantissaFrac(grams) * 14f) * d
+                val barH = 20f * d
+                val positions = when (barCount) {
+                    1 -> listOf(cx to cy)
+                    2 -> listOf((cx - barW * 0.56f) to (cy + 4f * d), (cx + barW * 0.56f) to (cy + 4f * d))
+                    3 -> listOf((cx - barW * 0.56f) to (cy + 12f * d), (cx + barW * 0.56f) to (cy + 12f * d), cx to (cy - 10f * d))
+                    4 -> listOf((cx - barW * 0.96f) to (cy + 13f * d), cx to (cy + 13f * d), (cx + barW * 0.96f) to (cy + 13f * d), cx to (cy - 9f * d))
+                    5 -> listOf((cx - barW * 0.96f) to (cy + 13f * d), cx to (cy + 13f * d), (cx + barW * 0.96f) to (cy + 13f * d), (cx - barW * 0.48f) to (cy - 9f * d), (cx + barW * 0.48f) to (cy - 9f * d))
+                    else -> listOf((cx - barW * 0.96f) to (cy + 18f * d), cx to (cy + 18f * d), (cx + barW * 0.96f) to (cy + 18f * d), (cx - barW * 0.48f) to (cy - 3f * d), (cx + barW * 0.48f) to (cy - 3f * d), cx to (cy - 24f * d))
+                }
+
+                // הילת זהב פרופורציונלית למשקל
+                val auraR = (30f + n * 58f) * d
+                fillP.shader = RadialGradient(cx, cy, auraR.coerceAtLeast(1f), withAlpha(gold, (35 + n * 65).toInt()), Color.TRANSPARENT, Shader.TileMode.CLAMP)
+                canvas.drawCircle(cx, cy, auraR, fillP)
                 fillP.shader = null
-                strokeP.strokeWidth = 1.8f * d; strokeP.color = goldDark
-                canvas.drawPath(path, strokeP)
-                textP.textSize = 11f * d; textP.color = Color.parseColor("#4E342E")
-                canvas.drawText("999.9 FINE GOLD", cx, cy + 6f * d, textP)
+
+                val shOffset = sin(phase * 1.4f + n * 4f) * 32f * d
+                for ((idx, pos) in positions.withIndex()) {
+                    val bx = pos.first; val by = pos.second
+                    path.reset()
+                    path.moveTo(bx - barW * 0.5f, by + barH * 0.5f)
+                    path.lineTo(bx + barW * 0.5f, by + barH * 0.5f)
+                    path.lineTo(bx + barW * 0.36f, by - barH * 0.5f)
+                    path.lineTo(bx - barW * 0.36f, by - barH * 0.5f)
+                    path.close()
+                    fillP.shader = LinearGradient(bx - barW * 0.4f + shOffset, by - barH * 0.5f, bx + barW * 0.4f + shOffset, by + barH * 0.5f, intArrayOf(goldDark, Color.WHITE, gold), floatArrayOf(0f, 0.5f, 1f), Shader.TileMode.CLAMP)
+                    canvas.drawPath(path, fillP)
+                    fillP.shader = null
+                    strokeP.strokeWidth = 1.5f * d; strokeP.color = goldDark
+                    canvas.drawPath(path, strokeP)
+                    if (idx == positions.lastIndex) {
+                        textP.textSize = 8.5f * d; textP.color = Color.parseColor("#4E342E")
+                        canvas.drawText("999.9", bx, by + 3.5f * d, textP)
+                    }
+                }
             }
+
+            // 107: נפח עץ ונגרות — קוטר הגזע, מספר הטבעות וערימת הקורות (1..6) גדלים לפי הנפח!
             107 -> {
-                val r = 28f * d
-                val lx = cx - 36f * d
-                fillP.color = withAlpha(Color.parseColor("#D7A86E"), 95)
+                val m3 = abs(liveBaseVal)
+                val n = logNorm(m3, -3.0, 9.0)
+                val r = (14f + n * 19f) * d
+                val lx = cx - 44f * d
+                fillP.color = withAlpha(Color.parseColor("#D7A86E"), 95 + (n * 55).toInt())
                 canvas.drawCircle(lx, cy, r, fillP)
-                strokeP.strokeWidth = 1.6f * d; strokeP.color = Color.parseColor("#8D6E63")
-                for (k in 1..4) canvas.drawCircle(lx, cy, r * (k / 4f), strokeP)
-                for (b in 0 until 3) {
-                    val ox = sin(phase * 1.2f + b) * 4f * d
-                    rect.set(cx + 6f * d + ox, cy - 24f * d + b * 17f * d, cx + 82f * d + ox, cy - 11f * d + b * 17f * d)
-                    fillP.color = withAlpha(c2, 130)
+                strokeP.strokeWidth = 1.5f * d; strokeP.color = Color.parseColor("#8D6E63")
+                val rings = (2 + (n * 5).toInt()).coerceIn(2, 7)
+                for (k in 1..rings) canvas.drawCircle(lx, cy, r * (k.toFloat() / rings), strokeP)
+
+                val planks = if (m3 <= 0.0) 1 else (1 + floor(n * 5.99f).toInt()).coerceIn(1, 6)
+                val plankH = 8.5f * d
+                val gap = 11.5f * d
+                val topY = cy - ((planks - 1) * gap) * 0.5f
+                val maxPlankW = (34f + n * 58f + mantissaFrac(m3) * 14f) * d
+                for (b in 0 until planks) {
+                    val ox = sin(phase * 1.1f + b) * 2.5f * d
+                    val py = topY + b * gap
+                    val pw = maxPlankW * (0.85f + (b % 2) * 0.15f)
+                    rect.set(cx + 2f * d + ox, py - plankH * 0.5f, cx + 2f * d + pw + ox, py + plankH * 0.5f)
+                    fillP.color = withAlpha(if (b % 2 == 0) c2 else c1, 130)
                     canvas.drawRoundRect(rect, 3f * d, 3f * d, fillP)
                     canvas.drawRoundRect(rect, 3f * d, 3f * d, strokeP)
                 }
             }
+
+            // 108: כושר קירור ומיזוג — מאוורר מסתובב + 2..6 זרמי קור + מד עוצמת קירור חי!
             108 -> {
-                val r = 26f * d
+                val watts = abs(liveBaseVal)
+                val n = logNorm(watts, 1.0, 9.0)
+                val fanX = cx - 44f * d
+                val r = (18f + n * 12f) * d
+                val rotDeg = phase * (32f + n * 110f) + mantissaFrac(watts) * 360f
+                val coolCol = if (n > 0.65f) Color.parseColor("#00B0FF") else c3
+
                 canvas.save()
-                canvas.rotate(phase * 45f, cx, cy)
-                strokeP.strokeWidth = 2.4f * d; strokeP.color = c3
-                for (i in 0 until 6) {
-                    val a = Math.toRadians(i * 60.0)
-                    canvas.drawLine(cx, cy, cx + (cos(a) * r).toFloat(), cy + (sin(a) * r).toFloat(), strokeP)
+                canvas.rotate(rotDeg, fanX, cy)
+                strokeP.strokeWidth = (2.0f + n * 1.2f) * d; strokeP.color = coolCol
+                val blades = if (n > 0.5f) 8 else 6
+                for (i in 0 until blades) {
+                    val a = Math.toRadians(i * (360.0 / blades))
+                    canvas.drawLine(fanX, cy, fanX + (cos(a) * r).toFloat(), cy + (sin(a) * r).toFloat(), strokeP)
                 }
                 canvas.restore()
-                for (s in -1..1) {
-                    val y = cy + s * 16f * d
-                    val off = ((phase * 30f * d) % (40f * d))
-                    strokeP.strokeWidth = 1.5f * d; strokeP.color = withAlpha(c1, 140)
-                    canvas.drawLine(cx + 38f * d + off * 0.5f, y, cx + 74f * d + off * 0.5f, y, strokeP)
+                fillP.color = c1
+                canvas.drawCircle(fanX, cy, 4.5f * d, fillP)
+
+                // 2..6 זרמי אוויר קר מתארכים עם העוצמה
+                val streams = (2 + floor(n * 4.99f).toInt()).coerceIn(2, 6)
+                val streamLen = (24f + n * 58f) * d
+                val sGap = 11f * d
+                val topS = cy - ((streams - 1) * sGap) * 0.5f
+                for (s in 0 until streams) {
+                    val sy = topS + s * sGap
+                    val off = ((phase * (24f + n * 48f) * d + s * 13f * d) % (26f * d))
+                    strokeP.strokeWidth = (1.6f + n * 1.2f) * d
+                    strokeP.color = withAlpha(if (s % 2 == 0) coolCol else c1, 150 + (n * 80).toInt())
+                    canvas.drawLine(fanX + r + 10f * d + off * 0.4f, sy, fanX + r + 10f * d + streamLen + off * 0.4f, sy, strokeP)
                 }
             }
+
+            // 109: זרימת אוויר (HVAC) — 2..9 קווי זרימה, אורך/עובי משתנים, קשתות לחץ ומד עוצמה חי!
             109 -> {
-                val speed = (1f + log10(abs(liveBaseVal * 3600.0).coerceAtLeast(1.0)).toFloat() * 0.5f).coerceIn(0.8f, 3.2f)
-                strokeP.strokeWidth = 2f * d
-                for (i in 0 until 5) {
-                    val y = cy - 26f * d + i * 13f * d
-                    val x = w * 0.10f + ((phase * 48f * speed * d + i * 42f * d) % (w * 0.72f))
-                    strokeP.color = withAlpha(if (i % 2 == 0) c1 else c3, 185)
-                    canvas.drawLine(x, y, x + 36f * d, y, strokeP)
+                val m3h = abs(liveBaseVal * 3600.0)
+                val n = logNorm(m3h, 0.0, 12.0)
+                val lineCount = (2 + floor(n * 7.99f).toInt()).coerceIn(2, 9)
+                val lineLen = (22f + n * 68f) * d
+                val speed = 0.8f + n * 3.2f
+                val gap = (56f / lineCount.coerceAtLeast(1)) * d
+                val startY = cy - ((lineCount - 1) * gap) * 0.5f
+
+                for (i in 0 until lineCount) {
+                    val y = startY + i * gap
+                    val travel = w * 0.72f
+                    val x = w * 0.08f + ((phase * 42f * speed * d + i * 33f * d + mantissaFrac(m3h) * travel) % travel)
+                    strokeP.strokeWidth = (1.5f + n * 1.8f) * d
+                    strokeP.color = withAlpha(if (i % 2 == 0) c1 else c3, 140 + (n * 95).toInt())
+                    canvas.drawLine(x, y, (x + lineLen).coerceAtMost(w * 0.90f), y, strokeP)
                 }
+
+                // מד עוצמת זרימה אופקי עדין בחלק העליון של הקנבס
+                val barL = w * 0.14f; val barR = w * 0.86f; val barY = 14f * d
+                strokeP.strokeWidth = 3.5f * d; strokeP.color = withAlpha(ink, 28)
+                canvas.drawLine(barL, barY, barR, barY, strokeP)
+                strokeP.color = c1
+                canvas.drawLine(barL, barY, barL + (barR - barL) * n.coerceAtLeast(0.05f), barY, strokeP)
             }
+
+            // 110: קשיות מים — טיפה שמשנה צבע + 1..16 יוני סידן/מגנזיום + סרגל דרגת קשיות
             110 -> {
                 val ppm = abs(liveBaseVal)
+                val n = logNorm(ppm, 0.5, 4.0)
                 val dropCol = when {
                     ppm < 60.0 -> Color.parseColor("#4FC3F7")
                     ppm < 180.0 -> Color.parseColor("#FFB74D")
@@ -1485,110 +1723,300 @@ private class ExtUnitHeroCanvasView(
                 path.moveTo(cx, cy - 32f * d)
                 path.quadTo(cx + 34f * d, cy + 8f * d, cx, cy + 32f * d)
                 path.quadTo(cx - 34f * d, cy + 8f * d, cx, cy - 32f * d)
-                fillP.color = withAlpha(dropCol, 70)
+                fillP.color = withAlpha(dropCol, 55 + (n * 70).toInt())
                 canvas.drawPath(path, fillP)
                 strokeP.strokeWidth = 2.2f * d; strokeP.color = dropCol
                 canvas.drawPath(path, strokeP)
-                val ions = (ppm / 45.0).toInt().coerceIn(1, 9)
+
+                val ions = if (ppm <= 0.0) 0 else (1 + floor(n * 15f).toInt()).coerceIn(1, 16)
                 fillP.color = dropCol
                 for (k in 0 until ions) {
-                    val ix = cx + sin(phase * 1.4f + k * 1.9f) * 11f * d
-                    val iy = cy + 6f * d + cos(phase * 1.1f + k * 2.3f) * 12f * d
-                    canvas.drawCircle(ix, iy, 2.6f * d, fillP)
+                    val ix = cx + sin(phase * 1.3f + k * 1.9f + mantissaFrac(ppm) * 6f) * 13f * d
+                    val iy = cy + 6f * d + cos(phase * 1.1f + k * 2.3f) * 14f * d
+                    canvas.drawCircle(ix, iy, 2.3f * d, fillP)
                 }
             }
+
+            // 111: מתח פנים — קימור המניסקוס, גובה טיפת המתח וחצי הכוח (← γ →) מגיבים ישירות ל-mN/m!
             111 -> {
+                val mnm = abs(liveBaseVal * 1000.0)
+                val n = logNorm(mnm, 0.0, 4.0)
+                val curveDepth = (-14f + n * 48f) * d // נמוך = שטוח, מים = קעור, כספית/גבוה = קימור חזק מאוד
+                val yBase = cy - 12f * d
                 path.reset()
-                path.moveTo(w * 0.14f, cy - 16f * d)
-                path.quadTo(cx, cy + 16f * d + sin(phase * 1.8f) * 7f * d, w * 0.86f, cy - 16f * d)
-                strokeP.strokeWidth = 3f * d; strokeP.color = c3
+                path.moveTo(w * 0.14f, yBase)
+                path.quadTo(cx, yBase + curveDepth + sin(phase * 1.6f) * 3f * d, w * 0.86f, yBase)
+
+                // מילוי שקוף מתחת לפני הנוזל
+                fillP.color = withAlpha(c3, 35 + (n * 55).toInt())
+                canvas.drawPath(path, fillP)
+                strokeP.strokeWidth = (2.2f + n * 2.4f) * d; strokeP.color = c3
                 canvas.drawPath(path, strokeP)
-                strokeP.strokeWidth = 2f * d; strokeP.color = c1
-                canvas.drawLine(w * 0.24f, cy - 10f * d, w * 0.40f, cy - 10f * d, strokeP)
-                canvas.drawLine(w * 0.76f, cy - 10f * d, w * 0.60f, cy - 10f * d, strokeP)
+
+                // חצי מתח פנים משני הצדדים שמתארכים עם עוצמת המתח
+                val arrowLen = (18f + n * 54f) * d
+                val ay = yBase - 10f * d
+                strokeP.strokeWidth = (1.8f + n * 1.2f) * d; strokeP.color = c1
+                // חץ שמאלי ←
+                canvas.drawLine(cx - 10f * d, ay, cx - 10f * d - arrowLen, ay, strokeP)
+                canvas.drawLine(cx - 10f * d - arrowLen, ay, cx - 4f * d - arrowLen, ay - 4f * d, strokeP)
+                canvas.drawLine(cx - 10f * d - arrowLen, ay, cx - 4f * d - arrowLen, ay + 4f * d, strokeP)
+                // חץ ימני →
+                canvas.drawLine(cx + 10f * d, ay, cx + 10f * d + arrowLen, ay, strokeP)
+                canvas.drawLine(cx + 10f * d + arrowLen, ay, cx + 4f * d + arrowLen, ay - 4f * d, strokeP)
+                canvas.drawLine(cx + 10f * d + arrowLen, ay, cx + 4f * d + arrowLen, ay + 4f * d, strokeP)
             }
+
+            // 112: פרמיטיביות (ε) ופרמאביליות (µ) — צפיפות קווי שדה ותווך דיאלקטרי / לולאות שטף מגנטי!
             112 -> {
-                val lx = cx - 44f * d; val rx = cx + 44f * d
-                strokeP.strokeWidth = 4f * d; strokeP.color = c1
-                canvas.drawLine(lx, cy - 28f * d, lx, cy + 28f * d, strokeP)
-                strokeP.color = c2
-                canvas.drawLine(rx, cy - 28f * d, rx, cy + 28f * d, strokeP)
-                strokeP.strokeWidth = 1.6f * d; strokeP.color = withAlpha(c3, 185)
-                for (k in -2..2) {
-                    val y = cy + k * 11f * d
-                    canvas.drawLine(lx + 6f * d, y, rx - 6f * d, y, strokeP)
-                    val px = lx + 8f * d + ((phase * 36f * d + (k + 2) * 14f * d) % (rx - lx - 16f * d))
-                    fillP.color = c3
-                    canvas.drawCircle(px, y, 2.8f * d, fillP)
+                if (activeGroupIdx == 0) {
+                    // פרמיטיביות ε: קבל + תווך דיאלקטרי מתמלא + 2..9 קווי שדה חשמלי
+                    val epsR = abs(liveBaseVal / 8.854187817e-12)
+                    val n = logNorm(epsR, -1.0, 9.0)
+                    val lx = cx - (34f + n * 22f) * d
+                    val rx = cx + (34f + n * 22f) * d
+
+                    // תווך דיאלקטרי בין הלוחות שאטימותו גדלה עם εᵣ
+                    rect.set(lx + 4f * d, cy - 28f * d, rx - 4f * d, cy + 28f * d)
+                    fillP.color = withAlpha(c3, (18 + n * 80).toInt())
+                    canvas.drawRoundRect(rect, 6f * d, 6f * d, fillP)
+
+                    strokeP.strokeWidth = (3.2f + n * 1.8f) * d; strokeP.color = c1
+                    canvas.drawLine(lx, cy - 28f * d, lx, cy + 28f * d, strokeP)
+                    strokeP.color = c2
+                    canvas.drawLine(rx, cy - 28f * d, rx, cy + 28f * d, strokeP)
+
+                    val lines = (2 + floor(n * 7.99f).toInt()).coerceIn(2, 9)
+                    val gap = (50f / (lines - 1).coerceAtLeast(1)) * d
+                    val topY = cy - 25f * d
+                    strokeP.strokeWidth = 1.4f * d
+                    for (k in 0 until lines) {
+                        val y = topY + k * gap
+                        strokeP.color = withAlpha(c3, 120 + (n * 110).toInt())
+                        canvas.drawLine(lx + 6f * d, y, rx - 6f * d, y, strokeP)
+                        val span = (rx - lx - 14f * d).coerceAtLeast(4f)
+                        val px = lx + 7f * d + ((phase * (28f + n * 40f) * d + k * 11f * d + mantissaFrac(epsR) * span) % span)
+                        fillP.color = c1
+                        canvas.drawCircle(px, y, 2.6f * d, fillP)
+                    }
+                } else {
+                    // פרמאביליות µ: ליבה מגנטית עם 2..8 לולאות שטף מגנטי מתרחבות
+                    val muR = abs(liveBaseVal / 1.2566370614e-6)
+                    val n = logNorm(muR, -1.0, 9.0)
+                    val loops = (2 + floor(n * 6.99f).toInt()).coerceIn(2, 8)
+                    val coreW = 48f * d; val coreH = 14f * d
+                    rect.set(cx - coreW * 0.5f, cy - coreH * 0.5f, cx + coreW * 0.5f, cy + coreH * 0.5f)
+                    fillP.color = withAlpha(c1, 80 + (n * 120).toInt())
+                    canvas.drawRoundRect(rect, 4f * d, 4f * d, fillP)
+                    strokeP.strokeWidth = 1.6f * d; strokeP.color = c2
+                    canvas.drawRoundRect(rect, 4f * d, 4f * d, strokeP)
+
+                    for (k in 1..loops) {
+                        val rx = coreW * 0.55f + k * (7f + n * 5f) * d
+                        val ry = coreH * 0.7f + k * (4.2f + n * 2.8f) * d
+                        rect.set(cx - rx, cy - ry, cx + rx, cy + ry)
+                        strokeP.strokeWidth = 1.3f * d
+                        strokeP.color = withAlpha(c3, (170 - k * 12).coerceIn(55, 220))
+                        canvas.drawOval(rect, strokeP)
+                    }
                 }
             }
+
+            // 113: מומנט אינרציה — עובי החישוק, רדיוס הגלגל, גודל המשקולות וקשת האנרגיה מגיבים ל-kg·m²!
             113 -> {
-                val r = 30f * d
+                val kgm2 = abs(liveBaseVal)
+                val n = logNorm(kgm2, -4.0, 6.0)
+                val r = (18f + n * 16f) * d
+                val rimW = (2.2f + n * 5.2f) * d
+                val weightR = (3.5f + n * 5.0f) * d
+                val rotDeg = phase * (75f - n * 48f).coerceAtLeast(18f) + mantissaFrac(kgm2) * 360f
+
+                // קשת אנרגיית אינרציה חיצונית
+                val outerR = r + 7f * d
+                rect.set(cx - outerR, cy - outerR, cx + outerR, cy + outerR)
+                strokeP.strokeWidth = 2.6f * d; strokeP.color = withAlpha(c3, 165)
+                canvas.drawArc(rect, -90f, 30f + n * 310f, false, strokeP)
+
                 canvas.save()
-                canvas.rotate(phase * 52f, cx, cy)
-                strokeP.strokeWidth = 3f * d; strokeP.color = c1
+                canvas.rotate(rotDeg, cx, cy)
+                strokeP.strokeWidth = rimW; strokeP.color = c1
                 canvas.drawCircle(cx, cy, r, strokeP)
+                strokeP.strokeWidth = 2.0f * d
                 canvas.drawLine(cx - r, cy, cx + r, cy, strokeP)
                 canvas.drawLine(cx, cy - r, cx, cy + r, strokeP)
                 fillP.color = c2
-                canvas.drawCircle(cx - r, cy, 5.5f * d, fillP)
-                canvas.drawCircle(cx + r, cy, 5.5f * d, fillP)
+                canvas.drawCircle(cx - r, cy, weightR, fillP)
+                canvas.drawCircle(cx + r, cy, weightR, fillP)
+                canvas.drawCircle(cx, cy - r, weightR, fillP)
+                canvas.drawCircle(cx, cy + r, weightR, fillP)
                 canvas.restore()
             }
+
+            // 114: צפיפות חום (J/m²) וקיבול חום (J/K) — תגובה שונה לכל תת-קטגוריה!
             114 -> {
-                strokeP.strokeWidth = 3.5f * d; strokeP.color = pal.warning
-                canvas.drawLine(w * 0.22f, cy + 24f * d, w * 0.78f, cy + 24f * d, strokeP)
-                strokeP.strokeWidth = 2f * d
-                for (i in -2..2) {
-                    val bx = cx + i * 24f * d
-                    path.reset()
-                    var y = cy + 18f * d
-                    var first = true
-                    while (y >= cy - 28f * d) {
-                        val x = bx + sin(y * 0.14f + phase * 2.2f + i) * 6f * d
-                        if (first) { path.moveTo(x, y); first = false } else path.lineTo(x, y)
-                        y -= 5f * d
+                if (activeGroupIdx == 0) {
+                    // צפיפות חום: 2..9 גלי חום עולים + צבע פלטה מתחמם
+                    val n = logNorm(liveBaseVal, 0.0, 9.0)
+                    val heatCol = when {
+                        n < 0.35f -> pal.warning
+                        n < 0.70f -> Color.parseColor("#FF7043")
+                        else -> Color.parseColor("#EF5350")
                     }
-                    strokeP.color = withAlpha(if (i % 2 == 0) pal.warning else c1, 185)
-                    canvas.drawPath(path, strokeP)
+                    strokeP.strokeWidth = (3f + n * 3f) * d; strokeP.color = heatCol
+                    canvas.drawLine(w * 0.16f, cy + 25f * d, w * 0.84f, cy + 25f * d, strokeP)
+
+                    val waves = (2 + floor(n * 7.99f).toInt()).coerceIn(2, 9)
+                    val span = w * 0.60f
+                    val startX = cx - span * 0.5f
+                    val plumeH = (22f + n * 34f) * d
+                    strokeP.strokeWidth = (1.6f + n * 1.1f) * d
+                    for (i in 0 until waves) {
+                        val bx = if (waves == 1) cx else startX + (span * i / (waves - 1))
+                        path.reset()
+                        var y = cy + 20f * d
+                        val topY = cy + 20f * d - plumeH
+                        var first = true
+                        while (y >= topY) {
+                            val x = bx + sin(y * 0.16f + phase * (1.8f + n * 2f) + i) * (4f + n * 5f) * d
+                            if (first) { path.moveTo(x, y); first = false } else path.lineTo(x, y)
+                            y -= 4f * d
+                        }
+                        strokeP.color = withAlpha(if (i % 2 == 0) heatCol else c1, 145 + (n * 95).toInt())
+                        canvas.drawPath(path, strokeP)
+                    }
+                } else {
+                    // קיבול חום (J/K): מכל אגירה תרמי + מדחום שמתמלאים לפי הקלט
+                    val n = logNorm(liveBaseVal, 0.0, 8.0)
+                    val tankW = 92f * d; val tankH = 48f * d
+                    rect.set(cx - tankW * 0.5f, cy - tankH * 0.5f, cx + tankW * 0.5f, cy + tankH * 0.5f)
+                    strokeP.strokeWidth = 2f * d; strokeP.color = c1
+                    canvas.drawRoundRect(rect, 10f * d, 10f * d, strokeP)
+                    val fillH = (tankH - 6f * d) * n.coerceAtLeast(0.08f)
+                    val fillRect = RectF(rect.left + 3f * d, rect.bottom - 3f * d - fillH, rect.right - 3f * d, rect.bottom - 3f * d)
+                    fillP.color = withAlpha(pal.warning, 140 + (n * 90).toInt())
+                    canvas.drawRoundRect(fillRect, 7f * d, 7f * d, fillP)
                 }
             }
+
+            // 115: נפח סגולי וצפיפות — קו מים + צפיפות מולקולות (3..28) + חיווי ציפה/שקיעה
             115 -> {
-                rect.set(cx - 56f * d, cy - 26f * d, cx + 56f * d, cy + 26f * d)
+                rect.set(cx - 58f * d, cy - 28f * d, cx + 58f * d, cy + 28f * d)
                 strokeP.strokeWidth = 1.8f * d; strokeP.color = c1
                 canvas.drawRoundRect(rect, 10f * d, 10f * d, strokeP)
-                val rho = if (liveBaseVal > 0) 1.0 / liveBaseVal else 1000.0
-                val count = (log10(rho.coerceAtLeast(1.0)) * 5.0).toInt().coerceIn(5, 22)
+
+                val rho = if (liveBaseVal > 0.0) 1.0 / liveBaseVal else 0.0
+                val n = logNorm(rho, -1.0, 5.0)
+                val count = if (rho <= 0.0) 3 else (3 + floor(n * 25f).toInt()).coerceIn(3, 28)
+
+                // קו ייחוס מים (1000 kg/m³)
+                strokeP.strokeWidth = 1.1f * d; strokeP.color = withAlpha(c3, 120)
+                canvas.drawLine(rect.left + 4f * d, cy, rect.right - 4f * d, cy, strokeP)
+
+                val yBias = if (rho in 0.0001..999.9) -8f * d else if (rho > 1000.1) 8f * d else 0f
                 for (k in 0 until count) {
-                    val px = cx + sin(phase * 1.1f + k * 2.1f) * 44f * d
-                    val py = cy + cos(phase * 1.3f + k * 1.7f) * 18f * d
+                    val px = cx + sin(phase * 1.1f + k * 2.1f + mantissaFrac(rho) * 6f) * 46f * d
+                    val py = (cy + yBias + cos(phase * 1.3f + k * 1.7f) * 14f * d).coerceIn(rect.top + 5f * d, rect.bottom - 5f * d)
                     fillP.color = if (k % 2 == 0) c1 else c3
-                    canvas.drawCircle(px, py, 3.2f * d, fillP)
+                    canvas.drawCircle(px, py, 3.0f * d, fillP)
                 }
             }
+
+            // 116: מהירות ותאוצה זוויתית — מד סל״ד/טכומטר עם קשת מתמלאת ומחוג שמצביע על הקלט!
             116 -> {
-                val r = 30f * d
-                val spd = (1f + log10(abs(liveBaseVal).coerceAtLeast(1.0)).toFloat()).coerceIn(1f, 4f)
-                strokeP.strokeWidth = 2.4f * d; strokeP.color = withAlpha(c1, 130)
+                val n = logNorm(liveBaseVal, -1.0, 7.0)
+                val r = 32f * d
+                val sweepMax = 260f
+                val activeSweep = (8f + n * (sweepMax - 8f)).coerceIn(8f, sweepMax)
+
                 rect.set(cx - r, cy - r, cx + r, cy + r)
-                canvas.drawArc(rect, 140f, 260f, false, strokeP)
-                val ang = phase * 2.2f * spd
+                strokeP.strokeWidth = 5f * d; strokeP.color = withAlpha(ink, 32)
+                canvas.drawArc(rect, 140f, sweepMax, false, strokeP)
+
+                strokeP.color = if (activeGroupIdx == 0) c1 else c2
+                canvas.drawArc(rect, 140f, activeSweep, false, strokeP)
+
+                if (activeGroupIdx == 1) {
+                    val innerR = r - 7f * d
+                    rect.set(cx - innerR, cy - innerR, cx + innerR, cy + innerR)
+                    strokeP.strokeWidth = 2.4f * d; strokeP.color = withAlpha(pal.warning, 190)
+                    canvas.drawArc(rect, 140f, activeSweep, false, strokeP)
+                }
+
+                // מחוג מדויק לקלט + רעד קל
+                val needleDeg = 140.0 + activeSweep + sin(phase * (2f + n * 4f)) * 2.5
+                val needleRad = Math.toRadians(needleDeg)
                 strokeP.color = c2; strokeP.strokeWidth = 2.8f * d
-                canvas.drawLine(cx, cy, cx + cos(ang) * r * 0.85f, cy + sin(ang) * r * 0.85f, strokeP)
+                canvas.drawLine(cx, cy, cx + (cos(needleRad) * r * 0.86f).toFloat(), cy + (sin(needleRad) * r * 0.86f).toFloat(), strokeP)
                 fillP.color = c1
-                canvas.drawCircle(cx, cy, 4.5f * d, fillP)
+                canvas.drawCircle(cx, cy, 4.8f * d, fillP)
             }
+
+            // 117: מטען (Q), צפיפות זרם (J) ומוליכות (G) — 3 תצוגות מגיבות נפרדות!
             else -> {
-                val r = 28f * d
-                strokeP.strokeWidth = 3f * d; strokeP.color = pal.warning
-                fillP.color = withAlpha(pal.warning, 42)
-                canvas.drawCircle(cx, cy, r, fillP)
-                canvas.drawCircle(cx, cy, r, strokeP)
-                for (k in 0 until 7) {
-                    val a = phase * 1.6f + k * (2f * PI.toFloat() / 7f)
-                    val rr = (10f + (k % 2) * 10f) * d
-                    fillP.color = c1
-                    canvas.drawCircle(cx + cos(a) * rr, cy + sin(a) * rr, 3.3f * d, fillP)
+                when (activeGroupIdx) {
+                    0 -> { // מטען (Q): תא סוללה מתמלא + 3..18 מטענים נעים
+                        val n = logNorm(liveBaseVal, -3.0, 8.0)
+                        val bw = 78f * d; val bh = 38f * d
+                        rect.set(cx - bw * 0.5f, cy - bh * 0.5f, cx + bw * 0.5f, cy + bh * 0.5f)
+                        strokeP.strokeWidth = 2.2f * d; strokeP.color = c1
+                        canvas.drawRoundRect(rect, 8f * d, 8f * d, strokeP)
+                        // קוטב חיובי של הסוללה
+                        fillP.color = c1
+                        canvas.drawRoundRect(RectF(rect.right, cy - 9f * d, rect.right + 6f * d, cy + 9f * d), 3f * d, 3f * d, fillP)
+
+                        val fillW = (bw - 8f * d) * n.coerceAtLeast(0.06f)
+                        val innerRect = RectF(rect.left + 4f * d, rect.top + 4f * d, rect.left + 4f * d + fillW, rect.bottom - 4f * d)
+                        fillP.color = withAlpha(pal.positive, 125 + (n * 100).toInt())
+                        canvas.drawRoundRect(innerRect, 5f * d, 5f * d, fillP)
+
+                        val dots = (3 + floor(n * 14f).toInt()).coerceIn(3, 17)
+                        fillP.color = c2
+                        for (k in 0 until dots) {
+                            val px = innerRect.left + 4f * d + ((k * 13f * d + phase * 18f * d) % (fillW - 6f * d).coerceAtLeast(4f))
+                            val py = cy + sin(phase * 1.5f + k * 1.7f) * 10f * d
+                            canvas.drawCircle(px, py, 2.3f * d, fillP)
+                        }
+                    }
+                    1 -> { // צפיפות זרם (J): חתך נחושת שמשנה צבע בטיחות + 3..24 אלקטרונים
+                        val amm2 = abs(liveBaseVal) / 1e6
+                        val n = logNorm(amm2, -2.0, 4.0)
+                        val wireCol = when {
+                            amm2 <= 4.0 -> pal.positive
+                            amm2 <= 7.0 -> pal.warning
+                            else -> Color.parseColor("#EF5350")
+                        }
+                        val r = (22f + n * 10f) * d
+                        fillP.color = withAlpha(wireCol, 45 + (n * 70).toInt())
+                        canvas.drawCircle(cx, cy, r, fillP)
+                        strokeP.strokeWidth = 3f * d; strokeP.color = wireCol
+                        canvas.drawCircle(cx, cy, r, strokeP)
+
+                        val dots = (3 + floor(n * 21f).toInt()).coerceIn(3, 24)
+                        fillP.color = wireCol
+                        for (k in 0 until dots) {
+                            val a = phase * (1.2f + n * 2.5f) + k * (2f * PI.toFloat() / dots) + mantissaFrac(amm2) * 6f
+                            val rr = r * (0.28f + ((k % 3) * 0.24f))
+                            canvas.drawCircle(cx + cos(a) * rr, cy + sin(a) * rr, 2.6f * d, fillP)
+                        }
+                    }
+                    else -> { // מוליכות (G): תעלה מוליכה מתרחבת + 2..14 נושאי מטען זורמים
+                        val n = logNorm(liveBaseVal, -6.0, 5.0)
+                        val pipeH = (12f + n * 34f) * d
+                        rect.set(w * 0.14f, cy - pipeH * 0.5f, w * 0.86f, cy + pipeH * 0.5f)
+                        fillP.color = withAlpha(c1, 35 + (n * 65).toInt())
+                        canvas.drawRoundRect(rect, pipeH * 0.45f, pipeH * 0.45f, fillP)
+                        strokeP.strokeWidth = 2f * d; strokeP.color = c1
+                        canvas.drawRoundRect(rect, pipeH * 0.45f, pipeH * 0.45f, strokeP)
+
+                        val carriers = (2 + floor(n * 12f).toInt()).coerceIn(2, 14)
+                        val span = rect.width() - 16f * d
+                        fillP.color = c2
+                        for (k in 0 until carriers) {
+                            val px = rect.left + 8f * d + ((phase * (35f + n * 55f) * d + k * (span / carriers) + mantissaFrac(liveBaseVal) * span) % span)
+                            val py = cy + sin(k * 2.1f) * (pipeH * 0.28f)
+                            canvas.drawCircle(px, py, 3f * d, fillP)
+                        }
+                    }
                 }
             }
         }
@@ -1671,7 +2099,7 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
     headerCard.addView(formulaTv)
     root.addView(headerCard)
 
-    // 2. סרגל תת-קטגוריות (מופיע רק בכלים עם יותר מגודל פיזיקלי אחד: 112, 114, 116, 117)
+    // 2. סרגל תת-קטגוריות (מופיע בכלים משולבים: 112, 114, 116, 117)
     val subGroupTabsRow = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER
@@ -1682,11 +2110,11 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
     }
     root.addView(subGroupTabsRow)
 
-    // 3. קנבס מונפש אישי לכלי
+    // 3. קנבס אינטראקטיבי מגיב בזמן אמת
     val heroCanvas = ExtUnitHeroCanvasView(this, spec.tabIndex, currentGroup()).apply {
         layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
-            dp(136f)
+            dp(140f)
         ).apply { bottomMargin = dp(12f) }
     }
     root.addView(heroCanvas)
@@ -1695,7 +2123,7 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
     var toIdx = currentGroup().defaultTo.coerceIn(0, currentGroup().units.lastIndex)
     var isProgrammaticText = false
 
-    // 4. שורת דוגמאות מהירות (Presets) — מתעדכנת לפי תת-הקטגוריה
+    // 4. שורת דוגמאות מהירות (Presets)
     val presetScroll = HorizontalScrollView(this).apply {
         isHorizontalScrollBarEnabled = false
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
@@ -1718,7 +2146,6 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
     lateinit var fromBtn: TextView
     lateinit var toBtn: TextView
 
-    // כרטיס התוצאה עטוף ב-LinearLayout כדי לשמור על עיצוב כרטיס נקי גם במצב המינימליסטי
     val resultCard = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(16f), dp(14f), dp(16f), dp(14f))
@@ -1755,6 +2182,17 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
     }
 
+    fun parseNumericOrExpression(raw: String): Double {
+        val cleaned = raw.trim().replace(",", ".")
+        if (cleaned.isEmpty()) return 0.0
+        cleaned.toDoubleOrNull()?.let { return it }
+        return try {
+            Utils.evalMathExpression(cleaned)
+        } catch (_: Throwable) {
+            0.0
+        }
+    }
+
     fun recalculateAll() {
         val grp = currentGroup()
         fromIdx = fromIdx.coerceIn(0, grp.units.lastIndex)
@@ -1768,11 +2206,11 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
         toBtn.text = "ליחידה: ${ProExtendedUnitConverters.formatUnitDisplayLabel(toU)}"
         inputBox.hint = "\u200Fהזן ערך להמרה ($hintLbl)"
 
-        val rawVal = inputBox.text.toString().replace(",", ".").toDoubleOrNull() ?: 0.0
+        val rawVal = parseNumericOrExpression(inputBox.text.toString())
         val baseVal = fromU.toBase(rawVal)
         val resVal = toU.fromBase(baseVal)
 
-        heroCanvas.updateLiveData(rawVal, baseVal, resVal, fromU.symbol, toU.symbol)
+        heroCanvas.updateLiveData(rawVal, baseVal, resVal, fromU.symbol, toU.symbol, activeGroupIdx)
 
         val formattedIn = ProExtendedUnitConverters.formatSmartValue(rawVal, calcPrecision)
         val formattedOut = ProExtendedUnitConverters.formatSmartValue(resVal, calcPrecision)
@@ -1793,7 +2231,6 @@ fun MainActivity.createProExtendedUnitScreen(tabIndex: Int): View {
             insight
         )
 
-        // טבלת השוואה מקבילה ליחידות התואמות פיזיקלית בלבד
         allUnitsContainer.removeAllViews()
         allUnitsContainer.addView(TextView(this).apply {
             text = "המרה מקבילה לכל ${grp.units.size} היחידות (לחץ להעתקה):"
