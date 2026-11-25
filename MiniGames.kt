@@ -1,6 +1,8 @@
 package com.example.calculator
 
-import android.graphics.Color
+import android.animation.ValueAnimator
+import android.content.Context
+import android.graphics.*
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
@@ -9,38 +11,51 @@ import android.os.Handler
 import android.os.Looper
 import android.view.HapticFeedbackConstants
 import android.view.View
-import android.widget.TextView
+import android.view.ViewGroup
+import android.view.animation.LinearInterpolator
+import android.widget.LinearLayout
 import android.widget.Toast
+import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.math.PI
-import kotlin.math.ceil
-import kotlin.math.sin
+import kotlin.math.*
 import kotlin.random.Random
 
 object MiniGameEngine {
 
-    private data class GameThemePalette(
-        val displayPrimary: Int,
-        val displaySub: Int,
-        val headerAccent: Int,
+    internal data class GameThemePalette(
+        val cardBgTop: Int,
+        val cardBgBottom: Int,
+        val cardBorder: Int,
+        val arenaBg: Int,
+        val arenaGrid: Int,
+        val inkPrimary: Int,
+        val inkSecondary: Int,
         val playerColor: Int,
         val enemyColor: Int,
         val bonusColor: Int,
         val controlAccent: Int,
-        val glowShadowColor: Int,
-        val glowRadius: Float,
+        val laserColor: Int,
+        val glowColor: Int,
         val isMinimalist: Boolean,
-        val isClean: Boolean
+        val isAurora: Boolean,
+        val isGlass: Boolean
     )
 
     var isActive = false
-    private var currentGame = ""
+    internal var currentGame = ""
     private val handler = Handler(Looper.getMainLooper())
     private var gameLoop: Runnable? = null
     private var cooldownTicker: Runnable? = null
     private var roundResetRunnable: Runnable? = null
+    private var gameOverDelayRunnable: Runnable? = null
+    private var gameEnding = false
 
-    // ניהול אודיו בטוח ללא דליפות או קריסות AudioTrack
+    // מארח הקנבס הווקטורי בתוך צג המחשבון (displayCard)
+    private var vectorStageView: MiniGameVectorStageView? = null
+    private var attachedDisplayCard: LinearLayout? = null
+    private var savedDisplayPadding: IntArray? = null
+
+    // נגני אודיו — הפרדה מלאה בין לולאת המנוע לצלילי אפקטים חד-פעמיים
     private var engineLoopPlayer: MediaPlayer? = null
     private var currentEngineStage = 0
     private var sfxPlayer: MediaPlayer? = null
@@ -48,33 +63,47 @@ object MiniGameEngine {
     @Volatile private var synthEngineRunning = false
 
     // איקס עיגול חכם (1337)
-    private val tttBoard = Array(9) { "" }
+    internal val tttBoard = Array(9) { "" }
+    internal var tttStatusText = ""
+    internal var tttWinningLine: IntArray? = null
     private var tttRoundLocked = false
 
     // פולשי החשבון (8080)
-    private var invaderScore = 0
-    private var invaderTrack = mutableListOf<String>()
+    internal var invaderScore = 0
+    internal var invaderTrack = mutableListOf<String>()
+    internal var invaderLaserCol = -1
+    internal var invaderLaserTime = 0L
     private val invaderSymbols = listOf("+", "−", "×", "÷", "sin", "cos", "tan", "√")
 
     // מירוץ מכוניות (5555)
-    private var carLane = 1 // 0 = עליון (8), 1 = אמצעי, 2 = תחתון (2)
-    private var racerScore = 0
-    private val racerTracks = Array(3) { MutableList(5) { "." } }
-    private var lastShotTime = 0L
+    internal var carLane = 1 // 0 = עליון (8), 1 = אמצעי, 2 = תחתון (2)
+    internal var racerScore = 0
+    internal val racerTracks = Array(3) { MutableList(5) { "." } }
+    internal var lastShotTime = 0L
+    internal var racerLaserLane = -1
+    internal var racerLaserEndCol = 0
+    internal var racerLaserTime = 0L
+    internal var crashAnimStartTime = 0L
+    internal var crashLane = 1
     private var lastCooldownToastTime = 0L
-    private val SHOT_COOLDOWN_MS = 3000L
+    internal const val SHOT_COOLDOWN_MS = 3000L
     private var pendingGuardedStarLane = -1
 
     // נטרול פצצה (1010)
-    private var bombTimeLeft = 15
-    private var bombScore = 0
-    private var bombLhs = 2
-    private var bombRhs = 3
-    private var bombTarget = 6
+    internal var bombTimeLeft = 15
+    internal var bombScore = 0
+    internal var bombLhs = 2
+    internal var bombRhs = 3
+    internal var bombTarget = 6
+    internal var bombShakeTime = 0L
     private var expectedOp = "×"
 
     // מסיבת חיות מצפצפות (7777)
     var isAnimalParty = false
+    internal var animalTimeLeft = 15
+    internal var animalTotalTime = 15
+    internal var animalActiveIdx = 0
+    internal var animalBounceTime = 0L
     private val savedKeyLabels = mutableMapOf<String, CharSequence>()
     private val animalEmojis = listOf(
         "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼",
@@ -82,102 +111,148 @@ object MiniGameEngine {
     )
 
     // =========================================================================
-    // התאמה דינמית לכל 4 ערכות הנושא (מינימליסטי / זוהר / זכוכית / קלאסי)
+    // פלטת צבעים וקטורית מותאמת לכל 4 ערכות הנושא
     // =========================================================================
-    private fun resolvePalette(activity: MainActivity): GameThemePalette {
+    internal fun resolvePalette(activity: MainActivity): GameThemePalette {
         val isMin = activity.isMinimalistMode
         val isAur = activity.isAuroraMode
         val isGlass = activity.isIosGlassMode
-        val dispBg = if (isMin) MinimalistTheme.getBackgroundColor(activity) else Utils.lightenColor(activity.bgColor, 0.07f)
 
         return when {
             isMin -> GameThemePalette(
-                displayPrimary = MinimalistTheme.ensureReadableTextOnBg(MinimalistTheme.TEXT_CHARCOAL, dispBg, 2.5),
-                displaySub = MinimalistTheme.TEXT_MUTED_GREY,
-                headerAccent = MinimalistTheme.ensureReadableTextOnBg(Color.parseColor("#2E6F5E"), dispBg, 2.3),
+                cardBgTop = MinimalistTheme.CARD_WHITE,
+                cardBgBottom = MinimalistTheme.BG_CREAM,
+                cardBorder = MinimalistTheme.resolveBorderStrokeColor(activity, Color.parseColor("#DDD6CC")),
+                arenaBg = Color.parseColor("#F3EFE8"),
+                arenaGrid = Color.argb(32, 44, 44, 44),
+                inkPrimary = MinimalistTheme.TEXT_CHARCOAL,
+                inkSecondary = MinimalistTheme.TEXT_MUTED_GREY,
                 playerColor = Color.parseColor("#2E7D32"),
-                enemyColor = MinimalistTheme.ALERT_RED_TEXT,
-                bonusColor = Color.parseColor("#B26A00"),
-                controlAccent = Color.parseColor("#1565C0"),
-                glowShadowColor = Color.TRANSPARENT,
-                glowRadius = 0f,
+                enemyColor = Color.parseColor("#C62828"),
+                bonusColor = Color.parseColor("#C67C00"),
+                controlAccent = Color.parseColor("#1976D2"),
+                laserColor = Color.parseColor("#00897B"),
+                glowColor = Color.TRANSPARENT,
                 isMinimalist = true,
-                isClean = true
+                isAurora = false,
+                isGlass = false
             )
             isAur -> GameThemePalette(
-                displayPrimary = Color.WHITE,
-                displaySub = AuroraBorealisTheme.EXPRESSION_CYAN_GREY,
-                headerAccent = AuroraBorealisTheme.AURORA_PRIMARY,
+                cardBgTop = AuroraBorealisTheme.EMERALD_NIGHT,
+                cardBgBottom = Color.parseColor("#081B26"),
+                cardBorder = Color.argb(185, Color.red(AuroraBorealisTheme.AURORA_PRIMARY), Color.green(AuroraBorealisTheme.AURORA_PRIMARY), Color.blue(AuroraBorealisTheme.AURORA_PRIMARY)),
+                arenaBg = Color.argb(170, 5, 16, 24),
+                arenaGrid = Color.argb(38, 0, 245, 212),
+                inkPrimary = Color.WHITE,
+                inkSecondary = AuroraBorealisTheme.EXPRESSION_CYAN_GREY,
                 playerColor = Color.parseColor("#00F5D4"),
                 enemyColor = Color.parseColor("#FF4D8D"),
                 bonusColor = Color.parseColor("#FFD166"),
-                controlAccent = AuroraBorealisTheme.AURORA_PRIMARY,
-                glowShadowColor = Color.argb(145, Color.red(AuroraBorealisTheme.AURORA_PRIMARY), Color.green(AuroraBorealisTheme.AURORA_PRIMARY), Color.blue(AuroraBorealisTheme.AURORA_PRIMARY)),
-                glowRadius = 10f,
+                controlAccent = Color.parseColor("#38BDF8"),
+                laserColor = Color.parseColor("#00F5D4"),
+                glowColor = AuroraBorealisTheme.AURORA_PRIMARY,
                 isMinimalist = false,
-                isClean = true
+                isAurora = true,
+                isGlass = false
             )
             isGlass -> GameThemePalette(
-                displayPrimary = Color.WHITE,
-                displaySub = Color.parseColor("#B8C7D9"),
-                headerAccent = MinimalistTheme.ensureReadableTextOnBg(activity.primaryColor, dispBg, 2.2),
+                cardBgTop = Color.argb(82, 255, 255, 255),
+                cardBgBottom = Color.argb(34, 255, 255, 255),
+                cardBorder = Color.argb(135, 255, 255, 255),
+                arenaBg = Color.argb(56, 12, 20, 34),
+                arenaGrid = Color.argb(36, 255, 255, 255),
+                inkPrimary = Color.WHITE,
+                inkSecondary = Color.parseColor("#CBD5E1"),
                 playerColor = Color.parseColor("#34D399"),
                 enemyColor = Color.parseColor("#FB7185"),
                 bonusColor = Color.parseColor("#FBBF24"),
                 controlAccent = Color.parseColor("#7DD3FC"),
-                glowShadowColor = Color.argb(100, 0, 0, 0),
-                glowRadius = 6f,
+                laserColor = Color.parseColor("#38BDF8"),
+                glowColor = Color.argb(110, 255, 255, 255),
                 isMinimalist = false,
-                isClean = true
+                isAurora = false,
+                isGlass = true
             )
-            else -> GameThemePalette(
-                displayPrimary = MinimalistTheme.ensureReadableTextOnBg(
-                    MinimalistTheme.resolveDisplayTextColor(activity), dispBg, 2.5
-                ),
-                displaySub = Color.parseColor("#8A94A8"),
-                headerAccent = MinimalistTheme.ensureReadableTextOnBg(activity.primaryColor, dispBg, 2.3),
-                playerColor = MinimalistTheme.ensureReadableTextOnBg(Color.parseColor("#4CAF50"), dispBg, 2.2),
-                enemyColor = MinimalistTheme.ensureReadableTextOnBg(Color.parseColor("#FF5252"), dispBg, 2.2),
-                bonusColor = MinimalistTheme.ensureReadableTextOnBg(Color.parseColor("#FFD54F"), dispBg, 2.2),
-                controlAccent = MinimalistTheme.ensureReadableTextOnBg(activity.primaryColor, dispBg, 2.3),
-                glowShadowColor = Color.TRANSPARENT,
-                glowRadius = 0f,
-                isMinimalist = false,
-                isClean = false
-            )
+            else -> {
+                val baseBg = Utils.lightenColor(activity.bgColor, 0.06f)
+                val accent = MinimalistTheme.ensureReadableTextOnBg(activity.primaryColor, baseBg, 2.2)
+                GameThemePalette(
+                    cardBgTop = Utils.lightenColor(activity.bgColor, 0.09f),
+                    cardBgBottom = Utils.lightenColor(activity.bgColor, 0.04f),
+                    cardBorder = Color.argb(130, Color.red(accent), Color.green(accent), Color.blue(accent)),
+                    arenaBg = activity.bgColor,
+                    arenaGrid = Color.argb(32, Color.red(accent), Color.green(accent), Color.blue(accent)),
+                    inkPrimary = Color.WHITE,
+                    inkSecondary = Color.parseColor("#94A3B8"),
+                    playerColor = Color.parseColor("#4ADE80"),
+                    enemyColor = Color.parseColor("#F87171"),
+                    bonusColor = Color.parseColor("#FACC15"),
+                    controlAccent = accent,
+                    laserColor = accent,
+                    glowColor = Color.TRANSPARENT,
+                    isMinimalist = false,
+                    isAurora = false,
+                    isGlass = false
+                )
+            }
         }
     }
 
     private fun isActivityValid(activity: MainActivity): Boolean =
         !activity.isFinishing && !activity.isDestroyed
 
-    private fun applyDisplayTheme(
-        activity: MainActivity,
-        palette: GameThemePalette,
-        headerText: String,
-        exprText: String,
-        mainText: String,
-        mainAccentOverride: Int? = null
-    ) {
-        activity.memoryIndicator?.apply {
-            text = "\u200F$headerText"
-            setTextColor(palette.headerAccent)
+    // =========================================================================
+    // הטמעה והסרה נקייה של מסך המשחק הווקטורי בתוך displayCard
+    // =========================================================================
+    private fun attachVectorStage(activity: MainActivity) {
+        detachVectorStage(activity)
+        val displayCard = activity.currentView?.parent as? LinearLayout ?: return
+        attachedDisplayCard = displayCard
+        savedDisplayPadding = intArrayOf(
+            displayCard.paddingLeft,
+            displayCard.paddingTop,
+            displayCard.paddingRight,
+            displayCard.paddingBottom
+        )
+
+        activity.memoryIndicator?.visibility = View.GONE
+        activity.expressionView?.visibility = View.GONE
+        activity.currentView?.visibility = View.GONE
+
+        val pad = activity.dp(4f)
+        displayCard.setPadding(pad, pad, pad, pad)
+
+        val stage = MiniGameVectorStageView(activity).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
         }
-        activity.expressionView?.apply {
-            text = "\u200F$exprText"
-            setTextColor(palette.displaySub)
+        vectorStageView = stage
+        displayCard.addView(stage)
+    }
+
+    private fun detachVectorStage(activity: MainActivity) {
+        val stage = vectorStageView
+        vectorStageView = null
+        if (stage != null) {
+            (stage.parent as? ViewGroup)?.removeView(stage)
         }
-        activity.currentView?.apply {
-            textDirection = View.TEXT_DIRECTION_LTR
-            text = "\u200E$mainText"
-            val col = mainAccentOverride ?: palette.displayPrimary
-            setTextColor(col)
-            if (palette.glowRadius > 0f) {
-                setShadowLayer(palette.glowRadius, 0f, if (activity.isIosGlassMode) 2f else 0f, palette.glowShadowColor)
-            } else {
-                setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
-            }
+        val card = attachedDisplayCard
+        val pads = savedDisplayPadding
+        attachedDisplayCard = null
+        savedDisplayPadding = null
+        if (card != null && pads != null && pads.size == 4) {
+            card.setPadding(pads[0], pads[1], pads[2], pads[3])
         }
+        activity.memoryIndicator?.visibility = View.VISIBLE
+        activity.expressionView?.visibility = View.VISIBLE
+        activity.currentView?.visibility = View.VISIBLE
+    }
+
+    private fun invalidateStage() {
+        vectorStageView?.invalidate()
     }
 
     private fun styleKeyForGame(
@@ -218,23 +293,39 @@ object MiniGameEngine {
 
     private fun prepareNewGame(activity: MainActivity, gameId: String) {
         stopPreviousLoop()
-        stopAllAudio()
+        stopRacerAudio()
+        releaseSfxPlayerSafely()
         restoreAllKeyColorsAndLabels(activity)
         isAnimalParty = false
         tttRoundLocked = false
+        tttWinningLine = null
+        gameEnding = false
+        crashAnimStartTime = 0L
+        racerLaserTime = 0L
+        invaderLaserTime = 0L
+        bombShakeTime = 0L
         isActive = true
         currentGame = gameId
+        attachVectorStage(activity)
     }
 
     fun stopGame(activity: MainActivity, message: String = "יצאת מהמשחק 🎮") {
+        stopGameInternal(activity, message, stopSfx = true)
+    }
+
+    private fun stopGameInternal(activity: MainActivity, message: String, stopSfx: Boolean) {
         val wasActive = isActive
         isActive = false
+        gameEnding = false
         currentGame = ""
         isAnimalParty = false
         tttRoundLocked = false
         stopPreviousLoop()
-        stopAllAudio()
+        stopRacerAudio()
+        if (stopSfx) releaseSfxPlayerSafely()
+
         if (!isActivityValid(activity)) return
+        detachVectorStage(activity)
         restoreAllKeyColorsAndLabels(activity)
         activity.currentInput = ""
         activity.justCalculated = false
@@ -248,13 +339,31 @@ object MiniGameEngine {
     }
 
     // =========================================================================
-    // מערכת סאונד מוגנת (מכבדת useSound, בודקת minBufferSize ומונעת דליפות)
+    // מערכת אודיו חכמה: מוצאת אוטומטית כל קובץ crash/shot/star/engine ב-res/raw
+    // ולא קוטעת את צליל ההתרסקות בסיום המשחק!
     // =========================================================================
-    private fun findRawResId(activity: MainActivity, candidates: List<String>): Int {
-        for (name in candidates) {
+    private fun findRawResId(
+        activity: MainActivity,
+        exactCandidates: List<String>,
+        keywords: List<String> = emptyList(),
+        exclude: List<String> = emptyList()
+    ): Int {
+        for (name in exactCandidates) {
             val id = activity.resources.getIdentifier(name, "raw", activity.packageName)
             if (id != 0) return id
         }
+        if (keywords.isEmpty()) return 0
+        try {
+            val rawClass = Class.forName("${activity.packageName}.R\$raw")
+            for (field in rawClass.fields) {
+                val fname = field.name.lowercase(Locale.US)
+                if (exclude.any { fname.contains(it) }) continue
+                if (keywords.any { fname.contains(it) }) {
+                    val resId = field.getInt(null)
+                    if (resId != 0) return resId
+                }
+            }
+        } catch (_: Throwable) {}
         return 0
     }
 
@@ -268,12 +377,13 @@ object MiniGameEngine {
         }
     }
 
-    private fun playRawSfx(activity: MainActivity, resId: Int): Boolean {
+    private fun playRawSfx(activity: MainActivity, resId: Int, volume: Float = 1.0f): Boolean {
         if (resId == 0 || !isActivityValid(activity)) return false
         return try {
             releaseSfxPlayerSafely()
             val mp = MediaPlayer.create(activity.applicationContext, resId) ?: return false
             sfxPlayer = mp
+            mp.setVolume(volume, volume)
             mp.setOnCompletionListener { player ->
                 if (sfxPlayer === player) sfxPlayer = null
                 try { player.release() } catch (_: Throwable) {}
@@ -299,7 +409,6 @@ object MiniGameEngine {
                 val minBuf = AudioTrack.getMinBufferSize(
                     sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
                 ).coerceAtLeast(2048)
-                val bytesNeeded = maxOf(buffer.size * 2, minBuf)
                 track = AudioTrack.Builder()
                     .setAudioAttributes(
                         AudioAttributes.Builder()
@@ -314,7 +423,7 @@ object MiniGameEngine {
                             .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                             .build()
                     )
-                    .setBufferSizeInBytes(bytesNeeded)
+                    .setBufferSizeInBytes(maxOf(buffer.size * 2, minBuf))
                     .setTransferMode(AudioTrack.MODE_STATIC)
                     .build()
                 track.write(buffer, 0, buffer.size)
@@ -331,53 +440,42 @@ object MiniGameEngine {
 
     fun playTttResultSound(activity: MainActivity, isWin: Boolean) {
         if (!activity.useSound) return
-        val candidates = if (isWin) {
-            listOf("ttt_win", "win", "game_win", "tuomas_data_game_win_471625", "victory", "star", "cheer")
+        val baseExcludes = listOf("sound1", "sound2", "sound3", "ac_sound", "loop", "shot", "shoot")
+        val resId = if (isWin) {
+            findRawResId(
+                activity,
+                listOf("ttt_win", "win", "game_win", "tuomas_data_game_win_471625", "victory", "cheer"),
+                keywords = listOf("win", "victory", "cheer", "tada"),
+                exclude = baseExcludes + listOf("coin", "crash", "lose")
+            )
         } else {
-            listOf("ttt_lose", "lose", "game_over", "universfield_game_over_deep_male_voice_clip_352695", "gameover", "fail", "crash")
+            findRawResId(
+                activity,
+                listOf("ttt_lose", "lose", "game_over", "universfield_game_over_deep_male_voice_clip_352695", "gameover", "fail"),
+                keywords = listOf("gameover", "game_over", "lose", "fail"),
+                exclude = baseExcludes + listOf("win")
+            )
         }
-        if (playRawSfx(activity, findRawResId(activity, candidates))) return
+        if (playRawSfx(activity, resId)) return
 
-        if (activeSynthThreads.get() >= 3) return
-        activeSynthThreads.incrementAndGet()
-        Thread {
-            try {
-                val sampleRate = 22050
-                val notes = if (isWin) {
-                    listOf(523.25 to 120, 659.25 to 120, 783.99 to 140, 1046.50 to 260)
-                } else {
-                    listOf(311.13 to 180, 277.18 to 180, 246.94 to 180, 196.00 to 320)
-                }
-                val totalSamples = notes.sumOf { (it.second * sampleRate) / 1000 }
-                val buffer = ShortArray(totalSamples)
-                var offset = 0
-                for ((freq, dur) in notes) {
-                    val count = (dur * sampleRate) / 1000
-                    for (i in 0 until count) {
-                        val env = sin((i.toDouble() / count) * PI)
-                        buffer[offset + i] = (sin(2.0 * PI * freq * i / sampleRate) * env * Short.MAX_VALUE * 0.52).toInt().toShort()
-                    }
-                    offset += count
-                }
-                val minBuf = AudioTrack.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT).coerceAtLeast(2048)
-                val track = AudioTrack.Builder()
-                    .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
-                    .setAudioFormat(AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_16BIT).setSampleRate(sampleRate).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
-                    .setBufferSizeInBytes(maxOf(buffer.size * 2, minBuf))
-                    .setTransferMode(AudioTrack.MODE_STATIC).build()
-                try {
-                    track.write(buffer, 0, buffer.size)
-                    track.play()
-                    Thread.sleep(notes.sumOf { it.second }.toLong() + 40L)
-                } finally {
-                    try { track.stop() } catch (_: Throwable) {}
-                    try { track.release() } catch (_: Throwable) {}
-                }
-            } catch (_: Throwable) {
-            } finally {
-                activeSynthThreads.decrementAndGet()
+        val sampleRate = 22050
+        val notes = if (isWin) {
+            listOf(523.25 to 120, 659.25 to 120, 783.99 to 140, 1046.50 to 260)
+        } else {
+            listOf(311.13 to 180, 277.18 to 180, 246.94 to 180, 196.00 to 320)
+        }
+        val totalSamples = notes.sumOf { (it.second * sampleRate) / 1000 }
+        val buffer = ShortArray(totalSamples)
+        var offset = 0
+        for ((freq, dur) in notes) {
+            val count = (dur * sampleRate) / 1000
+            for (i in 0 until count) {
+                val env = sin((i.toDouble() / count) * PI)
+                buffer[offset + i] = (sin(2.0 * PI * freq * i / sampleRate) * env * Short.MAX_VALUE * 0.52).toInt().toShort()
             }
-        }.start()
+            offset += count
+        }
+        playStaticPcmAsync(sampleRate, buffer, notes.sumOf { it.second }.toLong())
     }
 
     private fun startRacerEngineLoop(activity: MainActivity) {
@@ -395,7 +493,12 @@ object MiniGameEngine {
             return
         }
 
-        val singleResId = findRawResId(activity, listOf("car_loop", "engine", "race_car", "car_engine", "car", "motor"))
+        val singleResId = findRawResId(
+            activity,
+            listOf("car_loop", "engine", "race_car", "car_engine", "car", "motor"),
+            keywords = listOf("loop", "engine", "motor"),
+            exclude = listOf("crash", "shot", "shoot", "win", "lose", "ac_sound", "sound1", "sound2", "sound3")
+        )
         if (singleResId != 0) {
             try {
                 engineLoopPlayer = MediaPlayer.create(activity.applicationContext, singleResId)?.apply {
@@ -423,7 +526,7 @@ object MiniGameEngine {
                     .setBufferSizeInBytes(maxOf(chunkSamples * 2, minBuf))
                     .setTransferMode(AudioTrack.MODE_STREAM).build()
                 track.play()
-                while (synthEngineRunning && isActive && currentGame == "RACER" && isActivityValid(activity)) {
+                while (synthEngineRunning && isActive && !gameEnding && currentGame == "RACER" && isActivityValid(activity)) {
                     val gearStage = (tick / 18).coerceAtMost(5)
                     val baseFreq = 65.0 + (gearStage * 22.0) + (if (tick % 4 < 2) 5.0 else -3.0)
                     tick++
@@ -443,7 +546,7 @@ object MiniGameEngine {
     }
 
     private fun playEngineStage(activity: MainActivity, stageResIds: List<Int>) {
-        if (!isActive || currentGame != "RACER" || !activity.useSound || !isActivityValid(activity)) return
+        if (!isActive || gameEnding || currentGame != "RACER" || !activity.useSound || !isActivityValid(activity)) return
         val resId = stageResIds[currentEngineStage.coerceIn(0, stageResIds.lastIndex)]
         try {
             val prev = engineLoopPlayer
@@ -457,7 +560,7 @@ object MiniGameEngine {
                 } else {
                     isLooping = false
                     setOnCompletionListener {
-                        if (isActive && currentGame == "RACER" && isActivityValid(activity)) {
+                        if (isActive && !gameEnding && currentGame == "RACER" && isActivityValid(activity)) {
                             currentEngineStage = (currentEngineStage + 1).coerceAtMost(stageResIds.lastIndex)
                             playEngineStage(activity, stageResIds)
                         }
@@ -479,23 +582,34 @@ object MiniGameEngine {
         }
     }
 
-    private fun stopAllAudio() {
-        stopRacerAudio()
-        releaseSfxPlayerSafely()
-    }
-
     private fun playRacerSoundEffect(activity: MainActivity, type: String) {
         if (!activity.useSound) return
-        val candidates = when (type) {
-            "SHOOT" -> listOf("shoot", "shot", "universfield_arcade_shot_152053", "arcade_shot", "laser", "fire", "gun")
-            "CRASH" -> listOf("crash", "collision", "hit", "explosion", "boom")
-            "STAR" -> listOf("star", "coin", "mixkit_winning_a_coin_video_game_2069", "winning_a_coin", "bonus", "powerup", "pickup")
-            else -> emptyList()
+        val commonExcludes = listOf("sound1", "sound2", "sound3", "ac_sound", "loop")
+        val resId = when (type) {
+            "SHOOT" -> findRawResId(
+                activity,
+                listOf("shoot", "shot", "universfield_arcade_shot_152053", "arcade_shot", "laser", "fire", "gun"),
+                keywords = listOf("shot", "shoot", "laser", "gun", "fire"),
+                exclude = commonExcludes + listOf("crash", "win", "lose", "coin")
+            )
+            "CRASH" -> findRawResId(
+                activity,
+                listOf("crash", "car_crash", "carcrash", "collision", "explosion", "boom", "hit", "smash", "impact"),
+                keywords = listOf("crash", "collis", "explos", "boom", "smash", "wreck", "impact", "accident", "debris", "hit"),
+                exclude = commonExcludes + listOf("shot", "shoot", "coin", "star", "win")
+            )
+            "STAR" -> findRawResId(
+                activity,
+                listOf("star", "coin", "mixkit_winning_a_coin_video_game_2069", "winning_a_coin", "bonus", "powerup", "pickup"),
+                keywords = listOf("coin", "star", "bonus", "pickup", "powerup"),
+                exclude = commonExcludes + listOf("crash", "shot", "shoot", "lose")
+            )
+            else -> 0
         }
-        if (playRawSfx(activity, findRawResId(activity, candidates))) return
+        if (playRawSfx(activity, resId, volume = 1.0f)) return
 
         val sampleRate = 22050
-        val durationMs = when (type) { "SHOOT" -> 160; "CRASH" -> 420; else -> 240 }
+        val durationMs = when (type) { "SHOOT" -> 160; "CRASH" -> 480; else -> 240 }
         val numSamples = (durationMs * sampleRate) / 1000
         val buffer = ShortArray(numSamples)
         var phase = 0.0
@@ -510,7 +624,7 @@ object MiniGameEngine {
                 "CRASH" -> {
                     val noise = (Random.nextDouble() * 2.0 - 1.0)
                     phase += 2.0 * PI * (95.0 * (1.0 - p * 0.5)) / sampleRate
-                    (noise * 0.75 + sin(phase) * 0.25) * (1.0 - p)
+                    (noise * 0.78 + sin(phase) * 0.22) * (1.0 - p)
                 }
                 else -> {
                     val freq = if (p < 0.45) 880.0 else 1318.5
@@ -518,7 +632,7 @@ object MiniGameEngine {
                     sin(phase) * sin(p * PI)
                 }
             }
-            buffer[i] = (sample * Short.MAX_VALUE * 0.62).toInt().toShort()
+            buffer[i] = (sample * Short.MAX_VALUE * 0.65).toInt().toShort()
         }
         playStaticPcmAsync(sampleRate, buffer, durationMs.toLong())
     }
@@ -541,13 +655,38 @@ object MiniGameEngine {
         playStaticPcmAsync(sampleRate, buffer, durationMs.toLong())
     }
 
+    // סיום דרמטי עם שמירה מלאה על צליל ההתרסקות ואנימציית הפיצוץ לפני חזרה למחשבון
+    private fun triggerCrashAndExit(activity: MainActivity, endMessage: String) {
+        if (gameEnding) return
+        gameEnding = true
+        stopPreviousLoop()
+        stopRacerAudio() // עוצר רק את המנוע הלולאתי — משאיר את צליל ההתרסקות פועל עד תומו!
+        crashAnimStartTime = System.currentTimeMillis()
+        crashLane = carLane
+        playRacerSoundEffect(activity, "CRASH")
+        activity.shakeScreen()
+        invalidateStage()
+
+        val exitTask = Runnable {
+            if (isActive && isActivityValid(activity)) {
+                // stopSfx = false כדי שצליל ההתרסקות יסיים להתנגן במלואו ולא ייחתך!
+                stopGameInternal(activity, endMessage, stopSfx = false)
+            }
+        }
+        gameOverDelayRunnable = exitTask
+        handler.postDelayed(exitTask, 850L)
+    }
+
     // =========================================================================
     // משחק 0: מסיבת חיות מצפצפות (קוד 7777)
     // =========================================================================
     fun startAnimalParty(activity: MainActivity) {
         prepareNewGame(activity, "ANIMALS")
         isAnimalParty = true
-        val pal = resolvePalette(activity)
+        animalTimeLeft = 15
+        animalTotalTime = 15
+        animalActiveIdx = 0
+        animalBounceTime = System.currentTimeMillis()
 
         val shuffled = animalEmojis.shuffled()
         var idx = 0
@@ -558,27 +697,18 @@ object MiniGameEngine {
                 idx++
             }
         }
-        applyDisplayTheme(
-            activity, pal,
-            headerText = if (pal.isClean) "מסיבת חיות! לחץ לצפצוף | AC ליציאה" else "🐾 מסיבת חיות! לחץ לצפצוף | AC ליציאה",
-            exprText = "חוזר למצב רגיל בעוד 15 שניות...",
-            mainText = "🐶 🐱 🐸 🦊 🐼"
-        )
         playSqueakSound(activity.useSound)
+        invalidateStage()
 
-        var left = 15
         gameLoop = object : Runnable {
             override fun run() {
-                if (!isActive || currentGame != "ANIMALS" || !isActivityValid(activity)) {
-                    stopAllAudio()
+                if (!isActive || currentGame != "ANIMALS" || !isActivityValid(activity)) return
+                animalTimeLeft--
+                if (animalTimeLeft <= 0) {
+                    stopGameInternal(activity, "🐾 החיות חזרו לגן החיות!", stopSfx = false)
                     return
                 }
-                left--
-                if (left <= 0) {
-                    stopGame(activity, "🐾 החיות חזרו לגן החיות!")
-                    return
-                }
-                activity.expressionView?.text = "\u200Fחוזר למצב רגיל בעוד $left שניות..."
+                invalidateStage()
                 handler.postDelayed(this, 1000L)
             }
         }
@@ -595,23 +725,12 @@ object MiniGameEngine {
             activity.keypadButtons[k]?.let { savedKeyLabels[k] = it.text }
             tttBoard[i] = k
         }
-        updateTicTacToeUI(activity, "תורך! לחץ על 1-9 להצבת × (AC ליציאה)")
+        updateTicTacToeUI(activity, "תורך! בחר 1–9")
     }
 
-    private fun updateTicTacToeUI(activity: MainActivity, status: String, winnerHighlight: Int? = null) {
+    private fun updateTicTacToeUI(activity: MainActivity, status: String) {
+        tttStatusText = status
         val pal = resolvePalette(activity)
-        val row1 = "[ ${tttBoard[6]} | ${tttBoard[7]} | ${tttBoard[8]} ]"
-        val row2 = "[ ${tttBoard[3]} | ${tttBoard[4]} | ${tttBoard[5]} ]"
-        val row3 = "[ ${tttBoard[0]} | ${tttBoard[1]} | ${tttBoard[2]} ]"
-
-        applyDisplayTheme(
-            activity, pal,
-            headerText = if (pal.isClean) "איקס עיגול (× נגד 0) | AC ליציאה" else "🎮 איקס עיגול (× נגד 0) | AC ליציאה",
-            exprText = status,
-            mainText = "$row1\n$row2\n$row3",
-            mainAccentOverride = winnerHighlight
-        )
-
         for (i in 0..8) {
             val key = (i + 1).toString()
             val mark = tttBoard[i]
@@ -623,9 +742,10 @@ object MiniGameEngine {
                 else -> styleKeyForGame(activity, key, neutralColor, mark, glow = false)
             }
         }
+        invalidateStage()
     }
 
-    private fun checkWinner(): String? {
+    private fun findWinningLine(): Pair<String, IntArray?>? {
         val wins = arrayOf(
             intArrayOf(0, 1, 2), intArrayOf(3, 4, 5), intArrayOf(6, 7, 8),
             intArrayOf(0, 3, 6), intArrayOf(1, 4, 7), intArrayOf(2, 5, 8),
@@ -633,12 +753,14 @@ object MiniGameEngine {
         )
         for (w in wins) {
             if (tttBoard[w[0]] == tttBoard[w[1]] && tttBoard[w[1]] == tttBoard[w[2]]) {
-                return tttBoard[w[0]]
+                return tttBoard[w[0]] to w
             }
         }
-        if (tttBoard.none { it in "1".."9" }) return "TIE"
+        if (tttBoard.none { it in "1".."9" }) return "TIE" to null
         return null
     }
+
+    private fun checkWinner(): String? = findWinningLine()?.first
 
     private fun getSmartComputerMove(): Int {
         val free = (0..8).filter { tttBoard[it] !in listOf("×", "0") }
@@ -694,19 +816,20 @@ object MiniGameEngine {
         }
     }
 
-    private fun finishTicTacToe(activity: MainActivity, winner: String) {
+    private fun finishTicTacToe(activity: MainActivity, result: Pair<String, IntArray?>) {
         tttRoundLocked = true
-        val pal = resolvePalette(activity)
+        tttWinningLine = result.second
+        val winner = result.first
         when (winner) {
             "×" -> playTttResultSound(activity, true)
             "0" -> playTttResultSound(activity, false)
         }
-        val (msg, highlight) = when (winner) {
-            "×" -> (if (pal.isClean) "ניצחת! × ניצח את 0 (AC ליציאה)" else "🏆 ניצחת! × ניצח את 0! (AC ליציאה)") to pal.playerColor
-            "0" -> (if (pal.isClean) "המחשב (0) ניצח — סיבוב חדש..." else "🤖 המחשב (0) ניצח! נסה שוב") to pal.enemyColor
-            else -> (if (pal.isClean) "תיקו! משחק צמוד" else "🤝 תיקו! משחק צמוד") to pal.bonusColor
+        val msg = when (winner) {
+            "×" -> "ניצחת! סיבוב חדש..."
+            "0" -> "המחשב ניצח! נסה שוב"
+            else -> "תיקו! סיבוב חדש..."
         }
-        updateTicTacToeUI(activity, msg, winnerHighlight = highlight)
+        updateTicTacToeUI(activity, msg)
         roundResetRunnable?.let { handler.removeCallbacks(it) }
         val resetTask = Runnable {
             if (isActive && currentGame == "TTT" && isActivityValid(activity)) {
@@ -714,7 +837,7 @@ object MiniGameEngine {
             }
         }
         roundResetRunnable = resetTask
-        handler.postDelayed(resetTask, 2200L)
+        handler.postDelayed(resetTask, 2100L)
     }
 
     // =========================================================================
@@ -734,15 +857,10 @@ object MiniGameEngine {
 
         gameLoop = object : Runnable {
             override fun run() {
-                if (!isActive || currentGame != "INVADERS" || !isActivityValid(activity)) {
-                    stopAllAudio()
-                    return
-                }
+                if (!isActive || gameEnding || currentGame != "INVADERS" || !isActivityValid(activity)) return
                 val reachedShip = invaderTrack.removeAt(0)
                 if (reachedShip != ".") {
-                    playRacerSoundEffect(activity, "CRASH")
-                    activity.shakeScreen()
-                    stopGame(activity, "💥 החללית נפגעה! ניקוד סופי: $invaderScore")
+                    triggerCrashAndExit(activity, "💥 החללית נפגעה! ניקוד סופי: $invaderScore")
                     return
                 }
                 val nextSpawn = if (Random.nextFloat() < 0.65f) invaderSymbols.random() else "."
@@ -758,26 +876,16 @@ object MiniGameEngine {
 
     private fun renderInvaders(activity: MainActivity) {
         val pal = resolvePalette(activity)
-        val ship = if (pal.isMinimalist) "▷" else "🚀"
-        val dangerNear = invaderTrack.firstOrNull() != "."
-        applyDisplayTheme(
-            activity, pal,
-            headerText = if (pal.isClean) "פולשי החשבון | לחץ על הסימן הקרוב | AC ליציאה" else "👾 פולשי החשבון | לחץ על הסימן כדי ליירט! | AC ליציאה",
-            exprText = if (pal.isClean) "ניקוד: $invaderScore | יירט את הסימן הקרוב" else "ניקוד: $invaderScore ⭐ | יירט את הסימן הקרוב ל-🚀",
-            mainText = "$ship ⬅ " + invaderTrack.joinToString("  "),
-            mainAccentOverride = if (dangerNear) pal.enemyColor else pal.displayPrimary
-        )
-
-        // הדגשה עדינה של מקשי האופרטורים המדעיים בערכת הנושא
+        val nextTarget = invaderTrack.firstOrNull { it != "." }
         for (sym in invaderSymbols) {
-            val isNextTarget = invaderTrack.firstOrNull { it != "." } == sym
-            val col = if (isNextTarget) pal.bonusColor else pal.controlAccent
-            styleKeyForGame(activity, sym, col, glow = isNextTarget)
+            val isNext = (sym == nextTarget)
+            styleKeyForGame(activity, sym, if (isNext) pal.bonusColor else pal.controlAccent, glow = isNext)
         }
+        invalidateStage()
     }
 
     // =========================================================================
-    // משחק 3: מירוץ מכוניות (קוד 5555)
+    // משחק 3: מירוץ מכוניות וקטורי (קוד 5555)
     // =========================================================================
     fun startMathRacer(activity: MainActivity) {
         prepareNewGame(activity, "RACER")
@@ -795,26 +903,23 @@ object MiniGameEngine {
 
         gameLoop = object : Runnable {
             override fun run() {
-                if (!isActive || currentGame != "RACER" || !isActivityValid(activity)) {
-                    stopAllAudio()
-                    return
-                }
+                if (!isActive || gameEnding || currentGame != "RACER" || !isActivityValid(activity)) return
                 advanceRacerTracks(activity)
-                if (!isActive) return
+                if (!isActive || gameEnding) return
                 renderRacer(activity)
                 handler.postDelayed(this, currentRacerDelayMs())
             }
         }
         cooldownTicker = object : Runnable {
             override fun run() {
-                if (!isActive || currentGame != "RACER" || !isActivityValid(activity)) return
+                if (!isActive || gameEnding || currentGame != "RACER" || !isActivityValid(activity)) return
                 renderRacer(activity)
-                handler.postDelayed(this, 300L)
+                handler.postDelayed(this, 250L)
             }
         }
         renderRacer(activity)
         handler.postDelayed(gameLoop!!, currentRacerDelayMs())
-        handler.postDelayed(cooldownTicker!!, 300L)
+        handler.postDelayed(cooldownTicker!!, 250L)
     }
 
     private fun currentRacerDelayMs(): Long =
@@ -826,9 +931,7 @@ object MiniGameEngine {
             if (reachedCar != ".") {
                 if (lane == carLane) {
                     if (reachedCar == "🚧") {
-                        playRacerSoundEffect(activity, "CRASH")
-                        activity.shakeScreen()
-                        stopGame(activity, "💥 התנגשת במחסום! ניקוד סופי: $racerScore 🏆")
+                        triggerCrashAndExit(activity, "💥 התנגשת במחסום! ניקוד סופי: $racerScore 🏆")
                         return
                     } else if (reachedCar == "⭐") {
                         playRacerSoundEffect(activity, "STAR")
@@ -872,7 +975,7 @@ object MiniGameEngine {
         }
     }
 
-    private fun getShotCooldownRemainingMs(): Long {
+    internal fun getShotCooldownRemainingMs(): Long {
         val elapsed = System.currentTimeMillis() - lastShotTime
         return (SHOT_COOLDOWN_MS - elapsed).coerceAtLeast(0L)
     }
@@ -887,46 +990,16 @@ object MiniGameEngine {
         styleKeyForGame(activity, "2", pal.controlAccent, if (pal.isMinimalist) "2 ↓" else "2⬇️", glow = true)
         styleKeyForGame(
             activity, "5",
-            if (gunReady) pal.playerColor else pal.displaySub,
+            if (gunReady) pal.playerColor else pal.inkSecondary,
             if (gunReady) (if (pal.isMinimalist) "5 ✦" else "5💥") else "${sec}s",
             glow = gunReady
         )
         styleKeyForGame(activity, "6", pal.bonusColor, if (pal.isMinimalist) "6 »" else "6⚡", glow = true)
-
-        val gunStatus = if (gunReady) {
-            if (pal.isClean) "ירייה: מוכן" else "🎯 ירייה: מוכן!"
-        } else {
-            if (pal.isClean) "טעינה: ${sec}ש'" else "⏳ טעינה: ${sec}ש'"
-        }
-
-        val rows = (0..2).map { lane ->
-            val trackDisplay = racerTracks[lane].joinToString("  ") { cell ->
-                if (pal.isMinimalist) {
-                    when (cell) {
-                        "🚧" -> "▮"
-                        "⭐" -> "★"
-                        else -> "·"
-                    }
-                } else cell
-            }
-            val carIcon = if (lane == carLane) {
-                if (pal.isMinimalist) " ▸ ◆" else " ➡ 🏎️"
-            } else {
-                if (pal.isMinimalist) "   ·" else " ➡ ▫️"
-            }
-            trackDisplay + carIcon
-        }
-
-        applyDisplayTheme(
-            activity, pal,
-            headerText = if (pal.isClean) "8=למעלה | 2=למטה | 5/×=ירייה | 6/+=טורבו" else "🏎️ 8=למעלה | 2=למטה | 5/×=ירייה (3ש') | 6/+=טורבו",
-            exprText = if (pal.isClean) "ניקוד: $racerScore | $gunStatus" else "🏆 ניקוד: $racerScore | $gunStatus",
-            mainText = rows.joinToString("\n")
-        )
+        invalidateStage()
     }
 
     // =========================================================================
-    // משחק 4: נטרול פצצה מתמטית (קוד 1010) — ללא משוואות דו-משמעיות!
+    // משחק 4: נטרול פצצה מתמטית (קוד 1010) — ללא שאלות דו-משמעיות
     // =========================================================================
     fun startBombDefusal(activity: MainActivity) {
         prepareNewGame(activity, "BOMB")
@@ -936,15 +1009,10 @@ object MiniGameEngine {
 
         gameLoop = object : Runnable {
             override fun run() {
-                if (!isActive || currentGame != "BOMB" || !isActivityValid(activity)) {
-                    stopAllAudio()
-                    return
-                }
+                if (!isActive || gameEnding || currentGame != "BOMB" || !isActivityValid(activity)) return
                 bombTimeLeft--
                 if (bombTimeLeft <= 0) {
-                    playRacerSoundEffect(activity, "CRASH")
-                    activity.shakeScreen()
-                    stopGame(activity, "💥 בום! הזמן נגמר! פצצות שנוטרלו: $bombScore")
+                    triggerCrashAndExit(activity, "💥 בום! הזמן נגמר! פצצות שנוטרלו: $bombScore")
                     return
                 }
                 renderBombUI(activity)
@@ -964,7 +1032,6 @@ object MiniGameEngine {
 
     private fun generateBombQuestion(activity: MainActivity) {
         val ops = listOf("+", "−", "×", "÷")
-        // הגרלת משוואה עם פתרון יחיד וברור (מונע מקרים כמו 2 ? 2 = 4 או 4 ? 2 = 2)
         for (attempt in 0 until 20) {
             val a = Random.nextInt(2, 13)
             val b = Random.nextInt(2, 11)
@@ -990,55 +1057,47 @@ object MiniGameEngine {
     private fun renderBombUI(activity: MainActivity) {
         val pal = resolvePalette(activity)
         val isUrgent = bombTimeLeft <= 5
-        val eqText = "$bombLhs [?] $bombRhs = $bombTarget"
-        applyDisplayTheme(
-            activity, pal,
-            headerText = if (pal.isClean) "נטרל את הפצצה! בחר +, −, × או ÷ | AC ליציאה" else "💣 נטרל את הפצצה! לחץ על +, −, × או ÷ | AC ליציאה",
-            exprText = if (pal.isClean) "זמן: ${bombTimeLeft}ש' | נוטרלו: $bombScore" else "⏳ זמן: ${bombTimeLeft}ש' | נוטרלו: $bombScore 💣",
-            mainText = eqText,
-            mainAccentOverride = if (isUrgent) pal.enemyColor else pal.displayPrimary
-        )
         for (op in listOf("+", "−", "×", "÷")) {
             styleKeyForGame(activity, op, if (isUrgent) pal.enemyColor else pal.controlAccent, glow = true)
         }
+        invalidateStage()
     }
 
     // =========================================================================
-    // קליטת מקשים בזמן משחק (כולל שחזור עיצוב מקשים אם נלחץ מקש לא חוקי)
+    // קליטת מקשים בזמן משחק
     // =========================================================================
     fun onKeyPress(activity: MainActivity, key: String): Boolean {
         if (!isActive) return false
         if (key == "AC") {
-            stopGame(activity)
+            stopGameInternal(activity, "יצאת מהמשחק 🎮", stopSfx = true)
             return true
         }
+        if (gameEnding) return true
+
         when (currentGame) {
             "ANIMALS" -> {
                 playSqueakSound(activity.useSound)
-                val pal = resolvePalette(activity)
-                activity.currentView?.apply {
-                    text = "\u200E" + List(5) { animalEmojis.random() }.joinToString(" ")
-                    setTextColor(pal.displayPrimary)
-                }
+                animalActiveIdx = (animalActiveIdx + 1) % 5
+                animalBounceTime = System.currentTimeMillis()
+                invalidateStage()
                 return true
             }
             "TTT" -> {
                 if (tttRoundLocked) {
-                    updateTicTacToeUI(activity, activity.expressionView?.text?.toString() ?: "")
+                    updateTicTacToeUI(activity, tttStatusText)
                     return true
                 }
                 val idx = key.toIntOrNull()?.minus(1)
                 if (idx != null && idx in 0..8 && tttBoard[idx] !in listOf("×", "0")) {
                     tttBoard[idx] = "×"
-                    var w = checkWinner()
-                    if (w != null) { finishTicTacToe(activity, w); return true }
+                    var res = findWinningLine()
+                    if (res != null) { finishTicTacToe(activity, res); return true }
                     val comp = getSmartComputerMove()
                     if (comp != -1) tttBoard[comp] = "0"
-                    w = checkWinner()
-                    if (w != null) finishTicTacToe(activity, w) else updateTicTacToeUI(activity, "תורך! בחר משבצת פנויה (1-9)")
+                    res = findWinningLine()
+                    if (res != null) finishTicTacToe(activity, res) else updateTicTacToeUI(activity, "תורך! בחר משבצת (1–9)")
                 } else {
-                    // משמר את צבעי ה-× וה-0 גם אם השחקן לחץ על תא תפוס או מקש אחר
-                    updateTicTacToeUI(activity, activity.expressionView?.text?.toString() ?: "בחר משבצת פנויה (1-9)")
+                    updateTicTacToeUI(activity, tttStatusText)
                 }
                 return true
             }
@@ -1047,6 +1106,8 @@ object MiniGameEngine {
                 if (targetIndex != -1 && invaderTrack[targetIndex] == key) {
                     invaderTrack[targetIndex] = "."
                     invaderScore += 10
+                    invaderLaserCol = targetIndex
+                    invaderLaserTime = System.currentTimeMillis()
                     playRacerSoundEffect(activity, "SHOOT")
                     if (activity.useHaptic) activity.mainContent?.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 } else {
@@ -1063,11 +1124,16 @@ object MiniGameEngine {
                         val rem = getShotCooldownRemainingMs()
                         if (rem == 0L) {
                             lastShotTime = System.currentTimeMillis()
+                            racerLaserLane = carLane
+                            racerLaserTime = lastShotTime
                             playRacerSoundEffect(activity, "SHOOT")
                             val idx = racerTracks[carLane].indexOfLast { it == "🚧" }
                             if (idx != -1) {
+                                racerLaserEndCol = idx
                                 racerTracks[carLane][idx] = "."
                                 racerScore += 2
+                            } else {
+                                racerLaserEndCol = 0
                             }
                         } else {
                             val now = System.currentTimeMillis()
@@ -1081,14 +1147,13 @@ object MiniGameEngine {
                     key == "6" || key.startsWith("6") || key == "+" -> {
                         racerScore++
                         advanceRacerTracks(activity)
-                        // איפוס טיימר הצעד האוטומטי כדי למנוע קפיצה כפולה מיידית אחרי טורבו
-                        if (isActive && gameLoop != null) {
+                        if (isActive && !gameEnding && gameLoop != null) {
                             handler.removeCallbacks(gameLoop!!)
                             handler.postDelayed(gameLoop!!, currentRacerDelayMs())
                         }
                     }
                 }
-                if (isActive) renderRacer(activity)
+                if (isActive && !gameEnding) renderRacer(activity)
                 return true
             }
             "BOMB" -> {
@@ -1100,6 +1165,7 @@ object MiniGameEngine {
                         generateBombQuestion(activity)
                     } else {
                         bombTimeLeft = (bombTimeLeft - 3).coerceAtLeast(1)
+                        bombShakeTime = System.currentTimeMillis()
                         playRacerSoundEffect(activity, "CRASH")
                         activity.shakeScreen()
                         renderBombUI(activity)
@@ -1117,8 +1183,719 @@ object MiniGameEngine {
         gameLoop?.let { handler.removeCallbacks(it) }
         cooldownTicker?.let { handler.removeCallbacks(it) }
         roundResetRunnable?.let { handler.removeCallbacks(it) }
+        gameOverDelayRunnable?.let { handler.removeCallbacks(it) }
         gameLoop = null
         cooldownTicker = null
         roundResetRunnable = null
+        gameOverDelayRunnable = null
+    }
+}
+
+// =========================================================================
+// קנבס משחקים וקטורי ב-60fps לכל 5 המיני-משחקים, מותאם לכל 4 ערכות הנושא
+// =========================================================================
+private class MiniGameVectorStageView(
+    private val activity: MainActivity
+) : View(activity) {
+
+    private val d = resources.displayMetrics.density
+    private var phase = 0f
+    private var smoothCarLane = 1f
+    private var anim: ValueAnimator? = null
+
+    private val fillP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val strokeP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
+    private val dashedP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 1.6f * d
+        pathEffect = DashPathEffect(floatArrayOf(10f * d, 8f * d), 0f)
+    }
+    private val textP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.DEFAULT_BOLD
+    }
+    private val subTextP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.create("sans-serif", Typeface.NORMAL)
+    }
+    private val rect = RectF()
+    private val path = Path()
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        smoothCarLane = MiniGameEngine.carLane.toFloat()
+        anim = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 10_000L
+            repeatCount = ValueAnimator.INFINITE
+            interpolator = LinearInterpolator()
+            addUpdateListener {
+                phase += 0.05f
+                if (phase > 6283f) phase = 0f
+                // החלקה רכה של מעבר נתיב במכונית
+                val targetLane = MiniGameEngine.carLane.toFloat()
+                smoothCarLane += (targetLane - smoothCarLane) * 0.28f
+                postInvalidateOnAnimation()
+            }
+            start()
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        anim?.cancel()
+        anim = null
+        super.onDetachedFromWindow()
+    }
+
+    private fun withAlpha(color: Int, a: Int): Int =
+        Color.argb(a.coerceIn(0, 255), Color.red(color), Color.green(color), Color.blue(color))
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val w = width.toFloat()
+        val h = height.toFloat()
+        if (w <= 4f || h <= 4f) return
+
+        val pal = MiniGameEngine.resolvePalette(activity)
+        drawStageBackdrop(canvas, w, h, pal)
+
+        when (MiniGameEngine.currentGame) {
+            "RACER" -> drawVectorRacer(canvas, w, h, pal)
+            "TTT" -> drawVectorTicTacToe(canvas, w, h, pal)
+            "INVADERS" -> drawVectorInvaders(canvas, w, h, pal)
+            "BOMB" -> drawVectorBomb(canvas, w, h, pal)
+            "ANIMALS" -> drawVectorAnimalParty(canvas, w, h, pal)
+        }
+    }
+
+    private fun drawStageBackdrop(canvas: Canvas, w: Float, h: Float, pal: MiniGameEngine.GameThemePalette) {
+        rect.set(2f * d, 2f * d, w - 2f * d, h - 2f * d)
+        val r = 20f * d
+        fillP.shader = LinearGradient(0f, 0f, w, h, pal.cardBgTop, pal.cardBgBottom, Shader.TileMode.CLAMP)
+        canvas.drawRoundRect(rect, r, r, fillP)
+        fillP.shader = null
+
+        // גימור ייחודי לערכת הנושא
+        if (pal.isGlass) {
+            // הברקת זכוכית עליונה
+            val gloss = RectF(10f * d, 4f * d, w - 10f * d, h * 0.24f)
+            fillP.shader = LinearGradient(0f, gloss.top, 0f, gloss.bottom, Color.argb(58, 255, 255, 255), Color.TRANSPARENT, Shader.TileMode.CLAMP)
+            canvas.drawRoundRect(gloss, 14f * d, 14f * d, fillP)
+            fillP.shader = null
+        } else if (!pal.isMinimalist && !pal.isAurora) {
+            // רשת קלאסית עדינה
+            strokeP.clearShadowLayer()
+            strokeP.strokeWidth = 0.7f * d
+            strokeP.color = pal.arenaGrid
+            var x = 22f * d
+            while (x < w - 10f * d) { canvas.drawLine(x, 8f * d, x, h - 8f * d, strokeP); x += 22f * d }
+        }
+
+        strokeP.strokeWidth = 1.4f * d
+        strokeP.color = pal.cardBorder
+        if (pal.isAurora) {
+            strokeP.setShadowLayer(6f * d, 0f, 0f, withAlpha(pal.glowColor, 165))
+        } else {
+            strokeP.clearShadowLayer()
+        }
+        canvas.drawRoundRect(rect, r, r, strokeP)
+        strokeP.clearShadowLayer()
+    }
+
+    // =========================================================================
+    // 1. מסך וקטורי: מירוץ מכוניות (5555)
+    // =========================================================================
+    private fun drawVectorRacer(canvas: Canvas, w: Float, h: Float, pal: MiniGameEngine.GameThemePalette) {
+        val padX = 12f * d
+        val hudY = 20f * d
+        val roadTop = 30f * d
+        val roadBot = h - 10f * d
+        val roadH = (roadBot - roadTop).coerceAtLeast(36f * d)
+        val laneH = roadH / 3f
+
+        // --- HUD עליון: ניקוד + מד טעינת לייזר ---
+        textP.textAlign = Paint.Align.LEFT
+        textP.textSize = 12f * d
+        textP.color = pal.inkPrimary
+        canvas.drawText("SCORE ${MiniGameEngine.racerScore}", padX + 4f * d, hudY, textP)
+
+        val remMs = MiniGameEngine.getShotCooldownRemainingMs()
+        val readyFrac = 1f - (remMs.toFloat() / MiniGameEngine.SHOT_COOLDOWN_MS.toFloat()).coerceIn(0f, 1f)
+        val barW = 78f * d
+        val barRight = w - padX - 4f * d
+        val barLeft = barRight - barW
+        val barY = hudY - 4f * d
+
+        subTextP.textAlign = Paint.Align.RIGHT
+        subTextP.textSize = 10.5f * d
+        subTextP.color = if (remMs == 0L) pal.playerColor else pal.inkSecondary
+        val gunTxt = if (remMs == 0L) "לייזר מוכן" else "טעינה ${ceil(remMs / 1000.0).toInt()}s"
+        canvas.drawText(gunTxt, barLeft - 8f * d, hudY, subTextP)
+
+        rect.set(barLeft, barY - 3.5f * d, barRight, barY + 3.5f * d)
+        fillP.color = withAlpha(pal.inkPrimary, 28)
+        canvas.drawRoundRect(rect, 4f * d, 4f * d, fillP)
+        rect.set(barLeft, barY - 3.5f * d, barLeft + barW * readyFrac, barY + 3.5f * d)
+        fillP.color = if (remMs == 0L) pal.playerColor else pal.bonusColor
+        canvas.drawRoundRect(rect, 4f * d, 4f * d, fillP)
+
+        // --- רקע כביש 3 נתיבים ---
+        rect.set(padX, roadTop, w - padX, roadBot)
+        fillP.color = pal.arenaBg
+        canvas.drawRoundRect(rect, 14f * d, 14f * d, fillP)
+        strokeP.strokeWidth = 1.1f * d
+        strokeP.color = withAlpha(pal.inkPrimary, 36)
+        canvas.drawRoundRect(rect, 14f * d, 14f * d, strokeP)
+
+        // קווי הפרדת נתיבים זורמים
+        val dashShift = (phase * 18f * d) % (18f * d)
+        dashedP.pathEffect = DashPathEffect(floatArrayOf(10f * d, 8f * d), -dashShift)
+        dashedP.color = withAlpha(pal.inkSecondary, 110)
+        for (div in 1..2) {
+            val y = roadTop + laneH * div
+            canvas.drawLine(padX + 8f * d, y, w - padX - 8f * d, y, dashedP)
+        }
+
+        // גיאומטריית עמודות (0..4 משמאל לימין + עמודת המכונית בימין)
+        val innerL = padX + 10f * d
+        val innerR = w - padX - 10f * d
+        val usableW = (innerR - innerL).coerceAtLeast(60f * d)
+        val colW = usableW / 6.2f
+        val carX = innerR - colW * 0.62f
+        val carY = roadTop + (smoothCarLane + 0.5f) * laneH
+
+        // --- קרן לייזר חיה (אם נורתה ב-240ms האחרונים) ---
+        val now = System.currentTimeMillis()
+        val laserAge = now - MiniGameEngine.racerLaserTime
+        if (laserAge in 0..240L && MiniGameEngine.racerLaserLane in 0..2) {
+            val alpha = ((1f - laserAge / 240f) * 255f).toInt().coerceIn(0, 255)
+            val ly = roadTop + (MiniGameEngine.racerLaserLane + 0.5f) * laneH
+            val endX = innerL + (MiniGameEngine.racerLaserEndCol + 0.5f) * colW
+            strokeP.strokeWidth = 4.2f * d
+            strokeP.color = withAlpha(pal.laserColor, alpha)
+            if (pal.isAurora) strokeP.setShadowLayer(8f * d, 0f, 0f, pal.laserColor)
+            canvas.drawLine(carX - 20f * d, ly, endX, ly, strokeP)
+            strokeP.clearShadowLayer()
+            fillP.color = withAlpha(pal.bonusColor, alpha)
+            canvas.drawCircle(endX, ly, (5f + (laserAge / 240f) * 10f) * d, fillP)
+        }
+
+        // --- ציור מחסומים וקטוריים וכוכבי בונוס ---
+        for (lane in 0..2) {
+            val cy = roadTop + (lane + 0.5f) * laneH
+            for (col in 0..4) {
+                val cell = MiniGameEngine.racerTracks[lane].getOrElse(col) { "." }
+                val cx = innerL + (col + 0.5f) * colW
+                when (cell) {
+                    "🚧" -> drawVectorBarrier(canvas, cx, cy, min(laneH * 0.68f, 24f * d), pal)
+                    "⭐" -> drawVectorStar(canvas, cx, cy, min(laneH * 0.34f, 11f * d), pal.bonusColor, pal.inkPrimary)
+                }
+            }
+        }
+
+        // --- ציור מכונית הספורט הווקטורית (פונה שמאלה אל עבר המסלול) ---
+        drawVectorSportsCar(canvas, carX, carY, min(laneH * 0.74f, 26f * d), pal)
+
+        // --- אנימציית פיצוץ וקטורית בעת התרסקות ---
+        val crashAge = now - MiniGameEngine.crashAnimStartTime
+        if (MiniGameEngine.crashAnimStartTime > 0L && crashAge in 0..900L) {
+            val p = (crashAge / 850f).coerceIn(0f, 1f)
+            val ex = carX - 10f * d
+            val ey = roadTop + (MiniGameEngine.crashLane + 0.5f) * laneH
+            val blastR = (10f + p * 34f) * d
+            val alpha = ((1f - p * 0.65f) * 255f).toInt().coerceIn(0, 255)
+
+            fillP.color = withAlpha(pal.enemyColor, (alpha * 0.45f).toInt())
+            canvas.drawCircle(ex, ey, blastR, fillP)
+            strokeP.strokeWidth = 2.6f * d
+            strokeP.color = withAlpha(pal.bonusColor, alpha)
+            for (i in 0 until 10) {
+                val a = Math.toRadians(i * 36.0 + p * 40.0)
+                canvas.drawLine(
+                    ex + (cos(a) * blastR * 0.35f).toFloat(),
+                    ey + (sin(a) * blastR * 0.35f).toFloat(),
+                    ex + (cos(a) * blastR * 1.15f).toFloat(),
+                    ey + (sin(a) * blastR * 1.15f).toFloat(),
+                    strokeP
+                )
+            }
+            textP.textAlign = Paint.Align.CENTER
+            textP.textSize = 14f * d
+            textP.color = pal.enemyColor
+            canvas.drawText("CRASH!", w * 0.5f, roadTop + roadH * 0.5f + 5f * d, textP)
+        }
+    }
+
+    private fun drawVectorBarrier(canvas: Canvas, cx: Float, cy: Float, h: Float, pal: MiniGameEngine.GameThemePalette) {
+        val bw = h * 0.62f
+        val bh = h * 0.92f
+        rect.set(cx - bw * 0.5f, cy - bh * 0.5f, cx + bw * 0.5f, cy + bh * 0.5f)
+        fillP.color = pal.enemyColor
+        canvas.drawRoundRect(rect, 3.5f * d, 3.5f * d, fillP)
+        // פסי אזהרה אלכסוניים בהירים
+        strokeP.strokeWidth = 2.0f * d
+        strokeP.color = if (pal.isMinimalist) Color.WHITE else pal.bonusColor
+        canvas.drawLine(rect.left + 2f * d, rect.top + bh * 0.28f, rect.right - 2f * d, rect.top + bh * 0.14f, strokeP)
+        canvas.drawLine(rect.left + 2f * d, rect.top + bh * 0.60f, rect.right - 2f * d, rect.top + bh * 0.46f, strokeP)
+        canvas.drawLine(rect.left + 2f * d, rect.top + bh * 0.88f, rect.right - 2f * d, rect.top + bh * 0.74f, strokeP)
+    }
+
+    private fun drawVectorStar(canvas: Canvas, cx: Float, cy: Float, r: Float, fillCol: Int, rimCol: Int) {
+        val pulse = 1f + sin(phase * 2.2f) * 0.10f
+        val ro = r * pulse
+        val ri = ro * 0.46f
+        path.reset()
+        for (i in 0 until 10) {
+            val a = Math.toRadians(-90.0 + i * 36.0)
+            val rad = if (i % 2 == 0) ro else ri
+            val px = cx + (cos(a) * rad).toFloat()
+            val py = cy + (sin(a) * rad).toFloat()
+            if (i == 0) path.moveTo(px, py) else path.lineTo(px, py)
+        }
+        path.close()
+        fillP.color = fillCol
+        canvas.drawPath(path, fillP)
+        strokeP.strokeWidth = 1.1f * d
+        strokeP.color = withAlpha(rimCol, 120)
+        canvas.drawPath(path, strokeP)
+    }
+
+    private fun drawVectorSportsCar(canvas: Canvas, cx: Float, cy: Float, h: Float, pal: MiniGameEngine.GameThemePalette) {
+        val w = h * 1.65f
+        val halfW = w * 0.5f
+        val halfH = h * 0.42f
+
+        // אלומות פנסים עדינות קדימה (שמאלה)
+        path.reset()
+        path.moveTo(cx - halfW, cy - halfH * 0.55f)
+        path.lineTo(cx - halfW - 22f * d, cy - halfH * 1.15f)
+        path.lineTo(cx - halfW - 22f * d, cy + halfH * 1.15f)
+        path.lineTo(cx - halfW, cy + halfH * 0.55f)
+        path.close()
+        fillP.shader = LinearGradient(cx - halfW, cy, cx - halfW - 22f * d, cy, withAlpha(pal.bonusColor, 78), Color.TRANSPARENT, Shader.TileMode.CLAMP)
+        canvas.drawPath(path, fillP)
+        fillP.shader = null
+
+        // גלגלים
+        fillP.color = pal.inkPrimary
+        val wheelW = w * 0.22f
+        val wheelH = 3.2f * d
+        canvas.drawRoundRect(RectF(cx - halfW * 0.72f, cy - halfH - wheelH * 0.5f, cx - halfW * 0.72f + wheelW, cy - halfH + wheelH * 0.5f), 2f * d, 2f * d, fillP)
+        canvas.drawRoundRect(RectF(cx + halfW * 0.26f, cy - halfH - wheelH * 0.5f, cx + halfW * 0.26f + wheelW, cy - halfH + wheelH * 0.5f), 2f * d, 2f * d, fillP)
+        canvas.drawRoundRect(RectF(cx - halfW * 0.72f, cy + halfH - wheelH * 0.5f, cx - halfW * 0.72f + wheelW, cy + halfH + wheelH * 0.5f), 2f * d, 2f * d, fillP)
+        canvas.drawRoundRect(RectF(cx + halfW * 0.26f, cy + halfH - wheelH * 0.5f, cx + halfW * 0.26f + wheelW, cy + halfH + wheelH * 0.5f), 2f * d, 2f * d, fillP)
+
+        // שלדת מכונית אווירודינמית
+        rect.set(cx - halfW, cy - halfH, cx + halfW, cy + halfH)
+        fillP.color = pal.playerColor
+        canvas.drawRoundRect(rect, halfH * 0.72f, halfH * 0.72f, fillP)
+
+        // שמשה ותא נהג
+        rect.set(cx - halfW * 0.32f, cy - halfH * 0.68f, cx + halfW * 0.40f, cy + halfH * 0.68f)
+        fillP.color = withAlpha(pal.cardBgTop, 215)
+        canvas.drawRoundRect(rect, halfH * 0.45f, halfH * 0.45f, fillP)
+
+        // ספוילר אחורי (ימין)
+        strokeP.strokeWidth = 2.4f * d
+        strokeP.color = pal.controlAccent
+        canvas.drawLine(cx + halfW - 2f * d, cy - halfH * 0.85f, cx + halfW - 2f * d, cy + halfH * 0.85f, strokeP)
+
+        // פנסים קדמיים (שמאל)
+        fillP.color = pal.bonusColor
+        canvas.drawCircle(cx - halfW + 2.5f * d, cy - halfH * 0.45f, 2f * d, fillP)
+        canvas.drawCircle(cx - halfW + 2.5f * d, cy + halfH * 0.45f, 2f * d, fillP)
+    }
+
+    // =========================================================================
+    // 2. מסך וקטורי: איקס עיגול חכם (1337)
+    // =========================================================================
+    private fun drawVectorTicTacToe(canvas: Canvas, w: Float, h: Float, pal: MiniGameEngine.GameThemePalette) {
+        val boardSize = (h - 22f * d).coerceAtMost(w * 0.46f).coerceAtLeast(60f * d)
+        val boardLeft = 18f * d
+        val boardTop = (h - boardSize) * 0.5f
+        val cellSize = boardSize / 3f
+
+        // רקע לוח
+        rect.set(boardLeft - 4f * d, boardTop - 4f * d, boardLeft + boardSize + 4f * d, boardTop + boardSize + 4f * d)
+        fillP.color = pal.arenaBg
+        canvas.drawRoundRect(rect, 12f * d, 12f * d, fillP)
+
+        // מיפוי 0..8 כמו במקלדת המחשבון: שורה עליונה 6,7,8 (מקשים 7,8,9), אמצעית 3,4,5, תחתונה 0,1,2
+        fun cellCenter(idx: Int): Pair<Float, Float> {
+            val col = idx % 3
+            val row = 2 - (idx / 3)
+            return (boardLeft + (col + 0.5f) * cellSize) to (boardTop + (row + 0.5f) * cellSize)
+        }
+
+        // קווי רשת הלוח
+        strokeP.strokeWidth = 1.6f * d
+        strokeP.color = withAlpha(pal.inkPrimary, 55)
+        for (i in 1..2) {
+            val x = boardLeft + cellSize * i
+            val y = boardTop + cellSize * i
+            canvas.drawLine(x, boardTop + 4f * d, x, boardTop + boardSize - 4f * d, strokeP)
+            canvas.drawLine(boardLeft + 4f * d, y, boardLeft + boardSize - 4f * d, y, strokeP)
+        }
+
+        // ציור תאים: X / O וקטוריים או מספר תא עדין
+        val markR = cellSize * 0.28f
+        for (idx in 0..8) {
+            val (cx, cy) = cellCenter(idx)
+            when (val mark = MiniGameEngine.tttBoard[idx]) {
+                "×" -> {
+                    strokeP.strokeWidth = 3.0f * d
+                    strokeP.color = pal.playerColor
+                    if (pal.isAurora) strokeP.setShadowLayer(6f * d, 0f, 0f, pal.playerColor)
+                    canvas.drawLine(cx - markR, cy - markR, cx + markR, cy + markR, strokeP)
+                    canvas.drawLine(cx + markR, cy - markR, cx - markR, cy + markR, strokeP)
+                    strokeP.clearShadowLayer()
+                }
+                "0" -> {
+                    strokeP.strokeWidth = 3.0f * d
+                    strokeP.color = pal.enemyColor
+                    if (pal.isAurora) strokeP.setShadowLayer(6f * d, 0f, 0f, pal.enemyColor)
+                    canvas.drawCircle(cx, cy, markR, strokeP)
+                    strokeP.clearShadowLayer()
+                }
+                else -> {
+                    subTextP.textAlign = Paint.Align.CENTER
+                    subTextP.textSize = cellSize * 0.34f
+                    subTextP.color = withAlpha(pal.inkSecondary, 140)
+                    canvas.drawText(mark, cx, cy + cellSize * 0.12f, subTextP)
+                }
+            }
+        }
+
+        // קו ניצחון חוצה
+        MiniGameEngine.tttWinningLine?.let { line ->
+            if (line.size == 3) {
+                val (x1, y1) = cellCenter(line[0])
+                val (x2, y2) = cellCenter(line[2])
+                strokeP.strokeWidth = 4.2f * d
+                strokeP.color = pal.bonusColor
+                canvas.drawLine(x1, y1, x2, y2, strokeP)
+            }
+        }
+
+        // פאנל מידע מימין ללוח
+        val rightCx = (boardLeft + boardSize + w - 12f * d) * 0.5f
+        textP.textAlign = Paint.Align.CENTER
+        textP.textSize = 14.5f * d
+        textP.color = pal.inkPrimary
+        canvas.drawText("איקס עיגול חכם", rightCx, h * 0.30f, textP)
+
+        // מקרא × נגד 0
+        textP.textSize = 12f * d
+        textP.color = pal.playerColor
+        canvas.drawText("× אתה", rightCx + 32f * d, h * 0.48f, textP)
+        textP.color = pal.enemyColor
+        canvas.drawText("0 מחשב", rightCx - 32f * d, h * 0.48f, textP)
+
+        // סטטוס נוכחי
+        textP.textSize = 12.5f * d
+        textP.color = pal.controlAccent
+        canvas.drawText(MiniGameEngine.tttStatusText, rightCx, h * 0.67f, textP)
+
+        subTextP.textAlign = Paint.Align.CENTER
+        subTextP.textSize = 10f * d
+        subTextP.color = pal.inkSecondary
+        canvas.drawText("AC ליציאה למחשבון", rightCx, h * 0.84f, subTextP)
+    }
+
+    // =========================================================================
+    // 3. מסך וקטורי: פולשי החשבון (8080)
+    // =========================================================================
+    private fun drawVectorInvaders(canvas: Canvas, w: Float, h: Float, pal: MiniGameEngine.GameThemePalette) {
+        val padX = 12f * d
+        val hudY = 20f * d
+        val arenaTop = 30f * d
+        val arenaBot = h - 10f * d
+        val arenaH = (arenaBot - arenaTop).coerceAtLeast(36f * d)
+        val cy = arenaTop + arenaH * 0.5f
+
+        textP.textAlign = Paint.Align.LEFT
+        textP.textSize = 12f * d
+        textP.color = pal.inkPrimary
+        canvas.drawText("SCORE ${MiniGameEngine.invaderScore}", padX + 4f * d, hudY, textP)
+
+        subTextP.textAlign = Paint.Align.RIGHT
+        subTextP.textSize = 10.5f * d
+        subTextP.color = pal.inkSecondary
+        canvas.drawText("לחץ על הסימן הקרוב לירוט | AC ליציאה", w - padX - 4f * d, hudY, subTextP)
+
+        rect.set(padX, arenaTop, w - padX, arenaBot)
+        fillP.color = pal.arenaBg
+        canvas.drawRoundRect(rect, 14f * d, 14f * d, fillP)
+
+        // כוכבי רקע נעים
+        fillP.color = withAlpha(pal.inkSecondary, 75)
+        for (s in 0 until 8) {
+            val sx = padX + 10f * d + (((s * 43f * d - phase * 12f * d) % (w - padX * 2 - 20f * d)) + (w - padX * 2 - 20f * d)) % (w - padX * 2 - 20f * d)
+            val sy = arenaTop + 8f * d + ((s * 29f) % (arenaH - 16f * d).coerceAtLeast(10f))
+            canvas.drawCircle(sx, sy, 1.6f * d, fillP)
+        }
+
+        // חללית וקטורית משמאל פונה ימינה
+        val shipX = padX + 24f * d
+        val shipR = min(arenaH * 0.30f, 16f * d)
+        // להבת מנוע
+        fillP.color = pal.bonusColor
+        val flameLen = (6f + sin(phase * 4f) * 3f) * d
+        path.reset()
+        path.moveTo(shipX - shipR * 0.8f, cy - shipR * 0.35f)
+        path.lineTo(shipX - shipR * 0.8f - flameLen, cy)
+        path.lineTo(shipX - shipR * 0.8f, cy + shipR * 0.35f)
+        path.close()
+        canvas.drawPath(path, fillP)
+
+        // גוף החללית
+        path.reset()
+        path.moveTo(shipX + shipR * 1.15f, cy)
+        path.lineTo(shipX - shipR * 0.85f, cy - shipR * 0.82f)
+        path.lineTo(shipX - shipR * 0.45f, cy)
+        path.lineTo(shipX - shipR * 0.85f, cy + shipR * 0.82f)
+        path.close()
+        fillP.color = pal.playerColor
+        canvas.drawPath(path, fillP)
+
+        // עמודות הפולשים (0..5)
+        val trackL = shipX + shipR + 14f * d
+        val trackR = w - padX - 10f * d
+        val colW = ((trackR - trackL) / 6f).coerceAtLeast(20f * d)
+
+        // קרן יירוט
+        val laserAge = System.currentTimeMillis() - MiniGameEngine.invaderLaserTime
+        if (laserAge in 0..220L && MiniGameEngine.invaderLaserCol in 0..5) {
+            val alpha = ((1f - laserAge / 220f) * 255f).toInt().coerceIn(0, 255)
+            val tx = trackL + (MiniGameEngine.invaderLaserCol + 0.5f) * colW
+            strokeP.strokeWidth = 3.5f * d
+            strokeP.color = withAlpha(pal.laserColor, alpha)
+            canvas.drawLine(shipX + shipR, cy, tx, cy, strokeP)
+            fillP.color = withAlpha(pal.bonusColor, alpha)
+            canvas.drawCircle(tx, cy, (6f + (laserAge / 220f) * 10f) * d, fillP)
+        }
+
+        // פודים משושים של פולשי החשבון
+        val firstEnemyIdx = MiniGameEngine.invaderTrack.indexOfFirst { it != "." }
+        val podR = min(colW * 0.42f, arenaH * 0.34f).coerceAtLeast(12f * d)
+        for (i in 0 until MiniGameEngine.invaderTrack.size) {
+            val sym = MiniGameEngine.invaderTrack[i]
+            val px = trackL + (i + 0.5f) * colW
+            if (sym == ".") {
+                fillP.color = withAlpha(pal.inkSecondary, 60)
+                canvas.drawCircle(px, cy, 2f * d, fillP)
+                continue
+            }
+            val isTarget = (i == firstEnemyIdx)
+            val podCol = if (i == 0) pal.enemyColor else if (isTarget) pal.bonusColor else pal.controlAccent
+            drawHexPod(canvas, px, cy, podR * (if (isTarget) 1.08f else 0.96f), withAlpha(podCol, 42), podCol)
+            textP.textAlign = Paint.Align.CENTER
+            textP.textSize = (if (sym.length >= 3) 9.5f else 13f) * d
+            textP.color = pal.inkPrimary
+            canvas.drawText(sym, px, cy + 4f * d, textP)
+        }
+    }
+
+    private fun drawHexPod(canvas: Canvas, cx: Float, cy: Float, r: Float, fillCol: Int, strokeCol: Int) {
+        path.reset()
+        for (k in 0 until 6) {
+            val a = Math.toRadians(k * 60.0 - 30.0)
+            val x = cx + (cos(a) * r).toFloat()
+            val y = cy + (sin(a) * r).toFloat()
+            if (k == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        path.close()
+        fillP.color = fillCol
+        canvas.drawPath(path, fillP)
+        strokeP.strokeWidth = 1.8f * d
+        strokeP.color = strokeCol
+        canvas.drawPath(path, strokeP)
+    }
+
+    // =========================================================================
+    // 4. מסך וקטורי: נטרול פצצה מתמטית (1010)
+    // =========================================================================
+    private fun drawVectorBomb(canvas: Canvas, w: Float, h: Float, pal: MiniGameEngine.GameThemePalette) {
+        val isUrgent = MiniGameEngine.bombTimeLeft <= 5
+        val ringCol = when {
+            isUrgent -> pal.enemyColor
+            MiniGameEngine.bombTimeLeft <= 9 -> pal.bonusColor
+            else -> pal.playerColor
+        }
+
+        // פצצה וקטורית משמאל עם טבעת זמן ופתיל בוער
+        val bombCx = w * 0.22f
+        val bombCy = h * 0.54f
+        val bombR = min(h * 0.30f, 34f * d)
+        val frac = (MiniGameEngine.bombTimeLeft / 20f).coerceIn(0f, 1f)
+
+        // טבעת ספירה לאחור
+        val arcR = bombR + 7f * d
+        rect.set(bombCx - arcR, bombCy - arcR, bombCx + arcR, bombCy + arcR)
+        strokeP.strokeWidth = 4.5f * d
+        strokeP.color = withAlpha(pal.inkPrimary, 30)
+        canvas.drawCircle(bombCx, bombCy, arcR, strokeP)
+        strokeP.color = ringCol
+        canvas.drawArc(rect, -90f, 360f * frac, false, strokeP)
+
+        // גוף הפצצה
+        fillP.color = if (pal.isMinimalist) Color.parseColor("#374151") else pal.arenaBg
+        canvas.drawCircle(bombCx, bombCy, bombR, fillP)
+        strokeP.strokeWidth = 2f * d
+        strokeP.color = ringCol
+        canvas.drawCircle(bombCx, bombCy, bombR, strokeP)
+
+        // פתיל וניצוץ
+        strokeP.strokeWidth = 2.2f * d
+        strokeP.color = pal.inkSecondary
+        canvas.drawLine(bombCx, bombCy - bombR, bombCx + 8f * d, bombCy - bombR - 10f * d, strokeP)
+        fillP.color = if ((phase * 4f).toInt() % 2 == 0) pal.bonusColor else pal.enemyColor
+        canvas.drawCircle(bombCx + 8f * d, bombCy - bombR - 10f * d, (3.2f + sin(phase * 5f) * 1.2f) * d, fillP)
+
+        // זמן שנותר במרכז הפצצה
+        textP.textAlign = Paint.Align.CENTER
+        textP.textSize = 16.5f * d
+        textP.color = if (pal.isMinimalist) Color.WHITE else ringCol
+        canvas.drawText("${MiniGameEngine.bombTimeLeft}s", bombCx, bombCy + 6f * d, textP)
+
+        // פאנל משוואה וחוטי אופרטורים מימין
+        val panelL = w * 0.41f
+        val panelR = w - 14f * d
+        val panelCx = (panelL + panelR) * 0.5f
+
+        subTextP.textAlign = Paint.Align.CENTER
+        subTextP.textSize = 11f * d
+        subTextP.color = pal.inkSecondary
+        canvas.drawText("פצצות שנוטרלו: ${MiniGameEngine.bombScore}  |  AC ליציאה", panelCx, 22f * d, subTextP)
+
+        // תיבת המשוואה הדיגיטלית
+        rect.set(panelL, 32f * d, panelR, h * 0.64f)
+        fillP.color = pal.arenaBg
+        canvas.drawRoundRect(rect, 12f * d, 12f * d, fillP)
+        strokeP.strokeWidth = 1.4f * d
+        strokeP.color = if (isUrgent) pal.enemyColor else pal.controlAccent
+        canvas.drawRoundRect(rect, 12f * d, 12f * d, strokeP)
+
+        textP.textAlign = Paint.Align.CENTER
+        textP.textSize = 18.5f * d
+        textP.color = pal.inkPrimary
+        val eq = "\u200E${MiniGameEngine.bombLhs}  [ ? ]  ${MiniGameEngine.bombRhs}  =  ${MiniGameEngine.bombTarget}"
+        canvas.drawText(eq, panelCx, (32f * d + h * 0.64f) * 0.5f + 6.5f * d, textP)
+
+        // 4 תגי חוטי אופרטורים (+, −, ×, ÷)
+        val ops = listOf("+", "−", "×", "÷")
+        val wireCols = listOf(pal.playerColor, pal.enemyColor, pal.bonusColor, pal.controlAccent)
+        val chipW = ((panelR - panelL) - 18f * d) / 4f
+        val chipTop = h * 0.72f
+        val chipBot = h - 12f * d
+        for (i in 0..3) {
+            val cl = panelL + i * (chipW + 6f * d)
+            rect.set(cl, chipTop, cl + chipW, chipBot)
+            fillP.color = withAlpha(wireCols[i], 45)
+            canvas.drawRoundRect(rect, 8f * d, 8f * d, fillP)
+            strokeP.strokeWidth = 1.4f * d
+            strokeP.color = wireCols[i]
+            canvas.drawRoundRect(rect, 8f * d, 8f * d, strokeP)
+            textP.textSize = 14f * d
+            textP.color = pal.inkPrimary
+            canvas.drawText(ops[i], cl + chipW * 0.5f, (chipTop + chipBot) * 0.5f + 5f * d, textP)
+        }
+    }
+
+    // =========================================================================
+    // 5. מסך וקטורי: מסיבת חיות מצפצפות (7777)
+    // =========================================================================
+    private fun drawVectorAnimalParty(canvas: Canvas, w: Float, h: Float, pal: MiniGameEngine.GameThemePalette) {
+        val padX = 14f * d
+        textP.textAlign = Paint.Align.CENTER
+        textP.textSize = 12.5f * d
+        textP.color = pal.inkPrimary
+        canvas.drawText("מסיבת חיות מצפצפות — נותרו ${MiniGameEngine.animalTimeLeft}ש' (AC ליציאה)", w * 0.5f, 22f * d, textP)
+
+        // פס זמן
+        val frac = (MiniGameEngine.animalTimeLeft.toFloat() / MiniGameEngine.animalTotalTime.coerceAtLeast(1)).coerceIn(0f, 1f)
+        rect.set(padX, 30f * d, w - padX, 36f * d)
+        fillP.color = withAlpha(pal.inkPrimary, 28)
+        canvas.drawRoundRect(rect, 4f * d, 4f * d, fillP)
+        rect.set(padX, 30f * d, padX + (w - padX * 2) * frac, 36f * d)
+        fillP.color = pal.playerColor
+        canvas.drawRoundRect(rect, 4f * d, 4f * d, fillP)
+
+        // 5 פרצופי חיות וקטוריים קופצים עם גלי קול
+        val cy = (36f * d + h - 8f * d) * 0.5f
+        val slotW = (w - padX * 2) / 5f
+        val r = min(slotW * 0.34f, (h - 54f * d) * 0.34f).coerceAtLeast(14f * d)
+        val animalColors = listOf(
+            Color.parseColor("#E6A96B"), // כלב
+            Color.parseColor("#F48FB1"), // חתול
+            Color.parseColor("#FF8A65"), // שועל
+            Color.parseColor("#90A4AE"), // פנדה
+            Color.parseColor("#81C784")  // צפרדע
+        )
+        val bounceAge = System.currentTimeMillis() - MiniGameEngine.animalBounceTime
+
+        for (i in 0 until 5) {
+            val cx = padX + slotW * (i + 0.5f)
+            val isActive = (i == MiniGameEngine.animalActiveIdx)
+            val hop = if (isActive && bounceAge in 0..320L) {
+                -sin((bounceAge / 320f) * PI).toFloat() * 12f * d
+            } else {
+                sin(phase * 1.8f + i * 1.2f) * 3f * d
+            }
+            val ay = cy + hop
+
+            // גלי קול מתפשטים סביב החיה המצפצפת
+            if (isActive && bounceAge in 0..400L) {
+                val wp = bounceAge / 400f
+                strokeP.strokeWidth = 2f * d
+                strokeP.color = withAlpha(pal.bonusColor, ((1f - wp) * 210f).toInt())
+                canvas.drawCircle(cx, ay, r + wp * 18f * d, strokeP)
+            }
+
+            val bodyCol = animalColors[i]
+            // אוזניים וקטוריות לפי סוג החיה
+            fillP.color = bodyCol
+            when (i) {
+                0 -> { // כלב: אוזניים שמוטות
+                    canvas.drawOval(RectF(cx - r * 1.12f, ay - r * 0.45f, cx - r * 0.60f, ay + r * 0.55f), fillP)
+                    canvas.drawOval(RectF(cx + r * 0.60f, ay - r * 0.45f, cx + r * 1.12f, ay + r * 0.55f), fillP)
+                }
+                1, 2 -> { // חתול / שועל: אוזניים משולשות
+                    path.reset()
+                    path.moveTo(cx - r * 0.78f, ay - r * 0.25f)
+                    path.lineTo(cx - r * 0.68f, ay - r * 1.15f)
+                    path.lineTo(cx - r * 0.12f, ay - r * 0.65f)
+                    path.close()
+                    canvas.drawPath(path, fillP)
+                    path.reset()
+                    path.moveTo(cx + r * 0.78f, ay - r * 0.25f)
+                    path.lineTo(cx + r * 0.68f, ay - r * 1.15f)
+                    path.lineTo(cx + r * 0.12f, ay - r * 0.65f)
+                    path.close()
+                    canvas.drawPath(path, fillP)
+                }
+                else -> { // פנדה / צפרדע: אוזניים/עיניים עגולות עליונות
+                    fillP.color = if (i == 3) Color.parseColor("#263238") else bodyCol
+                    canvas.drawCircle(cx - r * 0.62f, ay - r * 0.72f, r * 0.34f, fillP)
+                    canvas.drawCircle(cx + r * 0.62f, ay - r * 0.72f, r * 0.34f, fillP)
+                }
+            }
+
+            // ראש עגול
+            fillP.color = if (i == 3) Color.WHITE else bodyCol
+            canvas.drawCircle(cx, ay, r, fillP)
+            strokeP.strokeWidth = 1.4f * d
+            strokeP.color = withAlpha(pal.inkPrimary, 95)
+            canvas.drawCircle(cx, ay, r, strokeP)
+
+            // עיניים ואף
+            fillP.color = Color.parseColor("#1F2937")
+            canvas.drawCircle(cx - r * 0.34f, ay - r * 0.12f, r * 0.13f, fillP)
+            canvas.drawCircle(cx + r * 0.34f, ay - r * 0.12f, r * 0.13f, fillP)
+            canvas.drawCircle(cx, ay + r * 0.18f, r * 0.12f, fillP)
+        }
     }
 }
