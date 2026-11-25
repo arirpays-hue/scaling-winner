@@ -49,6 +49,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     lateinit var contentFrame: FrameLayout
     private lateinit var dimView: View
     var drawerMenu: LinearLayout? = null
+    private lateinit var drawerContainer: LinearLayout
+    private lateinit var drawerFooter: LinearLayout
     private lateinit var drawerScroll: ScrollView
     private lateinit var topHeader: LinearLayout
     private lateinit var titleText: TextView
@@ -322,14 +324,21 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         dimView = View(this).apply { setBackgroundColor(Color.parseColor("#88000000")); visibility = View.GONE; alpha = 0f; layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT); setOnClickListener { if (isDrawerOpen) closeDrawer() } }
 
+        // מיכל תפריט הצד: רשימה נגללת בחלק העליון + כפתור "הגדרות" מקובע תמיד בתחתית
+        drawerContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            isClickable = true
+        }
+
         drawerScroll = ScrollView(this).apply {
             isClickable = true
             isFillViewport = true
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
         }
         drawerMenu = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(24f), 0, dp(24f))
-            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            setPadding(0, dp(24f), 0, dp(16f))
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT)
         }
 
         val appLogo = TextView(this).apply {
@@ -430,22 +439,27 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         expandedSections.add(301)
 
-        val bottomSpacer = Space(this).apply {
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
+        // פוטר תחתון קבוע לכפתור ההגדרות (תמיד גלוי בתחתית התפריט בלי קשר לגלילה)
+        drawerFooter = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(4f), 0, dp(14f))
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
         }
-        drawerMenu?.addView(bottomSpacer)
-
         val settingsTopDivider = View(this).apply {
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1.5f)).apply {
-                setMargins(dp(16f), dp(14f), dp(16f), dp(6f))
+                setMargins(dp(16f), 0, dp(16f), dp(6f))
             }
             setBackgroundColor(Color.TRANSPARENT)
         }
         drawerSeparators.add(settingsTopDivider)
-        drawerMenu?.addView(settingsTopDivider)
-        drawerMenu?.addView(drawerItemsViews[19])
+        drawerFooter.addView(settingsTopDivider)
+        drawerFooter.addView(drawerItemsViews[19])
 
-        drawerScroll.addView(drawerMenu); rootFrame.addView(mainContent); rootFrame.addView(dimView); rootFrame.addView(drawerScroll)
+        drawerScroll.addView(drawerMenu)
+        drawerContainer.addView(drawerScroll)
+        drawerContainer.addView(drawerFooter)
+
+        rootFrame.addView(mainContent); rootFrame.addView(dimView); rootFrame.addView(drawerContainer)
         ProCanvasAnimations.loadPrefs(prefs)
         ProUiMotionEngine.loadPrefs(prefs)
         ProCanvasAnimations.installOverlay(this, rootFrame)
@@ -472,10 +486,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val hasCustomTextIcons = MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_TEXT_ICONS]
         val topIconCol = MinimalistTheme.resolveTopHeaderIconColor(this)
 
+        drawerScroll.background = null
+        drawerFooter.background = null
+
         if (isMinimalistMode) {
             val minBg = MinimalistTheme.getBackgroundColor(this)
             mainContent?.setBackgroundColor(minBg)
-            drawerScroll.setBackgroundColor(MinimalistTheme.DRAWER_BG)
+            drawerContainer.setBackgroundColor(MinimalistTheme.DRAWER_BG)
             val inkCol = MinimalistTheme.ensureReadableTextOnBg(MinimalistTheme.TEXT_CHARCOAL, minBg, 2.2)
             titleText.setTextColor(inkCol)
             menuBtn.setTextColor(topIconCol)
@@ -501,7 +518,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             val headerInk = if (hasCustomTextIcons) MinimalistTheme.ensureReadableTextOnBg(MinimalistTheme.TEXT_CHARCOAL, bgColor, 2.2) else Color.WHITE
             titleText.setTextColor(headerInk)
             menuBtn.setTextColor(topIconCol)
-            drawerScroll.setBackgroundColor(MinimalistTheme.resolveDrawerBgColor(this))
+            drawerContainer.setBackgroundColor(MinimalistTheme.resolveDrawerBgColor(this))
 
             appLogoView?.apply {
                 val logoBgCol = if (hasCustomLogoBg) MinimalistTheme.DRAWER_HEADER_YELLOW else MinimalistTheme.resolveDrawerBgColor(this@MainActivity)
@@ -943,11 +960,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             headerTv.gravity = (if (isRightHanded) Gravity.RIGHT else Gravity.LEFT) or Gravity.CENTER_VERTICAL
         }
         val drawerW = getDrawerWidthPx()
-        drawerScroll.layoutParams = FrameLayout.LayoutParams(drawerW, FrameLayout.LayoutParams.MATCH_PARENT).apply {
+        drawerContainer.layoutParams = FrameLayout.LayoutParams(drawerW, FrameLayout.LayoutParams.MATCH_PARENT).apply {
             gravity = if (isRightHanded) Gravity.RIGHT else Gravity.LEFT
         }
         if (!isDrawerOpen) {
-            drawerScroll.translationX = if (isRightHanded) drawerW.toFloat() else -drawerW.toFloat()
+            drawerContainer.translationX = if (isRightHanded) drawerW.toFloat() else -drawerW.toFloat()
         }
     }
 
@@ -992,7 +1009,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
-    private fun loadPreferences() {
+    fun loadPreferences() {
         useHaptic = prefs?.getBoolean("useHaptic", true) ?: true; useSound = prefs?.getBoolean("useSound", true) ?: true; useAnimations = prefs?.getBoolean("useAnimations", true) ?: true
         keepScreenOn = prefs?.getBoolean("keepScreenOn", false) ?: false
         soundType = (prefs?.getInt("soundType", 0) ?: 0).coerceIn(0, 3)
@@ -1083,12 +1100,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         window.navigationBarColor = statusNavCol
 
         val topIconCol = MinimalistTheme.resolveTopHeaderIconColor(this)
+        drawerScroll.background = null
+        drawerFooter.background = null
+        drawerMenu?.background = null
 
         if (isMinimalistMode) {
             val minBg = MinimalistTheme.getBackgroundColor(this)
             mainContent?.setBackgroundColor(minBg)
-            drawerScroll.setBackgroundColor(MinimalistTheme.DRAWER_BG)
-            drawerMenu?.background = null
+            drawerContainer.setBackgroundColor(MinimalistTheme.DRAWER_BG)
             val headerInk = MinimalistTheme.ensureReadableTextOnBg(MinimalistTheme.TEXT_CHARCOAL, minBg, 2.2)
             titleText.setTextColor(headerInk)
             menuBtn.setTextColor(topIconCol)
@@ -1112,9 +1131,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             historyBtn.setCompoundDrawables(MinimalistTheme.createMinimalistVectorIcon(this, 101, topIconCol, 22f), null, null, null)
         } else if (isAuroraMode) {
             mainContent?.background = AuroraBorealisTheme.createAuroraAtmosphericBackground()
-            val drawerBg = AuroraBorealisTheme.createAuroraCardDrawable(this, 0f, isDrawer = true)
-            drawerScroll.background = drawerBg
-            drawerMenu?.background = null
+            drawerContainer.background = AuroraBorealisTheme.createAuroraCardDrawable(this, 0f, isDrawer = true)
             titleText.setTextColor(Color.WHITE)
             menuBtn.setTextColor(topIconCol)
             appLogoView?.apply {
@@ -1135,9 +1152,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             historyBtn.setCompoundDrawables(AuroraBorealisTheme.createVectorIcon(this, 101, topIconCol, 22f, true), null, null, null)
         } else if (isIosGlassMode) {
             mainContent?.background = IosGlassTheme.createLiquidAmbientBackground(this)
-            val drawerBg = IosGlassTheme.createGlassCardDrawable(this, 0f)
-            drawerScroll.background = drawerBg
-            drawerMenu?.background = null
+            drawerContainer.background = IosGlassTheme.createGlassCardDrawable(this, 0f)
             titleText.setTextColor(Color.WHITE)
             menuBtn.setTextColor(topIconCol)
             appLogoView?.apply {
@@ -1158,8 +1173,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             historyBtn.setCompoundDrawables(IosGlassTheme.createSfSymbolDrawable(this, 101, topIconCol, 22f), null, null, null)
         } else {
             mainContent?.setBackgroundColor(bgColor)
-            drawerScroll.setBackgroundColor(MinimalistTheme.resolveDrawerBgColor(this))
-            drawerMenu?.background = null
+            drawerContainer.setBackgroundColor(MinimalistTheme.resolveDrawerBgColor(this))
             val headerInk = if (MinimalistTheme.slotCustomized[MinimalistTheme.SLOT_TEXT_ICONS]) {
                 MinimalistTheme.ensureReadableTextOnBg(MinimalistTheme.TEXT_CHARCOAL, bgColor, 2.2)
             } else Color.WHITE
@@ -1193,14 +1207,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private fun openDrawer() {
         updateHandednessLayout()
         if (isCleanGlassActive && !isMinimalistMode) IosGlassTheme.applyRealtimeGlassBlur(mainContent, true)
-        ProUiMotionEngine.animateDrawerToggle(this, true, drawerScroll, dimView, mainContent, getDrawerWidthPx())
+        ProUiMotionEngine.animateDrawerToggle(this, true, drawerContainer, dimView, mainContent, getDrawerWidthPx())
         isDrawerOpen = true
         ProCanvasAnimations.onDrawerStateChanged(this, true, drawerMenu)
     }
 
     private fun closeDrawer() {
         IosGlassTheme.applyRealtimeGlassBlur(mainContent, false)
-        ProUiMotionEngine.animateDrawerToggle(this, false, drawerScroll, dimView, mainContent, getDrawerWidthPx())
+        ProUiMotionEngine.animateDrawerToggle(this, false, drawerContainer, dimView, mainContent, getDrawerWidthPx())
         isDrawerOpen = false
         ProCanvasAnimations.onDrawerStateChanged(this, false, drawerMenu)
     }
@@ -1984,7 +1998,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             52 -> createProStatisticsBellScreen()
             53 -> createProGeometryBlueprintLiveScreen()
             54 -> createProNumberTheoryScreen()
-            55 -> createProPowerFeaturesCenter()
+            55 -> createProVerifiedExportCenterScreen()
             56 -> createProFavoritesCenterScreen()
             57 -> createProMechanicsUnitsScreen()
             58 -> createProFluidsUnitsScreen()
@@ -2043,7 +2057,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             ProUiMotionEngine.applySettingsButtonIcon(rawView, this)
         }
 
-        if (index !in listOf(0, 1, 19, 73, 78, 81, 96, 97, 98, 99) && index !in 100..120) {
+        if (index !in listOf(0, 1, 19, 55, 73, 78, 81, 96, 97, 98, 99) && index !in 100..120) {
             BidiFmt.attachUniversalLiveVisualizer(rawView)
         }
 
@@ -2464,6 +2478,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (ProExportBackupEngine.handleActivityResult(this, requestCode, resultCode, data)) return
         handleVoiceActivityResult(requestCode, resultCode, data)
     }
 }
