@@ -1,13 +1,18 @@
 package com.example.calculator
 
 import android.animation.ValueAnimator
+import android.content.Context
 import android.graphics.*
+import android.graphics.drawable.Drawable
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
 import android.media.MediaPlayer
 import android.os.Handler
 import android.os.Looper
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.ReplacementSpan
 import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.ViewGroup
@@ -60,6 +65,37 @@ object MiniGameEngine {
         val color: Int,
         val createdAt: Long = System.currentTimeMillis()
     )
+
+    // Span ממורכז להצגת חיה וקטורית חדה ישירות במרכז כפתור המחשבון
+    private class CenteredDrawableSpan(private val drawable: Drawable) : ReplacementSpan() {
+        override fun getSize(
+            paint: Paint, text: CharSequence?, start: Int, end: Int, fm: Paint.FontMetricsInt?
+        ): Int {
+            val rect = drawable.bounds
+            if (fm != null) {
+                val pfm = paint.fontMetricsInt
+                val fontHeight = pfm.descent - pfm.ascent
+                val centerY = pfm.ascent + fontHeight / 2
+                val halfH = rect.height() / 2
+                fm.ascent = centerY - halfH
+                fm.top = fm.ascent
+                fm.descent = centerY + halfH
+                fm.bottom = fm.descent
+            }
+            return rect.width()
+        }
+
+        override fun draw(
+            canvas: Canvas, text: CharSequence?, start: Int, end: Int,
+            x: Float, top: Int, y: Int, bottom: Int, paint: Paint
+        ) {
+            canvas.save()
+            val transY = top + ((bottom - top) - drawable.bounds.height()) / 2f
+            canvas.translate(x, transY)
+            drawable.draw(canvas)
+            canvas.restore()
+        }
+    }
 
     var isActive = false
     internal var currentGame = ""
@@ -126,7 +162,7 @@ object MiniGameEngine {
     internal var carLane = 1 // 0=עליון(8), 1=אמצעי, 2=תחתון(2)
     internal var racerScore = 0
     internal var racerBest = 0
-    internal var racerLives = 2
+    internal var racerLives = 3 // מתחיל עם 3 לבבות מלאים!
     internal var racerShieldActive = false
     internal var racerCombo = 1
     internal var racerStreak = 0
@@ -161,7 +197,8 @@ object MiniGameEngine {
     internal var bombLastCutTime = 0L
     private var expectedOp = "×"
 
-    // --- 5. תזמורת חיות + אתגר זיכרון (7777) ---
+    // --- 5. תזמורת חיות וקטוריות + אתגר זיכרון (7777) ---
+    // 5 חיות אישיות זהות ב-100% בין הכפתורים (1–5) למסך: 0=כלב, 1=חתול, 2=שועל, 3=פנדה, 4=צפרדע
     var isAnimalParty = false
     internal var animalTimeLeft = 25
     internal var animalTotalTime = 25
@@ -174,12 +211,7 @@ object MiniGameEngine {
     internal var animalSimonBest = 0
     internal val animalSimonSeq = mutableListOf<Int>()
     internal var animalSimonInputPos = 0
-    internal val stageAnimals = mutableListOf("🐶", "🐱", "🐭", "🐹", "🐰")
     private val savedKeyLabels = mutableMapOf<String, CharSequence>()
-    private val animalPool = listOf(
-        "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼",
-        "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🐔"
-    )
     private val animalNotes = doubleArrayOf(523.25, 587.33, 659.25, 783.99, 880.0, 987.77, 1046.5, 1174.66, 1318.5)
 
     // =========================================================================
@@ -195,6 +227,304 @@ object MiniGameEngine {
             return score
         }
         return prev
+    }
+
+    // =========================================================================
+    // ציור משותף ל-5 החיות הווקטוריות (משמש גם את המסך וגם את כפתורי 1–5!)
+    // 0=כלב, 1=חתול, 2=שועל, 3=פנדה, 4=צפרדע
+    // =========================================================================
+    internal fun drawCustomVectorAnimalFace(
+        canvas: Canvas,
+        cx: Float,
+        cy: Float,
+        r: Float,
+        animalIdx: Int,
+        isHappy: Boolean,
+        outlineInk: Int,
+        d: Float,
+        fillP: Paint,
+        strokeP: Paint,
+        path: Path
+    ) {
+        val safeIdx = animalIdx.coerceIn(0, 4)
+        val earOutline = Color.argb(115, Color.red(outlineInk), Color.green(outlineInk), Color.blue(outlineInk))
+        strokeP.strokeWidth = (r * 0.085f).coerceAtLeast(1.1f * d)
+
+        when (safeIdx) {
+            0 -> { // 🐶 כלב — אוזניים חומות שמוטות, חרטום קרם ולשון שמחה
+                val fur = Color.parseColor("#DDA15E")
+                val earCol = Color.parseColor("#8D5524")
+                val muzzleCol = Color.parseColor("#FDEBD0")
+
+                fillP.color = earCol
+                canvas.drawOval(RectF(cx - r * 1.18f, cy - r * 0.42f, cx - r * 0.56f, cy + r * 0.66f), fillP)
+                canvas.drawOval(RectF(cx + r * 0.56f, cy - r * 0.42f, cx + r * 1.18f, cy + r * 0.66f), fillP)
+
+                fillP.color = fur
+                canvas.drawCircle(cx, cy, r, fillP)
+                strokeP.color = earOutline
+                canvas.drawCircle(cx, cy, r, strokeP)
+
+                // חרטום בהיר
+                fillP.color = muzzleCol
+                canvas.drawOval(RectF(cx - r * 0.46f, cy + r * 0.02f, cx + r * 0.46f, cy + r * 0.66f), fillP)
+
+                // לשון ורודה בקפיצה
+                if (isHappy) {
+                    fillP.color = Color.parseColor("#F06292")
+                    canvas.drawOval(RectF(cx - r * 0.14f, cy + r * 0.42f, cx + r * 0.14f, cy + r * 0.72f), fillP)
+                }
+
+                // אף עגול כהה
+                fillP.color = Color.parseColor("#2B1B17")
+                canvas.drawOval(RectF(cx - r * 0.19f, cy + r * 0.08f, cx + r * 0.19f, cy + r * 0.30f), fillP)
+            }
+            1 -> { // 🐱 חתול — אוזניים משולשות עם פנים ורוד + שפם חתולי
+                val fur = Color.parseColor("#F48FB1")
+                val innerEar = Color.parseColor("#FCE4EC")
+
+                // אוזניים משולשות
+                fillP.color = fur
+                path.reset()
+                path.moveTo(cx - r * 0.86f, cy - r * 0.22f)
+                path.lineTo(cx - r * 0.72f, cy - r * 1.16f)
+                path.lineTo(cx - r * 0.14f, cy - r * 0.68f)
+                path.close()
+                canvas.drawPath(path, fillP)
+                path.reset()
+                path.moveTo(cx + r * 0.86f, cy - r * 0.22f)
+                path.lineTo(cx + r * 0.72f, cy - r * 1.16f)
+                path.lineTo(cx + r * 0.14f, cy - r * 0.68f)
+                path.close()
+                canvas.drawPath(path, fillP)
+
+                // משולשים פנימיים באוזניים
+                fillP.color = innerEar
+                path.reset()
+                path.moveTo(cx - r * 0.70f, cy - r * 0.36f)
+                path.lineTo(cx - r * 0.64f, cy - r * 0.92f)
+                path.lineTo(cx - r * 0.28f, cy - r * 0.64f)
+                path.close()
+                canvas.drawPath(path, fillP)
+                path.reset()
+                path.moveTo(cx + r * 0.70f, cy - r * 0.36f)
+                path.lineTo(cx + r * 0.64f, cy - r * 0.92f)
+                path.lineTo(cx + r * 0.28f, cy - r * 0.64f)
+                path.close()
+                canvas.drawPath(path, fillP)
+
+                fillP.color = fur
+                canvas.drawCircle(cx, cy, r, fillP)
+                strokeP.color = earOutline
+                canvas.drawCircle(cx, cy, r, strokeP)
+
+                // שפם חתול (2 קווים בכל צד)
+                strokeP.color = Color.parseColor("#4A148C")
+                strokeP.strokeWidth = (r * 0.075f).coerceAtLeast(1.0f * d)
+                canvas.drawLine(cx - r * 0.98f, cy + r * 0.12f, cx - r * 0.45f, cy + r * 0.20f, strokeP)
+                canvas.drawLine(cx - r * 0.95f, cy + r * 0.38f, cx - r * 0.45f, cy + r * 0.32f, strokeP)
+                canvas.drawLine(cx + r * 0.98f, cy + r * 0.12f, cx + r * 0.45f, cy + r * 0.20f, strokeP)
+                canvas.drawLine(cx + r * 0.95f, cy + r * 0.38f, cx + r * 0.45f, cy + r * 0.32f, strokeP)
+
+                // אף משולש קטן
+                fillP.color = Color.parseColor("#AD1457")
+                path.reset()
+                path.moveTo(cx - r * 0.14f, cy + r * 0.12f)
+                path.lineTo(cx + r * 0.14f, cy + r * 0.12f)
+                path.lineTo(cx, cy + r * 0.28f)
+                path.close()
+                canvas.drawPath(path, fillP)
+            }
+            2 -> { // 🦊 שועל — כתום עז, אוזניים גבוהות עם קצה שחור ולחיים לבנות מחודדות
+                val fur = Color.parseColor("#F57C3A")
+                val darkTip = Color.parseColor("#263238")
+
+                // אוזניים גבוהות
+                fillP.color = fur
+                path.reset()
+                path.moveTo(cx - r * 0.88f, cy - r * 0.18f)
+                path.lineTo(cx - r * 0.78f, cy - r * 1.24f)
+                path.lineTo(cx - r * 0.12f, cy - r * 0.68f)
+                path.close()
+                canvas.drawPath(path, fillP)
+                path.reset()
+                path.moveTo(cx + r * 0.88f, cy - r * 0.18f)
+                path.lineTo(cx + r * 0.78f, cy - r * 1.24f)
+                path.lineTo(cx + r * 0.12f, cy - r * 0.68f)
+                path.close()
+                canvas.drawPath(path, fillP)
+
+                // קצוות שחורים לאוזניים
+                fillP.color = darkTip
+                path.reset()
+                path.moveTo(cx - r * 0.78f, cy - r * 1.24f)
+                path.lineTo(cx - r * 0.83f, cy - r * 0.84f)
+                path.lineTo(cx - r * 0.50f, cy - r * 0.98f)
+                path.close()
+                canvas.drawPath(path, fillP)
+                path.reset()
+                path.moveTo(cx + r * 0.78f, cy - r * 1.24f)
+                path.lineTo(cx + r * 0.83f, cy - r * 0.84f)
+                path.lineTo(cx + r * 0.50f, cy - r * 0.98f)
+                path.close()
+                canvas.drawPath(path, fillP)
+
+                // פנים מעוין-מעוגל של שועל
+                fillP.color = fur
+                canvas.drawCircle(cx, cy, r, fillP)
+
+                // לחיים לבנות תחתונות
+                fillP.color = Color.WHITE
+                path.reset()
+                path.moveTo(cx - r * 0.95f, cy + r * 0.08f)
+                path.quadTo(cx - r * 0.38f, cy + r * 0.16f, cx, cy + r * 0.95f)
+                path.quadTo(cx - r * 0.78f, cy + r * 0.78f, cx - r * 0.95f, cy + r * 0.08f)
+                path.close()
+                canvas.drawPath(path, fillP)
+                path.reset()
+                path.moveTo(cx + r * 0.95f, cy + r * 0.08f)
+                path.quadTo(cx + r * 0.38f, cy + r * 0.16f, cx, cy + r * 0.95f)
+                path.quadTo(cx + r * 0.78f, cy + r * 0.78f, cx + r * 0.95f, cy + r * 0.08f)
+                path.close()
+                canvas.drawPath(path, fillP)
+
+                strokeP.color = earOutline
+                canvas.drawCircle(cx, cy, r, strokeP)
+
+                // אף שחור חד בקצה
+                fillP.color = darkTip
+                canvas.drawCircle(cx, cy + r * 0.42f, r * 0.15f, fillP)
+            }
+            3 -> { // 🐼 פנדה — פנים לבנות, אוזניים עגולות שחורות וכתמי עיניים שחורים
+                val dark = Color.parseColor("#263238")
+                fillP.color = dark
+                canvas.drawCircle(cx - r * 0.68f, cy - r * 0.74f, r * 0.36f, fillP)
+                canvas.drawCircle(cx + r * 0.68f, cy - r * 0.74f, r * 0.36f, fillP)
+
+                fillP.color = Color.WHITE
+                canvas.drawCircle(cx, cy, r, fillP)
+                strokeP.color = earOutline
+                canvas.drawCircle(cx, cy, r, strokeP)
+
+                // כתמי עיניים אובליים של פנדה
+                fillP.color = dark
+                canvas.drawOval(RectF(cx - r * 0.64f, cy - r * 0.36f, cx - r * 0.14f, cy + r * 0.16f), fillP)
+                canvas.drawOval(RectF(cx + r * 0.14f, cy - r * 0.36f, cx + r * 0.64f, cy + r * 0.16f), fillP)
+
+                // אישונים בהירים בולטים בתוך הכתמים
+                fillP.color = Color.WHITE
+                canvas.drawCircle(cx - r * 0.36f, cy - r * 0.12f, r * 0.11f, fillP)
+                canvas.drawCircle(cx + r * 0.36f, cy - r * 0.12f, r * 0.11f, fillP)
+
+                // אף שחור וחיוך קטן
+                fillP.color = dark
+                canvas.drawOval(RectF(cx - r * 0.16f, cy + r * 0.18f, cx + r * 0.16f, cy + r * 0.36f), fillP)
+                return // עיני הפנדה כבר צוירו
+            }
+            else -> { // 🐸 צפרדע — ירוקה עם 2 עיניים בולטות מלמעלה וחיוך רחב
+                val green = Color.parseColor("#66BB6A")
+                val belly = Color.parseColor("#C8E6C9")
+
+                // 2 בליטות עיניים עליונות
+                fillP.color = green
+                canvas.drawCircle(cx - r * 0.56f, cy - r * 0.76f, r * 0.40f, fillP)
+                canvas.drawCircle(cx + r * 0.56f, cy - r * 0.76f, r * 0.40f, fillP)
+                strokeP.color = earOutline
+                canvas.drawCircle(cx - r * 0.56f, cy - r * 0.76f, r * 0.40f, strokeP)
+                canvas.drawCircle(cx + r * 0.56f, cy - r * 0.76f, r * 0.40f, strokeP)
+
+                // ראש ירוק
+                fillP.color = green
+                canvas.drawOval(RectF(cx - r * 1.06f, cy - r * 0.78f, cx + r * 1.06f, cy + r * 0.88f), fillP)
+                strokeP.color = earOutline
+                canvas.drawOval(RectF(cx - r * 1.06f, cy - r * 0.78f, cx + r * 1.06f, cy + r * 0.88f), strokeP)
+
+                // לובן עיניים ואישונים בתוך הבליטות
+                fillP.color = Color.WHITE
+                canvas.drawCircle(cx - r * 0.56f, cy - r * 0.76f, r * 0.25f, fillP)
+                canvas.drawCircle(cx + r * 0.56f, cy - r * 0.76f, r * 0.25f, fillP)
+                fillP.color = Color.parseColor("#1B2631")
+                canvas.drawCircle(cx - r * 0.54f, cy - r * 0.76f, r * 0.13f, fillP)
+                canvas.drawCircle(cx + r * 0.54f, cy - r * 0.76f, r * 0.13f, fillP)
+
+                // סנטר בהיר + חיוך רחב
+                fillP.color = belly
+                canvas.drawOval(RectF(cx - r * 0.65f, cy + r * 0.16f, cx + r * 0.65f, cy + r * 0.72f), fillP)
+                strokeP.color = Color.parseColor("#1B5E20")
+                strokeP.strokeWidth = (r * 0.10f).coerceAtLeast(1.3f * d)
+                canvas.drawArc(
+                    RectF(cx - r * 0.56f, cy - r * 0.10f, cx + r * 0.56f, cy + r * (if (isHappy) 0.56f else 0.42f)),
+                    18f, 144f, false, strokeP
+                )
+                return // עיני הצפרדע כבר צוירו
+            }
+        }
+
+        // עיניים משותפות לכלב, חתול ושועל (מחייכות בקפיצה / עגולות במנוחה) + סומק עדין
+        if (isHappy) {
+            strokeP.strokeWidth = (r * 0.11f).coerceAtLeast(1.4f * d)
+            strokeP.color = Color.parseColor("#1F2937")
+            canvas.drawArc(RectF(cx - r * 0.52f, cy - r * 0.28f, cx - r * 0.16f, cy + r * 0.04f), 180f, 180f, false, strokeP)
+            canvas.drawArc(RectF(cx + r * 0.16f, cy - r * 0.28f, cx + r * 0.52f, cy + r * 0.04f), 180f, 180f, false, strokeP)
+        } else {
+            fillP.color = Color.parseColor("#1F2937")
+            canvas.drawCircle(cx - r * 0.34f, cy - r * 0.14f, r * 0.14f, fillP)
+            canvas.drawCircle(cx + r * 0.34f, cy - r * 0.14f, r * 0.14f, fillP)
+            fillP.color = Color.WHITE
+            canvas.drawCircle(cx - r * 0.38f, cy - r * 0.18f, r * 0.05f, fillP)
+            canvas.drawCircle(cx + r * 0.30f, cy - r * 0.18f, r * 0.05f, fillP)
+        }
+    }
+
+    private fun createAnimalKeyDrawable(
+        context: Context,
+        animalIdx: Int,
+        keyDigit: String,
+        sizeDp: Float,
+        outlineInk: Int,
+        badgeBg: Int,
+        badgeText: Int
+    ): Drawable {
+        val d = context.resources.displayMetrics.density
+        val sizePx = (sizeDp * d).toInt().coerceAtLeast(36)
+        return object : Drawable() {
+            private val fillP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+            private val strokeP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeCap = Paint.Cap.ROUND
+                strokeJoin = Paint.Join.ROUND
+            }
+            private val badgeTextP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                textAlign = Paint.Align.CENTER
+                typeface = Typeface.DEFAULT_BOLD
+            }
+            private val path = Path()
+
+            override fun getIntrinsicWidth(): Int = sizePx
+            override fun getIntrinsicHeight(): Int = sizePx
+
+            override fun draw(canvas: Canvas) {
+                val cx = bounds.exactCenterX()
+                val cy = bounds.exactCenterY() + sizePx * 0.06f
+                val r = sizePx * 0.34f
+                drawCustomVectorAnimalFace(canvas, cx, cy, r, animalIdx, false, outlineInk, d, fillP, strokeP, path)
+
+                // תגית מספר קטנה וברורה (1–5) בפינה הימנית-תחתונה
+                val br = sizePx * 0.17f
+                val bx = bounds.right - br - 1f * d
+                val by = bounds.bottom - br - 1f * d
+                fillP.color = badgeBg
+                canvas.drawCircle(bx, by, br, fillP)
+                badgeTextP.color = badgeText
+                badgeTextP.textSize = br * 1.35f
+                canvas.drawText(keyDigit, bx, by + br * 0.46f, badgeTextP)
+            }
+
+            override fun setAlpha(alpha: Int) { fillP.alpha = alpha; strokeP.alpha = alpha }
+            override fun setColorFilter(colorFilter: ColorFilter?) { fillP.colorFilter = colorFilter; strokeP.colorFilter = colorFilter }
+            @Deprecated("Deprecated in Java")
+            override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+        }.apply { setBounds(0, 0, sizePx, sizePx) }
     }
 
     // =========================================================================
@@ -483,7 +813,7 @@ object MiniGameEngine {
     }
 
     // =========================================================================
-    // מערכת אודיו חכמה (חיבור אוטומטי לכל קובץ ב-res/raw + גיבוי סינתטי)
+    // מערכת אודיו חכמה (צליל CRASH מהתיקייה רק בפסילה סופית + BUMP למכה לא-קטלנית)
     // =========================================================================
     private fun findRawResId(
         activity: MainActivity,
@@ -759,6 +1089,12 @@ object MiniGameEngine {
 
     private fun playRacerSoundEffect(activity: MainActivity, type: String) {
         if (!activity.useSound) return
+        // מכה לא-קטלנית / תשובה שגויה — צליל קצר ועדין בלבד, לא צליל ההתרסקות המלא!
+        if (type == "BUMP") {
+            playSynthTone(220.0, 95.0, 125, 0.48)
+            return
+        }
+
         val commonExcludes = listOf("sound1", "sound2", "sound3", "ac_sound", "loop")
         val resId = when (type) {
             "SHOOT" -> findRawResId(
@@ -850,7 +1186,8 @@ object MiniGameEngine {
     }
 
     // =========================================================================
-    // משחק 0: תזמורת חיות + אתגר זיכרון Simon Says (קוד 7777)
+    // משחק 0: תזמורת חיות וקטוריות + אתגר זיכרון Simon Says (קוד 7777)
+    // כפתורים 1–5 מציגים בדיוק את אותן 5 חיות וקטוריות שמופיעות על המסך!
     // =========================================================================
     fun startAnimalParty(activity: MainActivity) {
         prepareNewGame(activity, "ANIMALS")
@@ -866,31 +1203,10 @@ object MiniGameEngine {
         animalSimonInputPos = 0
         animalBounceTime = System.currentTimeMillis()
 
-        // התאמה מדויקת של 5 החיות על הבמה לכפתורים 1–5
-        val pickedFive = animalPool.shuffled().take(5)
-        stageAnimals.clear()
-        stageAnimals.addAll(pickedFive)
-
-        val remainingPool = (animalPool - pickedFive.toSet()).shuffled()
-        var remIdx = 0
-        val digitToAnimalIndex = mapOf("1" to 0, "2" to 1, "3" to 2, "4" to 3, "5" to 4)
-
         for ((k, btn) in activity.keypadButtons) {
             savedKeyLabels[k] = btn.text
-            when (k) {
-                "AC" -> {}
-                "=" -> btn.text = "🎵"
-                "0" -> btn.text = "🎉"
-                in digitToAnimalIndex.keys -> {
-                    val slot = digitToAnimalIndex[k]!!
-                    btn.text = "${k}${stageAnimals[slot]}"
-                }
-                else -> {
-                    btn.text = remainingPool[remIdx % remainingPool.size]
-                    remIdx++
-                }
-            }
         }
+        applyAnimalKeypadIcons(activity)
         playSqueakSound(activity.useSound, 1.0)
         invalidateStage()
 
@@ -909,6 +1225,47 @@ object MiniGameEngine {
             }
         }
         handler.postDelayed(gameLoop!!, 1000L)
+    }
+
+    private fun applyAnimalKeypadIcons(activity: MainActivity) {
+        val pal = resolvePalette(activity)
+        val isCompact = activity.keypadButtons.size > 26
+        val iconSizeDp = if (isCompact) 26f else 34f
+        val noteGlyphs = mapOf("6" to "♪", "7" to "♫", "8" to "♬", "9" to "♩")
+
+        for ((k, btn) in activity.keypadButtons) {
+            when (k) {
+                "AC" -> {}
+                "1", "2", "3", "4", "5" -> {
+                    val animalIdx = k.toInt() - 1
+                    val keyBg = MinimalistTheme.resolveKeypadButtonBgColor(activity, k)
+                    val badgeBg = pal.controlAccent
+                    val badgeTxt = MinimalistTheme.ensureReadableTextOnBg(Color.WHITE, badgeBg, 2.3)
+                    val outlineCol = MinimalistTheme.ensureReadableTextOnBg(pal.inkPrimary, keyBg, 2.2)
+                    val icon = createAnimalKeyDrawable(activity, animalIdx, k, iconSizeDp, outlineCol, badgeBg, badgeTxt)
+                    val span = SpannableString(" ").apply {
+                        setSpan(CenteredDrawableSpan(icon), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    }
+                    btn.text = span
+                }
+                "=" -> styleKeyForGame(
+                    activity, "=",
+                    if (animalSimonMode) pal.bonusColor else pal.playerColor,
+                    if (animalSimonMode) "חופשי" else "זיכרון",
+                    glow = true
+                )
+                "0" -> styleKeyForGame(activity, "0", pal.bonusColor, "מקהלה", glow = true)
+                in noteGlyphs.keys -> {
+                    val col = if (animalSimonMode) Color.argb(95, Color.red(pal.inkSecondary), Color.green(pal.inkSecondary), Color.blue(pal.inkSecondary)) else pal.controlAccent
+                    styleKeyForGame(activity, k, col, noteGlyphs[k], glow = !animalSimonMode)
+                }
+                else -> {
+                    // שומר על שאר המקשים נקיים בלי אימוג'ים מבלבלים של חיות אחרות
+                    val col = Color.argb(95, Color.red(pal.inkSecondary), Color.green(pal.inkSecondary), Color.blue(pal.inkSecondary))
+                    styleKeyForGame(activity, k, col, "•", glow = false)
+                }
+            }
+        }
     }
 
     private fun startNextAnimalSimonRound(activity: MainActivity) {
@@ -938,7 +1295,7 @@ object MiniGameEngine {
     }
 
     // =========================================================================
-    // משחק 1: איקס-עיגול טקטי (קוד 1337) — קושי אמיתי + 2 שחקנים + רמז
+    // משחק 1: איקס-עיגול טקטי (קוד 1337) — קושי אמיתי + 2 שחקנים + רמז מהיר ובטוח
     // =========================================================================
     fun startTicTacToe(activity: MainActivity) {
         val keepScores = (currentGame == "TTT")
@@ -966,14 +1323,16 @@ object MiniGameEngine {
     private fun updateTicTacToeUI(activity: MainActivity, status: String) {
         tttStatusText = status
         val pal = resolvePalette(activity)
+        val hintActive = (tttHintCell in 0..8 && System.currentTimeMillis() - tttHintTime < 2200L)
         for (i in 0..8) {
             val key = (i + 1).toString()
             val mark = tttBoard[i]
             val keyBg = MinimalistTheme.resolveKeypadButtonBgColor(activity, key)
             val neutralColor = MinimalistTheme.resolveKeypadSymbolTextColor(activity, key, keyBg)
-            when (mark) {
-                "×" -> styleKeyForGame(activity, key, pal.playerColor, mark, glow = true)
-                "0" -> styleKeyForGame(activity, key, pal.enemyColor, mark, glow = true)
+            when {
+                mark == "×" -> styleKeyForGame(activity, key, pal.playerColor, mark, glow = true)
+                mark == "0" -> styleKeyForGame(activity, key, pal.enemyColor, mark, glow = true)
+                hintActive && i == tttHintCell -> styleKeyForGame(activity, key, pal.bonusColor, mark, glow = true)
                 else -> styleKeyForGame(activity, key, neutralColor, mark, glow = false)
             }
         }
@@ -996,65 +1355,85 @@ object MiniGameEngine {
                 return tttBoard[w[0]] to w
             }
         }
-        if (tttBoard.none { it in "1".."9" }) return "TIE" to null
-        return null
+        for (i in 0..8) {
+            if (tttBoard[i] != "×" && tttBoard[i] != "0") return null
+        }
+        return "TIE" to null
     }
 
-    private fun checkWinner(): String? = findWinningLine()?.first
+    private fun checkWinnerFast(): String? {
+        val b = tttBoard
+        if (b[0] == b[1] && b[1] == b[2]) return b[0]
+        if (b[3] == b[4] && b[4] == b[5]) return b[3]
+        if (b[6] == b[7] && b[7] == b[8]) return b[6]
+        if (b[0] == b[3] && b[3] == b[6]) return b[0]
+        if (b[1] == b[4] && b[4] == b[7]) return b[1]
+        if (b[2] == b[5] && b[5] == b[8]) return b[2]
+        if (b[0] == b[4] && b[4] == b[8]) return b[0]
+        if (b[2] == b[4] && b[4] == b[6]) return b[2]
+        for (i in 0..8) {
+            if (b[i] != "×" && b[i] != "0") return null
+        }
+        return "TIE"
+    }
 
-    // הבדל אמיתי וברור בין רמות הקושי באיקס-עיגול:
-    // 0 (קל): בעיקר אקראי, חוסם לעיתים רחוקות מאוד (20%)
-    // 1 (בינוני): לוקח ניצחון מיידי, חוסם ב-55% מהמקרים, אחרת מהלך לא-אופטימלי (35%)
-    // 2 (מומחה): Minimax מלא עם עומק — ניצחון מהיר, חסימה עקבית ומשחק בלתי מנוצח
+    // הבדל חד בין רמות הקושי + פתרון O(1) בפתיחה + Alpha-Beta ללא הקצאות (מונע קריסה ברמז לפני משחק!)
     private fun getBestMoveFor(mark: String, mode: Int): Int {
         val opp = if (mark == "0") "×" else "0"
-        val free = (0..8).filter { tttBoard[it] !in listOf("×", "0") }
+        val free = ArrayList<Int>(9)
+        for (i in 0..8) {
+            if (tttBoard[i] != "×" && tttBoard[i] != "0") free.add(i)
+        }
         if (free.isEmpty()) return -1
 
+        // 0 = קל: 85% אקראי טהור, רק 15% לוקח ניצחון מיידי
         if (mode == 0) {
-            if (Random.nextFloat() < 0.20f) {
+            if (Random.nextFloat() < 0.15f) {
                 for (i in free) {
-                    val orig = tttBoard[i]; tttBoard[i] = opp
-                    if (checkWinner() == opp) { tttBoard[i] = orig; return i }
+                    val orig = tttBoard[i]; tttBoard[i] = mark
+                    val win = (checkWinnerFast() == mark)
                     tttBoard[i] = orig
+                    if (win) return i
                 }
             }
-            return free.random()
+            return free[Random.nextInt(free.size)]
         }
 
+        // 1 = בינוני: לוקח ניצחון מיידי, חוסם 55% מהפעמים, ואחרת משלב אקראי ומהלך חכם
         if (mode == 1) {
             for (i in free) {
                 val orig = tttBoard[i]; tttBoard[i] = mark
-                if (checkWinner() == mark) { tttBoard[i] = orig; return i }
+                val win = (checkWinnerFast() == mark)
                 tttBoard[i] = orig
+                if (win) return i
             }
             if (Random.nextFloat() < 0.55f) {
                 for (i in free) {
                     val orig = tttBoard[i]; tttBoard[i] = opp
-                    if (checkWinner() == opp) { tttBoard[i] = orig; return i }
+                    val oppWin = (checkWinnerFast() == opp)
                     tttBoard[i] = orig
+                    if (oppWin) return i
                 }
             }
-            if (Random.nextFloat() < 0.65f) {
-                var bestScore = Int.MIN_VALUE
-                var bestIdx = free.first()
-                for (i in free) {
-                    val orig = tttBoard[i]; tttBoard[i] = mark
-                    val s = minimaxFor(0, false, mark, opp)
-                    tttBoard[i] = orig
-                    if (s > bestScore) { bestScore = s; bestIdx = i }
-                }
-                return bestIdx
+            if (Random.nextFloat() < 0.50f) {
+                return free[Random.nextInt(free.size)]
             }
-            return free.random()
         }
 
-        // מצב 2 (מומחה / בלתי מנוצח) או רמז אופטימלי
+        // קיצור פתיחה O(1) — מונע חישוב של 550,000 מצבים על לוח ריק ומונע קריסה מיידית!
+        if (free.size == 9) {
+            return intArrayOf(0, 2, 4, 6, 8)[Random.nextInt(5)]
+        }
+        if (free.size == 8) {
+            return if (tttBoard[4] != "×" && tttBoard[4] != "0") 4 else intArrayOf(0, 2, 6, 8)[Random.nextInt(4)]
+        }
+
+        // 2 = מומחה (או רמז אופטימלי): Minimax מלא עם גיזום Alpha-Beta ללא הקצאות
         var bestScore = Int.MIN_VALUE
-        val bestMoves = mutableListOf<Int>()
+        val bestMoves = ArrayList<Int>(9)
         for (i in free) {
             val orig = tttBoard[i]; tttBoard[i] = mark
-            val score = minimaxFor(0, false, mark, opp)
+            val score = minimaxAlphaBeta(0, false, Int.MIN_VALUE, Int.MAX_VALUE, mark, opp)
             tttBoard[i] = orig
             if (score > bestScore) {
                 bestScore = score
@@ -1064,32 +1443,48 @@ object MiniGameEngine {
                 bestMoves.add(i)
             }
         }
-        return if (bestMoves.isNotEmpty()) bestMoves.random() else free.random()
+        return if (bestMoves.isNotEmpty()) bestMoves[Random.nextInt(bestMoves.size)] else free[0]
     }
 
-    private fun minimaxFor(depth: Int, isMax: Boolean, aiMark: String, humanMark: String): Int {
-        when (checkWinner()) {
+    private fun minimaxAlphaBeta(
+        depth: Int,
+        isMax: Boolean,
+        alphaIn: Int,
+        betaIn: Int,
+        aiMark: String,
+        humanMark: String
+    ): Int {
+        when (checkWinnerFast()) {
             aiMark -> return 100 - depth
             humanMark -> return depth - 100
             "TIE" -> return 0
         }
-        val free = (0..8).filter { tttBoard[it] !in listOf("×", "0") }
-        return if (isMax) {
+        var alpha = alphaIn
+        var beta = betaIn
+        if (isMax) {
             var best = Int.MIN_VALUE
-            for (i in free) {
+            for (i in 0..8) {
+                if (tttBoard[i] == "×" || tttBoard[i] == "0") continue
                 val orig = tttBoard[i]; tttBoard[i] = aiMark
-                best = maxOf(best, minimaxFor(depth + 1, false, aiMark, humanMark))
+                val score = minimaxAlphaBeta(depth + 1, false, alpha, beta, aiMark, humanMark)
                 tttBoard[i] = orig
+                if (score > best) best = score
+                if (best > alpha) alpha = best
+                if (beta <= alpha) break
             }
-            best
+            return best
         } else {
             var best = Int.MAX_VALUE
-            for (i in free) {
+            for (i in 0..8) {
+                if (tttBoard[i] == "×" || tttBoard[i] == "0") continue
                 val orig = tttBoard[i]; tttBoard[i] = humanMark
-                best = minOf(best, minimaxFor(depth + 1, true, aiMark, humanMark))
+                val score = minimaxAlphaBeta(depth + 1, true, alpha, beta, aiMark, humanMark)
                 tttBoard[i] = orig
+                if (score < best) best = score
+                if (best < beta) beta = best
+                if (beta <= alpha) break
             }
-            best
+            return best
         }
     }
 
@@ -1172,9 +1567,9 @@ object MiniGameEngine {
                         )
                         return
                     } else {
-                        playRacerSoundEffect(activity, "CRASH")
+                        playRacerSoundEffect(activity, "BUMP")
                         activity.shakeScreen()
-                        spawnPopup("−1 HP", 0.20f, 0.45f, resolvePalette(activity).enemyColor)
+                        spawnPopup("−1 ❤️", 0.20f, 0.45f, resolvePalette(activity).enemyColor)
                     }
                 }
 
@@ -1221,14 +1616,14 @@ object MiniGameEngine {
     }
 
     // =========================================================================
-    // משחק 3: מירוץ ארקייד — חיים, מגן, טורבו, מחסום משוריין ו-EMP (קוד 5555)
+    // משחק 3: מירוץ ארקייד — 3 לבבות מלאים, מגן, טורבו, מחסום משוריין ו-EMP (5555)
     // =========================================================================
     fun startMathRacer(activity: MainActivity) {
         prepareNewGame(activity, "RACER")
         carLane = 1
         racerScore = 0
         racerBest = getHighScore(activity, "racer")
-        racerLives = 2
+        racerLives = 3 // 3 לבבות מלאים בתחילת המשחק!
         racerShieldActive = false
         racerCombo = 1
         racerStreak = 0
@@ -1292,6 +1687,7 @@ object MiniGameEngine {
                                 racerStreak = 0
                                 racerCombo = 1
                                 if (racerLives <= 0) {
+                                    // רק בפסילה סופית מופעל צליל ההתרסקות המלא!
                                     triggerCrashAndExit(
                                         activity,
                                         "💥 התנגשת במחסום! ניקוד סופי: $racerScore 🏆",
@@ -1300,8 +1696,9 @@ object MiniGameEngine {
                                     )
                                     return
                                 } else {
+                                    // פגיעה לא-קטלנית: מכה עדינה (BUMP) בלי צליל ההתרסקות הסופי
                                     racerInvulnUntil = now + 1300L
-                                    playRacerSoundEffect(activity, "CRASH")
+                                    playRacerSoundEffect(activity, "BUMP")
                                     spawnBurstNormalized(0.80f, 0.30f + lane * 0.25f, pal.enemyColor, 14)
                                     spawnPopup("−1 ❤️", 0.74f, 0.35f, pal.enemyColor)
                                     activity.shakeScreen()
@@ -1518,6 +1915,7 @@ object MiniGameEngine {
                 if (key == "=") {
                     animalSimonMode = !animalSimonMode
                     simonStepRunnable?.let { handler.removeCallbacks(it) }
+                    applyAnimalKeypadIcons(activity)
                     if (animalSimonMode) {
                         animalSimonScore = 0
                         animalSimonSeq.clear()
@@ -1549,7 +1947,7 @@ object MiniGameEngine {
                             handler.postDelayed(nextRound, 650L)
                         }
                     } else {
-                        playRacerSoundEffect(activity, "CRASH")
+                        playRacerSoundEffect(activity, "BUMP")
                         activity.shakeScreen()
                         spawnPopup("טעות! ניקוד: $animalSimonScore", 0.5f, 0.35f, pal.enemyColor)
                         animalSimonScore = 0
@@ -1570,12 +1968,20 @@ object MiniGameEngine {
                     spawnPopup("מקהלה! ♫", 0.5f, 0.35f, pal.bonusColor)
                 } else {
                     val num = key.toIntOrNull()
-                    val idx = if (num != null && num in 1..9) (num - 1) % 5 else (animalActiveIdx + 1) % 5
-                    animalActiveIdx = idx
-                    animalBounceTime = System.currentTimeMillis()
-                    val pitch = 0.78 + (idx * 0.14)
-                    playSqueakSound(activity.useSound, pitch)
-                    spawnBurstNormalized(0.14f + idx * 0.18f, 0.58f, pal.playerColor, 7, isStar = true)
+                    if (num != null && num in 1..5) {
+                        val idx = num - 1
+                        animalActiveIdx = idx
+                        animalBounceTime = System.currentTimeMillis()
+                        val pitch = 0.78 + (idx * 0.14)
+                        playSqueakSound(activity.useSound, pitch)
+                        spawnBurstNormalized(0.14f + idx * 0.18f, 0.58f, pal.playerColor, 7, isStar = true)
+                    } else if (num != null && num in 6..9) {
+                        val noteIdx = (num - 1).coerceIn(0, animalNotes.lastIndex)
+                        animalActiveIdx = (num - 6) % 5
+                        animalBounceTime = System.currentTimeMillis()
+                        if (activity.useSound) playSynthTone(animalNotes[noteIdx], animalNotes[noteIdx] * 1.05, 180, 0.50)
+                        spawnBurstNormalized(0.14f + animalActiveIdx * 0.18f, 0.58f, pal.controlAccent, 7, isStar = true)
+                    }
                 }
                 invalidateStage()
                 return true
@@ -1583,15 +1989,38 @@ object MiniGameEngine {
 
             "TTT" -> {
                 when (key) {
-                    "+" -> { tttMode = 0; startTicTacToe(activity); return true }
-                    "−" -> { tttMode = 1; startTicTacToe(activity); return true }
-                    "×" -> { tttMode = 2; startTicTacToe(activity); return true }
-                    "÷" -> { tttMode = 3; startTicTacToe(activity); return true }
+                    "+" -> {
+                        tttMode = 0
+                        startTicTacToe(activity)
+                        spawnPopup("מצב: קל", 0.72f, 0.26f, pal.playerColor)
+                        return true
+                    }
+                    "−" -> {
+                        tttMode = 1
+                        startTicTacToe(activity)
+                        spawnPopup("מצב: בינוני", 0.72f, 0.26f, pal.bonusColor)
+                        return true
+                    }
+                    "×" -> {
+                        tttMode = 2
+                        startTicTacToe(activity)
+                        spawnPopup("מצב: מומחה", 0.72f, 0.26f, pal.enemyColor)
+                        return true
+                    }
+                    "÷" -> {
+                        tttMode = 3
+                        startTicTacToe(activity)
+                        spawnPopup("מצב: 2 שחקנים", 0.72f, 0.26f, pal.controlAccent)
+                        return true
+                    }
                     "0" -> {
                         if (!tttRoundLocked) {
-                            tttHintCell = getBestMoveFor(tttCurrentTurn, 2)
-                            tttHintTime = System.currentTimeMillis()
-                            invalidateStage()
+                            val suggested = getBestMoveFor(tttCurrentTurn, 2)
+                            if (suggested in 0..8) {
+                                tttHintCell = suggested
+                                tttHintTime = System.currentTimeMillis()
+                                updateTicTacToeUI(activity, "רמז: משבצת ${suggested + 1}")
+                            }
                         }
                         return true
                     }
@@ -1802,7 +2231,7 @@ object MiniGameEngine {
                         bombLastCutCorrect = false
                         bombStreak = 0
                         bombTimeLeft = (bombTimeLeft - 3).coerceAtLeast(1)
-                        playRacerSoundEffect(activity, "CRASH")
+                        playRacerSoundEffect(activity, "BUMP")
                         spawnBurstNormalized(0.68f, 0.50f, pal.enemyColor, 12)
                         spawnPopup("−3s ($expectedOp)", 0.65f, 0.30f, pal.enemyColor)
                         activity.shakeScreen()
@@ -2592,7 +3021,7 @@ private class MiniGameVectorStageView(
     }
 
     // =========================================================================
-    // 5. תזמורת חיות וקטוריות + אתגר זיכרון (7777)
+    // 5. תזמורת חיות וקטוריות + אתגר זיכרון (7777) — זהות ב-100% למקשי 1–5
     // =========================================================================
     private fun drawVectorAnimalParty(canvas: Canvas, w: Float, h: Float, pal: MiniGameEngine.GameThemePalette) {
         val now = System.currentTimeMillis()
@@ -2602,10 +3031,10 @@ private class MiniGameVectorStageView(
         textP.textSize = 11.5f * d
         textP.color = pal.inkPrimary
         val title = if (MiniGameEngine.animalSimonMode) {
-            val turn = if (MiniGameEngine.animalSimonShowing) "הקשב לרצף..." else "חזור במקשים 1–5!"
+            val turn = if (MiniGameEngine.animalSimonShowing) "הקשב לרצף..." else "חזור על החיות 1–5!"
             "זיכרון חיות: ${MiniGameEngine.animalSimonScore} (HI ${MiniGameEngine.animalSimonBest}) • $turn"
         } else {
-            "תזמורת חיות (${MiniGameEngine.animalTimeLeft}ש') • 0=מקהלה | =אתגר זיכרון"
+            "תזמורת חיות (${MiniGameEngine.animalTimeLeft}ש') • 0=מקהלה | =זיכרון"
         }
         canvas.drawText(title, w * 0.5f, 20f * d, textP)
 
@@ -2624,14 +3053,7 @@ private class MiniGameVectorStageView(
 
         val cy = (36f * d + h - 10f * d) * 0.52f
         val slotW = (w - padX * 2) / 5f
-        val r = min(slotW * 0.34f, (h - 56f * d) * 0.34f).coerceAtLeast(13f * d)
-        val animalColors = listOf(
-            Color.parseColor("#E6A96B"),
-            Color.parseColor("#F48FB1"),
-            Color.parseColor("#FF8A65"),
-            Color.parseColor("#90A4AE"),
-            Color.parseColor("#81C784")
-        )
+        val r = min(slotW * 0.33f, (h - 58f * d) * 0.34f).coerceAtLeast(13f * d)
         val bounceAge = now - MiniGameEngine.animalBounceTime
         val chorusActive = (now - MiniGameEngine.animalChorusTime) in 0..420L
 
@@ -2647,71 +3069,23 @@ private class MiniGameVectorStageView(
 
             if (isActive && bounceAge in 0..420L) {
                 val wp = bounceAge.toFloat() / 420f
-                strokeP.strokeWidth = 2f * d
-                strokeP.color = withAlpha(pal.bonusColor, ((1f - wp) * 220f).toInt())
+                strokeP.strokeWidth = 2.2f * d
+                strokeP.color = withAlpha(pal.bonusColor, ((1f - wp) * 235f).toInt())
                 canvas.drawCircle(cx, ay, r + wp * 18f * d, strokeP)
                 textP.textSize = 11f * d
                 textP.color = withAlpha(pal.controlAccent, ((1f - wp) * 255f).toInt())
                 canvas.drawText(if (i % 2 == 0) "♪" else "♫", cx + r * 0.8f, ay - r - wp * 10f * d, textP)
             }
 
-            val bodyCol = animalColors[i]
-            fillP.color = bodyCol
-            when (i) {
-                0 -> {
-                    canvas.drawOval(RectF(cx - r * 1.12f, ay - r * 0.45f, cx - r * 0.58f, ay + r * 0.55f), fillP)
-                    canvas.drawOval(RectF(cx + r * 0.58f, ay - r * 0.45f, cx + r * 1.12f, ay + r * 0.55f), fillP)
-                }
-                1, 2 -> {
-                    path.reset()
-                    path.moveTo(cx - r * 0.78f, ay - r * 0.25f)
-                    path.lineTo(cx - r * 0.68f, ay - r * 1.18f)
-                    path.lineTo(cx - r * 0.12f, ay - r * 0.65f)
-                    path.close()
-                    canvas.drawPath(path, fillP)
-                    path.reset()
-                    path.moveTo(cx + r * 0.78f, ay - r * 0.25f)
-                    path.lineTo(cx + r * 0.68f, ay - r * 1.18f)
-                    path.lineTo(cx + r * 0.12f, ay - r * 0.65f)
-                    path.close()
-                    canvas.drawPath(path, fillP)
-                }
-                else -> {
-                    fillP.color = if (i == 3) Color.parseColor("#263238") else bodyCol
-                    canvas.drawCircle(cx - r * 0.62f, ay - r * 0.72f, r * 0.34f, fillP)
-                    canvas.drawCircle(cx + r * 0.62f, ay - r * 0.72f, r * 0.34f, fillP)
-                }
-            }
-
-            fillP.color = if (i == 3) Color.WHITE else bodyCol
-            canvas.drawCircle(cx, ay, r, fillP)
-            strokeP.strokeWidth = 1.4f * d
-            strokeP.color = withAlpha(pal.inkPrimary, 95)
-            canvas.drawCircle(cx, ay, r, strokeP)
-
             val isHappy = isActive && bounceAge in 0..340L
-            if (isHappy) {
-                strokeP.strokeWidth = 1.8f * d
-                strokeP.color = Color.parseColor("#1F2937")
-                canvas.drawArc(RectF(cx - r * 0.50f, ay - r * 0.24f, cx - r * 0.18f, ay + r * 0.04f), 180f, 180f, false, strokeP)
-                canvas.drawArc(RectF(cx + r * 0.18f, ay - r * 0.24f, cx + r * 0.50f, ay + r * 0.04f), 180f, 180f, false, strokeP)
-            } else {
-                fillP.color = Color.parseColor("#1F2937")
-                canvas.drawCircle(cx - r * 0.34f, ay - r * 0.12f, r * 0.13f, fillP)
-                canvas.drawCircle(cx + r * 0.34f, ay - r * 0.12f, r * 0.13f, fillP)
-            }
-            fillP.color = Color.argb(95, 244, 114, 182)
-            canvas.drawCircle(cx - r * 0.52f, ay + r * 0.16f, r * 0.13f, fillP)
-            canvas.drawCircle(cx + r * 0.52f, ay + r * 0.16f, r * 0.13f, fillP)
+            MiniGameEngine.drawCustomVectorAnimalFace(
+                canvas, cx, ay, r, i, isHappy, pal.inkPrimary, d, fillP, strokeP, path
+            )
 
-            fillP.color = Color.parseColor("#1F2937")
-            canvas.drawCircle(cx, ay + r * 0.18f, r * 0.11f, fillP)
-
-            val glyph = MiniGameEngine.stageAnimals.getOrElse(i) { "🐾" }
             subTextP.textAlign = Paint.Align.CENTER
-            subTextP.textSize = 9.5f * d
-            subTextP.color = pal.inkSecondary
-            canvas.drawText("${i + 1} $glyph", cx, cy + r + 11f * d, subTextP)
+            subTextP.textSize = 10f * d
+            subTextP.color = if (isHappy) pal.bonusColor else pal.inkSecondary
+            canvas.drawText("${i + 1}", cx, cy + r + 12f * d, subTextP)
         }
     }
 }
