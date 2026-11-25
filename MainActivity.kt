@@ -242,6 +242,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = getSharedPreferences("CalcProPrefs", Context.MODE_PRIVATE); loadPreferences()
+        ProCrashGuardAndRecovery.install(this)
         AppVersionTracker.onAppLaunched(this)
         tts = TextToSpeech(this, this)
 
@@ -473,6 +474,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         CompassHomeWidgetHelper.renderCurrentStateToWidgets(this)
         ProCanvasAnimations.onActivityResume()
         ProFloatingMiniCalc.onHostActivityResumed(this)
+        ProCrashGuardAndRecovery.onActivityResumed(this)
     }
 
     override fun onPause() {
@@ -688,7 +690,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                         expressionView?.text = "\u200E$exprPart ="
                         justCalculated = true
                         copyToClipboard(resPart)
-                        dlg.dismiss()
+                        ProCrashGuardAndRecovery.safeDismissDialog(dlg)
                     }
                 }
 
@@ -748,7 +750,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 feedback(it)
                 historyList.clear()
                 savePreferences()
-                dlg.dismiss()
+                ProCrashGuardAndRecovery.safeDismissDialog(dlg)
                 Toast.makeText(this@MainActivity, "ההיסטוריה נוקתה", Toast.LENGTH_SHORT).show()
             }
         }
@@ -769,7 +771,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
             setOnClickListener {
                 feedback(it)
-                dlg.dismiss()
+                ProCrashGuardAndRecovery.safeDismissDialog(dlg)
             }
         }
 
@@ -778,7 +780,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         root.addView(bottomRow)
 
         dlg.setContentView(root)
-        dlg.show()
+        if (!ProCrashGuardAndRecovery.safeShowDialog(this, dlg)) return
         ProUiMotionEngine.animateDialogEntrance(this, root)
         val widthPx = (resources.displayMetrics.widthPixels * 0.90f).toInt()
         dlg.window?.setLayout(widthPx, WindowManager.LayoutParams.WRAP_CONTENT)
@@ -865,7 +867,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     ).apply { bottomMargin = dp(6f) }
                     setOnClickListener {
                         feedback(it)
-                        dlg.dismiss()
+                        ProCrashGuardAndRecovery.safeDismissDialog(dlg)
                         onSelected(item)
                     }
                 }
@@ -881,7 +883,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         populateList("")
 
         dlg.setContentView(root)
-        dlg.show()
+        if (!ProCrashGuardAndRecovery.safeShowDialog(this, dlg)) return
         ProUiMotionEngine.animateDialogEntrance(this, root)
         val widthPx = (resources.displayMetrics.widthPixels * 0.90f).toInt()
         dlg.window?.setLayout(widthPx, WindowManager.LayoutParams.WRAP_CONTENT)
@@ -972,7 +974,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration?) { super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig); if (isInPictureInPictureMode) { topHeader.visibility = View.GONE; if (isDrawerOpen) closeDrawer() } else { topHeader.visibility = View.VISIBLE } }
     override fun onNewIntent(intent: Intent?) { super.onNewIntent(intent); handleIntent(intent) }
     private fun handleIntent(intent: Intent?) {
-        when (intent?.action) {
+        when (ProCrashGuardAndRecovery.safeReadIntentAction(intent)) {
             "ACTION_CALC" -> { currentTabIndex = 0; applyTheme() }
             "ACTION_SCI" -> { currentTabIndex = 1; applyTheme() }
             "ACTION_COIN" -> { currentTabIndex = 13; applyTheme() }
@@ -988,11 +990,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     private fun setupShortcuts() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
-            val sm = getSystemService(ShortcutManager::class.java)
-            val s1 = ShortcutInfo.Builder(this, "coin").setShortLabel("מטבעות").setIcon(Icon.createWithResource(this, android.R.drawable.star_on)).setIntent(Intent(this, MainActivity::class.java).apply { action = "ACTION_COIN" }).build()
-            val s2 = ShortcutInfo.Builder(this, "sci").setShortLabel("מדעית").setIcon(Icon.createWithResource(this, android.R.drawable.ic_menu_edit)).setIntent(Intent(this, MainActivity::class.java).apply { action = "ACTION_SCI" }).build()
-            val s3 = ShortcutInfo.Builder(this, "compass").setShortLabel("מצפן 3D").setIcon(Icon.createWithResource(this, android.R.drawable.ic_menu_compass)).setIntent(Intent(this, MainActivity::class.java).apply { action = "ACTION_OPEN_COMPASS" }).build()
-            sm.dynamicShortcuts = listOf(s1, s2, s3)
+            ProCrashGuardAndRecovery.safeRun(Unit) {
+                val sm = getSystemService(ShortcutManager::class.java)
+                val s1 = ShortcutInfo.Builder(this, "coin").setShortLabel("מטבעות").setIcon(Icon.createWithResource(this, android.R.drawable.star_on)).setIntent(Intent(this, MainActivity::class.java).apply { action = "ACTION_COIN" }).build()
+                val s2 = ShortcutInfo.Builder(this, "sci").setShortLabel("מדעית").setIcon(Icon.createWithResource(this, android.R.drawable.ic_menu_edit)).setIntent(Intent(this, MainActivity::class.java).apply { action = "ACTION_SCI" }).build()
+                val s3 = ShortcutInfo.Builder(this, "compass").setShortLabel("מצפן 3D").setIcon(Icon.createWithResource(this, android.R.drawable.ic_menu_compass)).setIntent(Intent(this, MainActivity::class.java).apply { action = "ACTION_OPEN_COMPASS" }).build()
+                sm?.dynamicShortcuts = listOf(s1, s2, s3)
+            }
         }
     }
 
@@ -1002,7 +1006,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         if (currentTabIndex == 0 || currentTabIndex == 1) {
             contentFrame.removeAllViews()
             val isLandscape = newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE
-            val targetView = if (isLandscape) createScientificCalculator() else if (currentTabIndex == 1) createScientificCalculator() else createBasicCalculator()
+            val targetView = ProCrashGuardAndRecovery.buildTabSafely(this, currentTabIndex) {
+                if (isLandscape) createScientificCalculator() else if (currentTabIndex == 1) createScientificCalculator() else createBasicCalculator()
+            }
             ProCanvasAnimations.attachAmbientToContent(this, contentFrame, currentTabIndex)
             contentFrame.addView(targetView)
             ProUiMotionEngine.animateTabSwitch(this, targetView, titleText, currentTabIndex, false)
@@ -1234,7 +1240,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
-    fun copyToClipboard(text: String) { val cb = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager; cb.setPrimaryClip(ClipData.newPlainText("CalcResult", text)); Toast.makeText(this, if (isCleanGlassActive) "הועתק ללוח" else "הועתק ללוח 📋", Toast.LENGTH_SHORT).show() }
+    fun copyToClipboard(text: String) {
+        ProCrashGuardAndRecovery.safeClipboardCopy(this, text, isCleanGlassActive)
+    }
 
     fun updateDrawerSelection() {
         val proActive = ProState.isProEnabled(prefs)
@@ -1885,186 +1893,192 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             CalculatorGestureManager.isGestureSectionExpanded = false
         }
         if (MiniGameEngine.isActive) MiniGameEngine.stopGame(this)
-        currentTabIndex = index
-        titleText.text = IosGlassTheme.cleanCategoryTitle(categories.getOrElse(index) { "מחשבון" }, true)
+        currentTabIndex = if (index in categories.indices) index else 0
+        titleText.text = IosGlassTheme.cleanCategoryTitle(categories.getOrElse(currentTabIndex) { "מחשבון" }, true)
         refreshFavHeaderIcon()
         updateDrawerSelection(); contentFrame.removeAllViews()
-        val rawView = when (index) {
-            0 -> createBasicCalculator(); 1 -> createScientificCalculator(); 2 -> createVatCalculator(); 3 -> createLoanCalculator()
-            4 -> createDistanceCalculator(); 5 -> createWeightCalculator(); 6 -> createTempCalculator(); 7 -> createProgrammerCalculator()
-            8 -> createPercentageCalculator(); 9 -> createDiscountCalculator(); 10 -> createTipCalculator(); 11 -> createBMICalculator()
-            12 -> createAgeCalculator(); 13 -> createCurrencyCalculator(); 14 -> createBmrCalculator(); 15 -> createQuadraticCalculator()
-            16 -> createFractionCalculator(); 17 -> createCompoundInterestCalculator(); 18 -> createSpeedCalculator()
-            19 -> {
-                val settingsView = createSettingsPage()
-                enhanceSettingsHierarchy(settingsView)
-                applyButtonShapeVisibilityAndInsertAcSoundSetting(settingsView)
+        val rawView = ProCrashGuardAndRecovery.buildTabSafely(this, currentTabIndex) {
+            when (currentTabIndex) {
+                0 -> createBasicCalculator(); 1 -> createScientificCalculator(); 2 -> createVatCalculator(); 3 -> createLoanCalculator()
+                4 -> createDistanceCalculator(); 5 -> createWeightCalculator(); 6 -> createTempCalculator(); 7 -> createProgrammerCalculator()
+                8 -> createPercentageCalculator(); 9 -> createDiscountCalculator(); 10 -> createTipCalculator(); 11 -> createBMICalculator()
+                12 -> createAgeCalculator(); 13 -> createCurrencyCalculator(); 14 -> createBmrCalculator(); 15 -> createQuadraticCalculator()
+                16 -> createFractionCalculator(); 17 -> createCompoundInterestCalculator(); 18 -> createSpeedCalculator()
+                19 -> {
+                    val settingsView = createSettingsPage()
+                    enhanceSettingsHierarchy(settingsView)
+                    applyButtonShapeVisibilityAndInsertAcSoundSetting(settingsView)
 
-                val scrollObj = settingsView as? ScrollView
-                currentSettingsScroll = scrollObj
-                val container = scrollObj?.getChildAt(0) as? LinearLayout ?: (settingsView as? LinearLayout)
+                    val scrollObj = settingsView as? ScrollView
+                    currentSettingsScroll = scrollObj
+                    val container = scrollObj?.getChildAt(0) as? LinearLayout ?: (settingsView as? LinearLayout)
 
-                var hasProBtn = false
-                if (container != null) {
-                    for (i in 0 until container.childCount) {
-                        val ch = container.getChildAt(i)
-                        if (ch is TextView && (ch.text.contains("Pro Mode") || ch.text.contains("מצב מקצועי"))) {
-                            hasProBtn = true
-                            break
+                    var hasProBtn = false
+                    if (container != null) {
+                        for (i in 0 until container.childCount) {
+                            val ch = container.getChildAt(i)
+                            if (ch is TextView && (ch.text.contains("Pro Mode") || ch.text.contains("מצב מקצועי"))) {
+                                hasProBtn = true
+                                break
+                            }
+                        }
+                        if (!hasProBtn) {
+                            val proEnabled = ProState.isProEnabled(prefs)
+                            val proBtn = createActionBtn(
+                                if (proEnabled) "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-121 כלים): מופעל 🟢"
+                                else "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-121 כלים): כבוי 🔴",
+                                proEnabled
+                            ) {
+                                val nextState = !ProState.isProEnabled(prefs)
+                                ProState.setProEnabled(prefs, nextState)
+                                Toast.makeText(
+                                    this,
+                                    if (nextState) "🚀 מצב מקצועי הופעל! קטגוריות ה-Pro נוספו לתפריט הצד" else "מצב מקצועי כובה",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                applyTheme()
+                            }
+                            container.addView(proBtn)
                         }
                     }
-                    if (!hasProBtn) {
-                        val proEnabled = ProState.isProEnabled(prefs)
-                        val proBtn = createActionBtn(
-                            if (proEnabled) "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-121 כלים): מופעל 🟢"
-                            else "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-121 כלים): כבוי 🔴",
-                            proEnabled
-                        ) {
-                            val nextState = !ProState.isProEnabled(prefs)
-                            ProState.setProEnabled(prefs, nextState)
-                            Toast.makeText(
-                                this,
-                                if (nextState) "🚀 מצב מקצועי הופעל! קטגוריות ה-Pro נוספו לתפריט הצד" else "מצב מקצועי כובה",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            applyTheme()
-                        }
-                        container.addView(proBtn)
+
+                    val handLabel = if (isCleanGlassActive) {
+                        "יד דומיננטית: ${if (isRightHanded) "ימניים (תפריט ופעולות בימין)" else "שמאליים (תפריט ופעולות בשמאל)"}"
+                    } else {
+                        "יד דומיננטית: ${if (isRightHanded) "ימניים (תפריט ופעולות בימין) 🤚" else "שמאליים (תפריט ופעולות בשמאל) ✋"}"
                     }
-                }
+                    val handBtn = createActionBtn(handLabel, false) {
+                        isRightHanded = !isRightHanded
+                        savePreferences()
+                        updateHandednessLayout()
+                        switchTab(19)
+                    }
+                    container?.addView(handBtn)
+                    container?.addView(createDrawerCalculatorsChecklistSection())
+                    container?.addView(CalculatorGestureManager.createCollapsibleGesturesSettingsSection(this))
+                    container?.addView(ProCanvasAnimations.createSettingsToggleButton(this))
+                    container?.addView(ProUiMotionEngine.createSettingsToggleButton(this))
+                    container?.addView(AppVersionTracker.createAboutSettingsButton(this))
 
-                val handLabel = if (isCleanGlassActive) {
-                    "יד דומיננטית: ${if (isRightHanded) "ימניים (תפריט ופעולות בימין)" else "שמאליים (תפריט ופעולות בשמאל)"}"
-                } else {
-                    "יד דומיננטית: ${if (isRightHanded) "ימניים (תפריט ופעולות בימין) 🤚" else "שמאליים (תפריט ופעולות בשמאל) ✋"}"
-                }
-                val handBtn = createActionBtn(handLabel, false) {
-                    isRightHanded = !isRightHanded
-                    savePreferences()
-                    updateHandednessLayout()
-                    switchTab(19)
-                }
-                container?.addView(handBtn)
-                container?.addView(createDrawerCalculatorsChecklistSection())
-                container?.addView(CalculatorGestureManager.createCollapsibleGesturesSettingsSection(this))
-                container?.addView(ProCanvasAnimations.createSettingsToggleButton(this))
-                container?.addView(ProUiMotionEngine.createSettingsToggleButton(this))
-                container?.addView(AppVersionTracker.createAboutSettingsButton(this))
+                    unifyThemeSelectorAndCustomizerInSettings(settingsView)
+                    applyGlassAndAuroraSettingsIcons(settingsView)
 
-                unifyThemeSelectorAndCustomizerInSettings(settingsView)
-                applyGlassAndAuroraSettingsIcons(settingsView)
-
-                scrollObj?.viewTreeObserver?.addOnScrollChangedListener {
-                    if (currentTabIndex == 19) settingsScrollY = scrollObj.scrollY
+                    scrollObj?.viewTreeObserver?.addOnScrollChangedListener {
+                        if (currentTabIndex == 19) settingsScrollY = scrollObj.scrollY
+                    }
+                    if (settingsScrollY > 0) {
+                        scrollObj?.post { scrollObj.scrollTo(0, settingsScrollY) }
+                    }
+                    settingsView
                 }
-                if (settingsScrollY > 0) {
-                    scrollObj?.post { scrollObj.scrollTo(0, settingsScrollY) }
-                }
-                settingsView
+                20 -> createFuelCostCalculator()
+                21 -> createFuelEfficiencyCalculator()
+                22 -> createGpaCalculator()
+                23 -> createAdvancedTipCalculator()
+                24 -> createSalesTaxCalculator()
+                25 -> createUnitPriceCalculator()
+                26 -> createWorldClockConverter()
+                27 -> createOvulationCalculator()
+                28 -> createHexConverter()
+                29 -> createSavingsCalculator()
+                30 -> createDateAnniversaryCalculator()
+                // --- כל מסכי ה-Pro המעוצבים בקנבה (31..120) ---
+                31 -> createPro87UnitConverter()
+                32 -> createProPlumbingAndFluidsScreen()
+                33 -> createProMedicalDosageScreen()
+                34 -> createProConstructionAndAcScreen()
+                35 -> createProResistorScreen()
+                36 -> createProCapacitorScreen()
+                37 -> createProAwgWireScreen()
+                38 -> createProOhmAndPowerScreen()
+                39 -> createProSpiritLevelScreen()
+                40 -> createProCompassScreen()
+                41 -> createProRulerProtractorScreen()
+                42 -> createProStopwatchScreen()
+                43 -> createProFlashlightScreen()
+                44 -> createProPeriodicTableScreen()
+                45 -> createProMorseScreen()
+                46 -> createProPasswordGenScreen()
+                47 -> createProGematriaAndTextScreen()
+                48 -> createProCurrenciesAndMetalsHub()
+                49 -> createProMortgageSpitzerScreen()
+                50 -> createProRoiCagrScreen()
+                51 -> createProBusinessMarginLiveScreen()
+                52 -> createProStatisticsBellScreen()
+                53 -> createProGeometryBlueprintLiveScreen()
+                54 -> createProNumberTheoryScreen()
+                55 -> createProVerifiedExportCenterScreen()
+                56 -> createProFavoritesCenterScreen()
+                57 -> createProMechanicsUnitsScreen()
+                58 -> createProFluidsUnitsScreen()
+                59 -> createProThermoUnitsScreen()
+                60 -> createProElectricalUnitsScreen()
+                61 -> createProOpticsRadiationUnitsScreen()
+                62 -> createProMedicalChemUnitsScreen()
+                63 -> createProDigitalAstroUnitsScreen()
+                64 -> createProSalaryAndTaxScreen()
+                65 -> createProMatrixAndEquationsScreen()
+                66 -> createProMetalDetectorScreen()
+                67 -> createProVibrometerScreen()
+                68 -> createProEmergencySirenScreen()
+                69 -> createProMetronomeScreen()
+                70 -> createProTallyCounterScreen()
+                71 -> createProInductorColorScreen()
+                72 -> createProLogicGatesScreen()
+                73 -> createProHexRgbColorScreen()
+                74 -> createProAspectRatioScreen()
+                75 -> createProBatteryMonitorScreen()
+                76 -> createProElectricityBillScreen()
+                77 -> createProEncryptionLabScreen()
+                78 -> createProSmartNotesScreen()
+                79 -> createProRingSizerScreen()
+                80 -> createProShoeClothingHatSizeScreen()
+                81 -> createProUltraTextToolsStudioScreen()
+                82 -> createProRomanNumeralsScreen()
+                83 -> createProNumberSeriesScreen()
+                84 -> createProProportionsAndRatioScreen()
+                85 -> createProLinearEquationScreen()
+                86 -> createProSavingsGoalAndDoublingScreen()
+                87 -> createProSalaryPeriodConverterScreen()
+                88 -> createProStackedDiscountsScreen()
+                89 -> createProStockAndDividendScreen()
+                90 -> createProFixedDepositAndSimpleInterestScreen()
+                91 -> createProSipAndInflationScreen()
+                92 -> createProCarLoanAndEmiScreen()
+                93 -> createProFutureAndPresentValueScreen()
+                94 -> createProAnnuityAndPerpetuityScreen()
+                95 -> createProRetirementPlannerScreen()
+                96 -> createProLightMeterScreen()
+                97 -> createProSpeedTestScreen()
+                98 -> createProClinometerScreen()
+                99 -> createProNetworkInspectorScreen()
+                in 100..117 -> createProExtendedUnitScreen(currentTabIndex)
+                in 118..120 -> createProTimeAndTimersScreen(currentTabIndex)
+                else -> createBasicCalculator()
             }
-            20 -> createFuelCostCalculator()
-            21 -> createFuelEfficiencyCalculator()
-            22 -> createGpaCalculator()
-            23 -> createAdvancedTipCalculator()
-            24 -> createSalesTaxCalculator()
-            25 -> createUnitPriceCalculator()
-            26 -> createWorldClockConverter()
-            27 -> createOvulationCalculator()
-            28 -> createHexConverter()
-            29 -> createSavingsCalculator()
-            30 -> createDateAnniversaryCalculator()
-            // --- כל מסכי ה-Pro המעוצבים בקנבה (31..120) ---
-            31 -> createPro87UnitConverter()
-            32 -> createProPlumbingAndFluidsScreen()
-            33 -> createProMedicalDosageScreen()
-            34 -> createProConstructionAndAcScreen()
-            35 -> createProResistorScreen()
-            36 -> createProCapacitorScreen()
-            37 -> createProAwgWireScreen()
-            38 -> createProOhmAndPowerScreen()
-            39 -> createProSpiritLevelScreen()
-            40 -> createProCompassScreen()
-            41 -> createProRulerProtractorScreen()
-            42 -> createProStopwatchScreen()
-            43 -> createProFlashlightScreen()
-            44 -> createProPeriodicTableScreen()
-            45 -> createProMorseScreen()
-            46 -> createProPasswordGenScreen()
-            47 -> createProGematriaAndTextScreen()
-            48 -> createProCurrenciesAndMetalsHub()
-            49 -> createProMortgageSpitzerScreen()
-            50 -> createProRoiCagrScreen()
-            51 -> createProBusinessMarginLiveScreen()
-            52 -> createProStatisticsBellScreen()
-            53 -> createProGeometryBlueprintLiveScreen()
-            54 -> createProNumberTheoryScreen()
-            55 -> createProVerifiedExportCenterScreen()
-            56 -> createProFavoritesCenterScreen()
-            57 -> createProMechanicsUnitsScreen()
-            58 -> createProFluidsUnitsScreen()
-            59 -> createProThermoUnitsScreen()
-            60 -> createProElectricalUnitsScreen()
-            61 -> createProOpticsRadiationUnitsScreen()
-            62 -> createProMedicalChemUnitsScreen()
-            63 -> createProDigitalAstroUnitsScreen()
-            64 -> createProSalaryAndTaxScreen()
-            65 -> createProMatrixAndEquationsScreen()
-            66 -> createProMetalDetectorScreen()
-            67 -> createProVibrometerScreen()
-            68 -> createProEmergencySirenScreen()
-            69 -> createProMetronomeScreen()
-            70 -> createProTallyCounterScreen()
-            71 -> createProInductorColorScreen()
-            72 -> createProLogicGatesScreen()
-            73 -> createProHexRgbColorScreen()
-            74 -> createProAspectRatioScreen()
-            75 -> createProBatteryMonitorScreen()
-            76 -> createProElectricityBillScreen()
-            77 -> createProEncryptionLabScreen()
-            78 -> createProSmartNotesScreen()
-            79 -> createProRingSizerScreen()
-            80 -> createProShoeClothingHatSizeScreen()
-            81 -> createProUltraTextToolsStudioScreen()
-            82 -> createProRomanNumeralsScreen()
-            83 -> createProNumberSeriesScreen()
-            84 -> createProProportionsAndRatioScreen()
-            85 -> createProLinearEquationScreen()
-            86 -> createProSavingsGoalAndDoublingScreen()
-            87 -> createProSalaryPeriodConverterScreen()
-            88 -> createProStackedDiscountsScreen()
-            89 -> createProStockAndDividendScreen()
-            90 -> createProFixedDepositAndSimpleInterestScreen()
-            91 -> createProSipAndInflationScreen()
-            92 -> createProCarLoanAndEmiScreen()
-            93 -> createProFutureAndPresentValueScreen()
-            94 -> createProAnnuityAndPerpetuityScreen()
-            95 -> createProRetirementPlannerScreen()
-            96 -> createProLightMeterScreen()
-            97 -> createProSpeedTestScreen()
-            98 -> createProClinometerScreen()
-            99 -> createProNetworkInspectorScreen()
-            in 100..117 -> createProExtendedUnitScreen(index)
-            in 118..120 -> createProTimeAndTimersScreen(index)
-            else -> createBasicCalculator()
         }
 
-        if (isMinimalistMode && index != 0 && index != 1) {
-            MinimalistTheme.applyMinimalistStylingToHierarchy(rawView, this)
+        if (isMinimalistMode && currentTabIndex != 0 && currentTabIndex != 1) {
+            ProCrashGuardAndRecovery.safeRun(Unit) {
+                MinimalistTheme.applyMinimalistStylingToHierarchy(rawView, this)
+            }
         }
-        if (index == 19) {
+        if (currentTabIndex == 19) {
             AppVersionTracker.applyAboutButtonIcon(rawView, this)
             CalculatorGestureManager.applyGestureButtonIcon(rawView, this)
             ProUiMotionEngine.applySettingsButtonIcon(rawView, this)
         }
 
-        if (index !in listOf(0, 1, 19, 55, 73, 78, 81, 96, 97, 98, 99) && index !in 100..120) {
-            BidiFmt.attachUniversalLiveVisualizer(rawView)
+        if (currentTabIndex !in listOf(0, 1, 19, 55, 73, 78, 81, 96, 97, 98, 99) && currentTabIndex !in 100..120) {
+            ProCrashGuardAndRecovery.safeRun(Unit) {
+                BidiFmt.attachUniversalLiveVisualizer(rawView)
+            }
         }
 
-        ProCanvasAnimations.attachAmbientToContent(this, contentFrame, index)
+        ProCanvasAnimations.attachAmbientToContent(this, contentFrame, currentTabIndex)
         contentFrame.addView(rawView)
-        ProCanvasAnimations.playTabTransition(this, rawView, index, wasInSettings)
-        ProUiMotionEngine.animateTabSwitch(this, rawView, titleText, index, wasInSettings)
+        ProCanvasAnimations.playTabTransition(this, rawView, currentTabIndex, wasInSettings)
+        ProUiMotionEngine.animateTabSwitch(this, rawView, titleText, currentTabIndex, wasInSettings)
     }
 
     private fun createBasicCalculator(): View {
@@ -2310,9 +2324,20 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         justCalculated = false
         if (s in listOf("MC", "MR", "M+", "M-")) ProCanvasAnimations.triggerMemoryPulse(this)
         when (s) {
-            "MC" -> { memoryValue = 0.0; savePreferences() }; "MR" -> { currentInput += Utils.formatResult(memoryValue, calcPrecision) }
-            "M+" -> { try { memoryValue += Utils.evalMathExpression(if (currentInput.isEmpty()) "0" else currentInput); savePreferences(); justCalculated = true } catch (e: Exception) {} }
-            "M-" -> { try { memoryValue -= Utils.evalMathExpression(if (currentInput.isEmpty()) "0" else currentInput); savePreferences(); justCalculated = true } catch (e: Exception) {} }
+            "MC" -> { memoryValue = 0.0; savePreferences() }
+            "MR" -> { currentInput = ProCrashGuardAndRecovery.safeAppendInput(currentInput, Utils.formatResult(memoryValue, calcPrecision)) }
+            "M+" -> {
+                val delta = ProCrashGuardAndRecovery.safeEvaluateMemoryDelta(currentInput, calcPrecision)
+                if (delta != null && (memoryValue + delta).isFinite()) {
+                    memoryValue += delta; savePreferences(); justCalculated = true
+                }
+            }
+            "M-" -> {
+                val delta = ProCrashGuardAndRecovery.safeEvaluateMemoryDelta(currentInput, calcPrecision)
+                if (delta != null && (memoryValue - delta).isFinite()) {
+                    memoryValue -= delta; savePreferences(); justCalculated = true
+                }
+            }
             "AC" -> {
                 currentInput = ""
                 expressionView?.text = ""
@@ -2320,21 +2345,32 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 ProUiMotionEngine.animateDisplayClear(this, currentView, expressionView)
             }
             "⌫" -> { if (currentInput.isNotEmpty()) currentInput = currentInput.dropLast(1) }
-            "sin", "cos", "tan", "log", "ln" -> { currentInput += "$s(" }; "√" -> { currentInput += "√(" }; "x²" -> { currentInput += "^2" }; "x³" -> { currentInput += "^3" }; "x^y" -> { currentInput += "^" }
+            "sin", "cos", "tan", "log", "ln" -> { currentInput = ProCrashGuardAndRecovery.safeAppendInput(currentInput, "$s(") }
+            "√" -> { currentInput = ProCrashGuardAndRecovery.safeAppendInput(currentInput, "√(") }
+            "x²" -> { currentInput = ProCrashGuardAndRecovery.safeAppendInput(currentInput, "^2") }
+            "x³" -> { currentInput = ProCrashGuardAndRecovery.safeAppendInput(currentInput, "^3") }
+            "x^y" -> { currentInput = ProCrashGuardAndRecovery.safeAppendInput(currentInput, "^") }
             "=" -> {
                 if (checkEasterEggs(currentInput)) return
                 if (currentInput.isNotEmpty()) {
-                    try {
-                        val res = Utils.evalMathExpression(currentInput)
-                        val formatted = Utils.formatResult(res, calcPrecision)
+                    val outcome = ProCrashGuardAndRecovery.safeEvaluateMathExpression(currentInput, calcPrecision)
+                    if (outcome.success) {
                         expressionView?.text = "$currentInput ="
-                        historyList.add(0, "$currentInput = $formatted")
-                        savePreferences(); currentInput = formatted; justCalculated = true
+                        historyList.add(0, "$currentInput = ${outcome.formattedResult}")
+                        savePreferences()
+                        currentInput = outcome.formattedResult
+                        justCalculated = true
                         ProCanvasAnimations.triggerEqualsCelebration(this)
-                    } catch (e: Exception) { currentInput = "Error"; justCalculated = true }
+                    } else {
+                        currentInput = outcome.formattedResult
+                        justCalculated = true
+                        if (outcome.userMessage.isNotEmpty()) {
+                            Toast.makeText(this, outcome.userMessage, Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 }
             }
-            else -> currentInput += s
+            else -> currentInput = ProCrashGuardAndRecovery.safeAppendInput(currentInput, s)
         }
         memoryIndicator?.text = if (memoryValue != 0.0) "M = ${Utils.formatResult(memoryValue, calcPrecision)}" else ""
         val newText = if (currentInput.isEmpty()) "0" else currentInput
@@ -2344,7 +2380,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 this,
                 currentView,
                 isEquals = (s == "="),
-                isError = (newText == "Error")
+                isError = (newText == "Error" || newText == "Overflow")
             )
         }
     }
@@ -2468,7 +2504,23 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         setOnClickListener { if (text.isNotEmpty()) copyToClipboard(text.toString()) }
     }
 
-    override fun onDestroy() { ProFloatingMiniCalc.dismiss(); tts?.shutdown(); soundPool.release(); super.onDestroy() }
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        ProCrashGuardAndRecovery.onTrimMemory(this, level)
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        ProCrashGuardAndRecovery.onLowMemory(this)
+    }
+
+    override fun onDestroy() {
+        ProCrashGuardAndRecovery.safeRun(Unit) { ProFloatingMiniCalc.dismiss() }
+        ProCrashGuardAndRecovery.safeRun(Unit) { tts?.shutdown() }
+        ProCrashGuardAndRecovery.safeRun(Unit) { soundPool.release() }
+        super.onDestroy()
+    }
+
     fun dp(value: Float): Int = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, resources.displayMetrics).toInt()
 
     fun shakeScreen() {
@@ -2479,6 +2531,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (ProExportBackupEngine.handleActivityResult(this, requestCode, resultCode, data)) return
-        handleVoiceActivityResult(requestCode, resultCode, data)
+        ProCrashGuardAndRecovery.safeRun(Unit) {
+            handleVoiceActivityResult(requestCode, resultCode, data)
+        }
     }
 }
