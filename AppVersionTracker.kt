@@ -28,9 +28,9 @@ data class VersionReleaseNote(
 object AppVersionTracker {
 
     const val DEVELOPER_NAME = "Harry"
-        const val CURRENT_SEMANTIC_VERSION = "5.3.0 Pro"
-    const val CURRENT_BUILD_NUMBER = 53
-    const val CURRENT_RELEASE_DATE = "24/11/2026"
+    const val CURRENT_SEMANTIC_VERSION = "5.4.0 Pro"
+    const val CURRENT_BUILD_NUMBER = 54
+    const val CURRENT_RELEASE_DATE = "25/11/2026"
     private const val PREF_LAST_SEEN_BUILD = "app_tracker_last_seen_build"
     private const val PREF_LAST_PKG_UPDATE_TIME = "app_tracker_last_pkg_update_time"
     private const val PREF_UPDATE_COUNT = "app_tracker_update_count"
@@ -38,7 +38,20 @@ object AppVersionTracker {
     private const val PREF_CUSTOM_NOTES = "app_tracker_custom_notes_v1"
 
     val changelogHistory: List<VersionReleaseNote> = listOf(
-               VersionReleaseNote(
+                VersionReleaseNote(
+            versionCode = 54,
+            versionName = "v5.4.0 Pro",
+            releaseDate = "25/11/2026",
+            title = "כלי זמן וסטופרים (121 כלים), אנימציות ממשק, מחשבון צף לכל הכלים, ייצוא/גיבוי Drive והגנת קריסות",
+            highlights = listOf(
+                "הוספת 3 כלי זמן וסטופרים חדשים (Tabs 118..120 — סה״כ 121 כלים): סטופר מרווחים ואימון HIIT/Tabata, טיימר ספירה לאחור מרובה (Multi-Timer) ומחשבון הפרשי שעות ודדליין כולל חציית חצות (ProTimeAndTimersTools.kt)",
+                "הוספת מנוע אנימציות ממשק מותאם לכל 4 ערכות הנושא (ProUiMotionEngine.kt) עם כפתור בהגדרות בשם 'אנימציות ממשק' וסמל וקטורי אישי",
+                "הרחבת המחשבון המיני הצף (ProFloatingMiniCalc.kt) לתמיכה בכל המחשבונים והכלים, הצגת תוצאות ופקדים חיים בכלים מבוססי מקלדת ומעבר מהיר בין סוגי מחשבונים",
+                "שדרוג מרכז הייצוא והגיבוי (ProExportBackupEngine.kt) לייצוא PDF ו-CSV אמיתי ולגיבוי/שחזור מלא מול Google Drive, וקיבוע כפתור 'הגדרות' בתחתית תפריט הצד בכל מצב גלילה",
+                "שילוב מנוע הגנה שקט מפני קריסות, מצב בטוח (Safe Mode) וטיפול בכל מצבי הקצה המתמטיים והמערכתיים (ProCrashGuardAndRecovery.kt)"
+            )
+        ),       
+        VersionReleaseNote(
             versionCode = 53,
             versionName = "v5.3.0 Pro",
             releaseDate = "24/11/2026",
