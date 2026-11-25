@@ -46,7 +46,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     var prefs: SharedPreferences? = null
     private lateinit var rootFrame: FrameLayout
     var mainContent: LinearLayout? = null
-    private lateinit var contentFrame: FrameLayout
+    lateinit var contentFrame: FrameLayout
     private lateinit var dimView: View
     var drawerMenu: LinearLayout? = null
     private lateinit var drawerScroll: ScrollView
@@ -768,6 +768,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     fun showItemPicker(title: String, items: List<String>, onSelected: (String) -> Unit) {
+        if (ProFloatingMiniCalc.isShowing) {
+            ProFloatingMiniCalc.showInlinePicker(this, title, items, onSelected)
+            return
+        }
         val dlg = Dialog(this)
         dlg.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dlg.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
@@ -2450,7 +2454,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         setOnClickListener { if (text.isNotEmpty()) copyToClipboard(text.toString()) }
     }
 
-    override fun onDestroy() { tts?.shutdown(); soundPool.release(); super.onDestroy() }
+    override fun onDestroy() { ProFloatingMiniCalc.dismiss(); tts?.shutdown(); soundPool.release(); super.onDestroy() }
     fun dp(value: Float): Int = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, resources.displayMetrics).toInt()
 
     fun shakeScreen() {
