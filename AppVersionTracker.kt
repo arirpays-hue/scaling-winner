@@ -442,7 +442,7 @@ object AppVersionTracker {
                 CanvasUiHelper.drawFittedText(canvas, creditLine, w / 2f, h * 0.52f, w - 28f * d, 14.0f * d, 10f * d, p)
 
                 p.textSize = 13.0f * d
-                val verLine = "\u200Fגרסה ${BidiFmt.ltr("v$CURRENT_SEMANTIC_VERSION")}  •  ${BidiFmt.ltr("Build #$CURRENT_BUILD_NUMBER")}  •  ${BidiFmt.ltr("100")} כלים"
+                val verLine = "\u200Fגרסה ${BidiFmt.ltr("v$CURRENT_SEMANTIC_VERSION")}  •  ${BidiFmt.ltr("Build #$CURRENT_BUILD_NUMBER")}  •  ${BidiFmt.ltr("121")} כלים"
                 CanvasUiHelper.drawFittedText(canvas, verLine, w / 2f, h * 0.76f, w - 28f * d, 13.0f * d, 9.5f * d, p)
 
                 p.textSize = 11.5f * d
