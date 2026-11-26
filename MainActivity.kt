@@ -110,7 +110,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         "דולר אוסטרלי (אוסטרליה) - AUD", "פרנק שווייצרי (שווייץ) - CHF"
     )
 
-    val categories = listOf(
+    private val builtInCategories = listOf(
         "🧮 מחשבון רגיל",                           // 0
         "🔬 מחשבון מדעי",                           // 1
         "🧾 מחשבון מע״מ",                           // 2
@@ -216,6 +216,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         "🌐 פרטי רשת וכתובת IP (Network)"            // 99
     ) + ProExtendedUnitConverters.extraCategories + ProTimeAndTimersTools.extraCategories
 
+    // רשימת הקטגוריות והמדורים נטענת אוטומטית גם מ-ProFutureToolsRegistry
+    val categories: List<String> = builtInCategories + ProFutureToolsRegistry.extraCategories
+
     val drawerSections = listOf(
         Triple(301, "📐 מתמטיקה ומדע", listOf(0, 1, 8, 15, 16, 7, 28, 22)),
         Triple(302, "💳 פיננסים וצרכנות", listOf(2, 24, 3, 17, 29, 9, 25, 10, 23, 13)),
@@ -231,7 +234,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         Triple(312, "🛠️ Pro: כלי עזר, מטרונום, פתקים ומידות", listOf(69, 70, 78, 79, 80)),
         Triple(313, "📏 Pro: ממירי יחידות מורחבים (18 כלים)", (100..117).toList()),
         Triple(314, "⏱️ Pro: כלי זמן, סטופרים ואימונים", (118..120).toList())
-    )
+    ) + ProFutureToolsRegistry.getExtraDrawerSections(builtInCategories.size)
 
     // ממפה אוטומטית את אינדקס 79 (מדידת טבעת) לסמל הטבעת (80) ואת 80 (מידות בגדים/נעליים) לסמל הלבוש (81)
     private fun resolveToolIconCode(tabIndex: Int): Int = if (tabIndex in 79..80) tabIndex + 1 else tabIndex
@@ -433,7 +436,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 setBackgroundColor(Color.TRANSPARENT)
             }
             sectionDividersMap[secIconCode] = catSep
-            if (secIconCode in 305..314) proSectionDividers[secIconCode] = catSep
+            if (ProFutureToolsRegistry.isProSection(secIconCode)) proSectionDividers[secIconCode] = catSep
             drawerSeparators.add(catSep)
             drawerMenu?.addView(catSep)
             drawerMenu?.addView(sectionItemsContainer)
@@ -478,9 +481,12 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         ProFloatingMiniCalc.onHostActivityResumed(this)
         ProCrashGuardAndRecovery.onActivityResumed(this)
         ProHardwarePerformanceAdapter.onActivityResumed(this)
+        ProFutureToolsRegistry.onHostResume(this)
     }
 
     override fun onPause() {
+        ProFutureToolsRegistry.onHostPause(this)
+        ProHardwarePerformanceAdapter.onActivityPaused(this)
         ProCanvasAnimations.onActivityPause()
         super.onPause()
     }
@@ -1273,7 +1279,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
             val hasVisibleCalculators = secItemIndices.any { isCalculatorVisibleInDrawer(it) }
 
-            if (secIconCode in 305..314 && !proActive) {
+            if (ProFutureToolsRegistry.isProSection(secIconCode) && !proActive) {
                 headerTv.visibility = View.GONE
                 proSectionDividers[secIconCode]?.visibility = View.GONE
                 container.visibility = View.GONE
@@ -1311,8 +1317,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             )
             headerTv.setTextColor(headerTextCol)
 
-            // 4 שפות אייקונים מובחנות לכותרות הקטגוריות (מינימליסטי / זוהר / זכוכית / קלאסי)
-            val secIcon = when {
+            // 4 שפות אייקונים מובחנות לכותרות הקטגוריות (כולל מודולים עתידיים אוטומטיים)
+            val secIcon = ProFutureToolsRegistry.createSectionIcon(this, secIconCode, headerIconCol, 22f) ?: when {
                 secIconCode == ProExtendedUnitConverters.SECTION_ICON_CODE ->
                     ProExtendedUnitConverters.createSectionIcon(this, headerIconCol, 22f)
                 secIconCode == ProTimeAndTimersTools.SECTION_ICON_CODE ->
@@ -1371,8 +1377,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
             tv.text = IosGlassTheme.cleanCategoryTitle(categories[i], true)
 
-            // 4 שפות אייקונים מובחנות לכל הכלים והמחשבונים (0..120)
-            val icon = when {
+            // 4 שפות אייקונים מובחנות לכל הכלים והמחשבונים (כולל כלים עתידיים מ-ProFutureToolsRegistry)
+            val icon = ProFutureToolsRegistry.createToolIcon(this, i, builtInCategories.size, itemIconCol, 20f) ?: when {
                 i in ProExtendedUnitConverters.FIRST_TAB_INDEX..ProExtendedUnitConverters.LAST_TAB_INDEX ->
                     ProExtendedUnitConverters.createToolIcon(this, i, itemIconCol, 20f)
                 i in ProTimeAndTimersTools.FIRST_TAB_INDEX..ProTimeAndTimersTools.LAST_TAB_INDEX ->
@@ -1729,7 +1735,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         val proActive = ProState.isProEnabled(prefs)
         val availableSections = drawerSections.filter { (secCode, _, _) ->
-            proActive || secCode !in 305..314
+            proActive || !ProFutureToolsRegistry.isProSection(secCode)
         }
         val allSelectableIndices = availableSections.flatMap { it.third }
         val visibleCount = allSelectableIndices.count { isCalculatorVisibleInDrawer(it) }
@@ -1937,8 +1943,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                         if (!hasProBtn) {
                             val proEnabled = ProState.isProEnabled(prefs)
                             val proBtn = createActionBtn(
-                                if (proEnabled) "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-121 כלים): מופעל 🟢"
-                                else "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-121 כלים): כבוי 🔴",
+                                if (proEnabled) "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-${categories.size} כלים): מופעל 🟢"
+                                else "🚀 מצב מקצועי (Pro Mode - 87 יחידות ו-${categories.size} כלים): כבוי 🔴",
                                 proEnabled
                             ) {
                                 val nextState = !ProState.isProEnabled(prefs)
@@ -2067,7 +2073,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 99 -> createProNetworkInspectorScreen()
                 in 100..117 -> createProExtendedUnitScreen(currentTabIndex)
                 in 118..120 -> createProTimeAndTimersScreen(currentTabIndex)
-                else -> createBasicCalculator()
+                // --- ניתוב אוטומטי לכל מחשבון עתידי שנרשם ב-ProFutureToolsRegistry ---
+                else -> ProFutureToolsRegistry.buildScreen(this, currentTabIndex, builtInCategories.size) ?: createBasicCalculator()
             }
         }
 
@@ -2083,7 +2090,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             ProHardwarePerformanceAdapter.applySettingsButtonIcon(rawView, this)
         }
 
-        if (currentTabIndex !in listOf(0, 1, 19, 55, 73, 78, 81, 96, 97, 98, 99) && currentTabIndex !in 100..120) {
+        val isFutureTab = ProFutureToolsRegistry.isFutureTab(currentTabIndex, builtInCategories.size)
+        val shouldAttachBidi = if (isFutureTab) {
+            ProFutureToolsRegistry.shouldAttachUniversalBidiVisualizer(currentTabIndex, builtInCategories.size)
+        } else {
+            currentTabIndex !in listOf(0, 1, 19, 55, 73, 78, 81, 96, 97, 98, 99) && currentTabIndex !in 100..120
+        }
+        if (shouldAttachBidi) {
             ProCrashGuardAndRecovery.safeRun(Unit) {
                 BidiFmt.attachUniversalLiveVisualizer(rawView)
             }
@@ -2539,6 +2552,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     override fun onDestroy() {
+        ProFutureToolsRegistry.onHostDestroy(this)
         ProCrashGuardAndRecovery.safeRun(Unit) { ProFloatingMiniCalc.dismiss() }
         ProCrashGuardAndRecovery.safeRun(Unit) { tts?.shutdown() }
         ProCrashGuardAndRecovery.safeRun(Unit) { soundPool.release() }
@@ -2555,6 +2569,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (ProExportBackupEngine.handleActivityResult(this, requestCode, resultCode, data)) return
+        if (ProFutureToolsRegistry.handleActivityResult(this, requestCode, resultCode, data)) return
         ProCrashGuardAndRecovery.safeRun(Unit) {
             handleVoiceActivityResult(requestCode, resultCode, data)
         }
