@@ -5,6 +5,7 @@ import android.app.Dialog
 import android.app.PictureInPictureParams
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -463,6 +464,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         rootFrame.addView(mainContent); rootFrame.addView(dimView); rootFrame.addView(drawerContainer)
         ProCanvasAnimations.loadPrefs(prefs)
         ProUiMotionEngine.loadPrefs(prefs)
+        ProHardwarePerformanceAdapter.initAndAdapt(this)
         ProCanvasAnimations.installOverlay(this, rootFrame)
         updateHandednessLayout()
         setContentView(rootFrame); setupShortcuts(); handleIntent(intent)
@@ -475,6 +477,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         ProCanvasAnimations.onActivityResume()
         ProFloatingMiniCalc.onHostActivityResumed(this)
         ProCrashGuardAndRecovery.onActivityResumed(this)
+        ProHardwarePerformanceAdapter.onActivityResumed(this)
     }
 
     override fun onPause() {
@@ -1009,7 +1012,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             val targetView = ProCrashGuardAndRecovery.buildTabSafely(this, currentTabIndex) {
                 if (isLandscape) createScientificCalculator() else if (currentTabIndex == 1) createScientificCalculator() else createBasicCalculator()
             }
-            ProCanvasAnimations.attachAmbientToContent(this, contentFrame, currentTabIndex)
+            if (ProHardwarePerformanceAdapter.allowAmbientCanvas()) {
+                ProCanvasAnimations.attachAmbientToContent(this, contentFrame, currentTabIndex)
+            }
             contentFrame.addView(targetView)
             ProUiMotionEngine.animateTabSwitch(this, targetView, titleText, currentTabIndex, false)
         }
@@ -1093,7 +1098,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     fun updateKeepScreenOn() { if (keepScreenOn) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
 
     fun applyTheme() {
-        if (!isCleanGlassActive || !isDrawerOpen || isMinimalistMode) {
+        if (!isCleanGlassActive || !isDrawerOpen || isMinimalistMode || !ProHardwarePerformanceAdapter.allowRealtimeBlur()) {
             IosGlassTheme.applyRealtimeGlassBlur(mainContent, false)
         }
 
@@ -1212,7 +1217,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     private fun openDrawer() {
         updateHandednessLayout()
-        if (isCleanGlassActive && !isMinimalistMode) IosGlassTheme.applyRealtimeGlassBlur(mainContent, true)
+        if (isCleanGlassActive && !isMinimalistMode && ProHardwarePerformanceAdapter.allowRealtimeBlur()) {
+            IosGlassTheme.applyRealtimeGlassBlur(mainContent, true)
+        }
         ProUiMotionEngine.animateDrawerToggle(this, true, drawerContainer, dimView, mainContent, getDrawerWidthPx())
         isDrawerOpen = true
         ProCanvasAnimations.onDrawerStateChanged(this, true, drawerMenu)
@@ -1414,7 +1421,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val baseIconTint = MinimalistTheme.resolveDrawerIconColor(this, isSelected = false, isExpandedHeader = false)
 
         fun traverse(v: View) {
-            if (v.tag == "MINIMALIST_CUSTOMIZER_IGNORE" || v.tag == "THEME_MATCHED_PALETTES_BAR" || v.tag == "PRO_UI_MOTION_TOGGLE_BTN") return
+            if (v.tag == "MINIMALIST_CUSTOMIZER_IGNORE" ||
+                v.tag == "THEME_MATCHED_PALETTES_BAR" ||
+                v.tag == "PRO_UI_MOTION_TOGGLE_BTN" ||
+                v.tag == ProHardwarePerformanceAdapter.SETTINGS_BTN_TAG
+            ) return
             if (v is HorizontalScrollView) return
 
             if (v is TextView && v.isClickable && v.background != null) {
@@ -1584,6 +1595,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     t.contains("סוג צליל") ||
                     t.contains("צליל AC") ||
                     t.contains("אנימציות") ||
+                    t.contains("התאמה לחומרת המכשיר") ||
                     t.contains("מסך תמיד דולק") ||
                     t.contains("צורת כפתורים") ||
                     t.contains("דיוק עשרוני") ||
@@ -1958,6 +1970,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     container?.addView(CalculatorGestureManager.createCollapsibleGesturesSettingsSection(this))
                     container?.addView(ProCanvasAnimations.createSettingsToggleButton(this))
                     container?.addView(ProUiMotionEngine.createSettingsToggleButton(this))
+                    container?.addView(ProHardwarePerformanceAdapter.createSettingsButton(this))
                     container?.addView(AppVersionTracker.createAboutSettingsButton(this))
 
                     unifyThemeSelectorAndCustomizerInSettings(settingsView)
@@ -2067,6 +2080,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             AppVersionTracker.applyAboutButtonIcon(rawView, this)
             CalculatorGestureManager.applyGestureButtonIcon(rawView, this)
             ProUiMotionEngine.applySettingsButtonIcon(rawView, this)
+            ProHardwarePerformanceAdapter.applySettingsButtonIcon(rawView, this)
         }
 
         if (currentTabIndex !in listOf(0, 1, 19, 55, 73, 78, 81, 96, 97, 98, 99) && currentTabIndex !in 100..120) {
@@ -2075,7 +2089,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
         }
 
-        ProCanvasAnimations.attachAmbientToContent(this, contentFrame, currentTabIndex)
+        if (ProHardwarePerformanceAdapter.allowAmbientCanvas()) {
+            ProCanvasAnimations.attachAmbientToContent(this, contentFrame, currentTabIndex)
+        }
         contentFrame.addView(rawView)
         ProCanvasAnimations.playTabTransition(this, rawView, currentTabIndex, wasInSettings)
         ProUiMotionEngine.animateTabSwitch(this, rawView, titleText, currentTabIndex, wasInSettings)
@@ -2158,7 +2174,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     }
                 }
             }
-            if (isCleanGlassActive && !isMinimalistMode) IosGlassTheme.apply3DElevation(this, 10f)
+            if (isCleanGlassActive && !isMinimalistMode && ProHardwarePerformanceAdapter.allowElevationShadows()) {
+                IosGlassTheme.apply3DElevation(this, 10f)
+            }
         }
 
         if (isCleanGlassActive && !isMinimalistMode) {
@@ -2213,10 +2231,12 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             setAutoSizeTextTypeUniformWithConfiguration(18, 60, 2, TypedValue.COMPLEX_UNIT_SP)
             gravity = Gravity.END
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 2f)
-            if (isAuroraMode) {
-                setShadowLayer(12f, 0f, 0f, Color.argb(115, Color.red(AuroraBorealisTheme.AURORA_PRIMARY), Color.green(AuroraBorealisTheme.AURORA_PRIMARY), Color.blue(AuroraBorealisTheme.AURORA_PRIMARY)))
-            } else if (isIosGlassMode) {
-                setShadowLayer(8f, 0f, 2f, Color.argb(90, 0, 0, 0))
+            if (ProHardwarePerformanceAdapter.allowGlowShadows()) {
+                if (isAuroraMode) {
+                    setShadowLayer(12f, 0f, 0f, Color.argb(115, Color.red(AuroraBorealisTheme.AURORA_PRIMARY), Color.green(AuroraBorealisTheme.AURORA_PRIMARY), Color.blue(AuroraBorealisTheme.AURORA_PRIMARY)))
+                } else if (isIosGlassMode) {
+                    setShadowLayer(8f, 0f, 2f, Color.argb(90, 0, 0, 0))
+                }
             }
         }
 
@@ -2280,7 +2300,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             isClickable = true
 
             if (isCleanGlassActive) {
-                if (!isMinimalistMode) IosGlassTheme.apply3DElevation(this, 6f)
+                if (!isMinimalistMode && ProHardwarePerformanceAdapter.allowElevationShadows()) IosGlassTheme.apply3DElevation(this, 6f)
                 IosGlassTheme.styleSymbolTextView(this, this@MainActivity, symbol, false)
             }
 
@@ -2296,7 +2316,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                         } else if (isCleanGlassActive) {
                             tv.background = IosGlassTheme.createGlassButtonDrawable(this@MainActivity, symbol, isMem, true)
                             IosGlassTheme.styleSymbolTextView(tv, this@MainActivity, symbol, true)
-                            IosGlassTheme.apply3DElevation(tv, 2f)
+                            if (ProHardwarePerformanceAdapter.allowElevationShadows()) IosGlassTheme.apply3DElevation(tv, 2f)
                         }
                         ProUiMotionEngine.animateKeypadTouchDown(this@MainActivity, v, e.x, e.y, symbol)
                     }
@@ -2307,7 +2327,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                         } else if (isCleanGlassActive) {
                             tv.background = IosGlassTheme.createGlassButtonDrawable(this@MainActivity, symbol, isMem, false)
                             IosGlassTheme.styleSymbolTextView(tv, this@MainActivity, symbol, false)
-                            IosGlassTheme.apply3DElevation(tv, 6f)
+                            if (ProHardwarePerformanceAdapter.allowElevationShadows()) IosGlassTheme.apply3DElevation(tv, 6f)
                         }
                         ProUiMotionEngine.animateKeypadTouchUp(this@MainActivity, v, symbol)
                         if (e.actionMasked == MotionEvent.ACTION_UP) onEquationButtonClick(symbol)
@@ -2473,7 +2493,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 if (isMinimalistMode && isSwapBtn) gravity = Gravity.CENTER_HORIZONTAL
             }
             isClickable = true
-            if (isCleanGlassActive && !isMinimalistMode) IosGlassTheme.apply3DElevation(this, 5f)
+            if (isCleanGlassActive && !isMinimalistMode && ProHardwarePerformanceAdapter.allowElevationShadows()) {
+                IosGlassTheme.apply3DElevation(this, 5f)
+            }
             ProUiMotionEngine.attachTactilePress(this@MainActivity, this)
             setOnClickListener {
                 feedback(it)
@@ -2507,11 +2529,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         ProCrashGuardAndRecovery.onTrimMemory(this, level)
+        ProHardwarePerformanceAdapter.onTrimMemory(this, level)
     }
 
     override fun onLowMemory() {
         super.onLowMemory()
         ProCrashGuardAndRecovery.onLowMemory(this)
+        ProHardwarePerformanceAdapter.onTrimMemory(this, ComponentCallbacks2.TRIM_MEMORY_COMPLETE)
     }
 
     override fun onDestroy() {
