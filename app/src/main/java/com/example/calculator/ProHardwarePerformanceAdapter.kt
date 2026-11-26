@@ -2,6 +2,7 @@ package com.example.calculator
 
 import android.app.ActivityManager
 import android.app.Dialog
+import android.content.BroadcastReceiver
 import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.Intent
@@ -13,6 +14,8 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.os.BatteryManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.Settings
@@ -25,18 +28,23 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import java.io.File
+import java.lang.ref.WeakReference
 import java.util.Locale
 import kotlin.math.min
 import kotlin.math.roundToInt
 
 // =========================================================================
-// מנוע התאמת חומרה, איכות גרפיקה, אנימציות ואפקטים (ProHardwarePerformanceAdapter)
-// סורק RAM, CPU, קצב רענון, חיסכון בסוללה והתחממות — ומתאים את האפליקציה אוטומטית
+// מנוע התאמת חומרה וביצועים בזמן אמת (ProHardwarePerformanceAdapter.kt)
+// במצב אוטומטי: מאזין ברקע לחיסכון סוללה, טעינה, התחממות ועומס RAM
+// ומתאים מיד את האיכות, האפקטים וחבילת האנימציות — וחוזר חזרה כשהעומס יורד
 // =========================================================================
 object ProHardwarePerformanceAdapter {
 
     private const val PREF_KEY_MODE = "pro_hw_perf_mode_v1"
     private const val PREF_KEY_AUTO_APPLIED_ONCE = "pro_hw_auto_applied_once_v1"
+    private const val PREF_KEY_SAVED_RICH_PACK = "pro_hw_saved_rich_pack_v1"
+    private const val LIVE_POLL_INTERVAL_MS = 18_000L
+
     const val SETTINGS_BTN_TAG = "PRO_HW_PERF_SETTINGS_BTN"
 
     enum class PerformanceTier(
@@ -55,7 +63,7 @@ object ProHardwarePerformanceAdapter {
     ) {
         ECO_LOW_END(
             level = 0,
-            hebrewName = "חסכוני (מכשיר חלש)",
+            hebrewName = "חסכוני (מכשיר חלש / חיסכון)",
             shortName = "חסכוני",
             targetFps = 30,
             minFrameIntervalMs = 33L,
@@ -112,7 +120,7 @@ object ProHardwarePerformanceAdapter {
     }
 
     enum class AdaptationMode(val id: Int, val label: String) {
-        AUTO(0, "אוטומטי (לפי חומרה)"),
+        AUTO(0, "אוטומטי חי (מתעדכן לבד בזמן אמת)"),
         ULTRA(1, "נעול: אולטרה"),
         HIGH(2, "נעול: גבוה"),
         BALANCED(3, "נעול: מאוזן"),
@@ -152,18 +160,29 @@ object ProHardwarePerformanceAdapter {
         private set
 
     private var memoryPressureLevel: Int = 0
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var hostRef: WeakReference<MainActivity>? = null
+    private var systemStateReceiver: BroadcastReceiver? = null
+    private var thermalListenerObj: Any? = null
+    private var periodicCheckRunnable: Runnable? = null
+    private var isMonitoringActive = false
 
     // =========================================================================
-    // 1. אתחול, סריקת חומרה והתאמה אוטומטית של האפליקציה
+    // 1. אתחול, ניטור חי בזמן אמת והתאמה דו-כיוונית אוטומטית (ירידה ועלייה חזרה)
     // =========================================================================
     fun initAndAdapt(activity: MainActivity) {
+        hostRef = WeakReference(activity)
         loadPrefs(activity.prefs)
         val profile = detectHardwareProfile(activity)
         lastProfile = profile
         recomputeActiveTier(profile)
 
         val alreadyApplied = activity.prefs?.getBoolean(PREF_KEY_AUTO_APPLIED_ONCE, false) ?: false
-        applyTierToEngines(activity, forcePackSwitch = (!alreadyApplied && adaptationMode == AdaptationMode.AUTO))
+        applyTierToEngines(
+            activity = activity,
+            forcePackSwitch = (!alreadyApplied && adaptationMode == AdaptationMode.AUTO),
+            notifyUser = false
+        )
 
         if (!alreadyApplied) {
             activity.prefs?.edit()?.putBoolean(PREF_KEY_AUTO_APPLIED_ONCE, true)?.apply()
@@ -171,24 +190,133 @@ object ProHardwarePerformanceAdapter {
     }
 
     fun onActivityResumed(activity: MainActivity) {
-        val profile = detectHardwareProfile(activity)
-        lastProfile = profile
-        val prevTier = activeTier
-        recomputeActiveTier(profile)
-        if (activeTier != prevTier) {
-            applyTierToEngines(activity, forcePackSwitch = (adaptationMode == AdaptationMode.AUTO && activeTier == PerformanceTier.ECO_LOW_END))
-        }
+        hostRef = WeakReference(activity)
+        startLiveMonitoring(activity)
+        evaluateLiveConditions(activity, notifyOnTierChange = false)
+    }
+
+    fun onActivityPaused(activity: MainActivity) {
+        stopLiveMonitoring(activity)
     }
 
     fun onTrimMemory(activity: MainActivity, level: Int) {
         memoryPressureLevel = level
         if (adaptationMode != AdaptationMode.AUTO) return
-        if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) {
-            activeTier = PerformanceTier.ECO_LOW_END
-            applyTierToEngines(activity, forcePackSwitch = false)
-        } else if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW && activeTier.level > PerformanceTier.BALANCED.level) {
-            activeTier = PerformanceTier.BALANCED
-            applyTierToEngines(activity, forcePackSwitch = false)
+        evaluateLiveConditions(activity, notifyOnTierChange = false)
+    }
+
+    private fun startLiveMonitoring(activity: MainActivity) {
+        if (isMonitoringActive) return
+        isMonitoringActive = true
+
+        // 1. האזנה מיידית לשינויי מצב חיסכון בסוללה, חיבור/ניתוק מטען וסוללה נמוכה
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                val host = hostRef?.get() ?: return
+                if (host.isFinishing || host.isDestroyed) return
+                if (adaptationMode == AdaptationMode.AUTO) {
+                    mainHandler.post { evaluateLiveConditions(host, notifyOnTierChange = true) }
+                }
+            }
+        }
+        val filter = IntentFilter().apply {
+            addAction(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED)
+            addAction(Intent.ACTION_BATTERY_LOW)
+            addAction(Intent.ACTION_BATTERY_OKAY)
+            addAction(Intent.ACTION_POWER_CONNECTED)
+            addAction(Intent.ACTION_POWER_DISCONNECTED)
+        }
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                activity.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                @Suppress("UnspecifiedRegisterReceiverFlag")
+                activity.registerReceiver(receiver, filter)
+            }
+            systemStateReceiver = receiver
+        } catch (_: Throwable) {
+            systemStateReceiver = null
+        }
+
+        // 2. האזנה בזמן אמת לחיישן ההתחממות של אנדרואיד (API 29+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                val pm = activity.getSystemService(Context.POWER_SERVICE) as? PowerManager
+                if (pm != null) {
+                    val listener = PowerManager.OnThermalStatusChangedListener { _ ->
+                        val host = hostRef?.get() ?: return@OnThermalStatusChangedListener
+                        if (host.isFinishing || host.isDestroyed) return@OnThermalStatusChangedListener
+                        if (adaptationMode == AdaptationMode.AUTO) {
+                            mainHandler.post { evaluateLiveConditions(host, notifyOnTierChange = true) }
+                        }
+                    }
+                    pm.addThermalStatusListener(listener)
+                    thermalListenerObj = listener
+                }
+            } catch (_: Throwable) {
+                thermalListenerObj = null
+            }
+        }
+
+        // 3. בדיקה מחזורית קלה של זיכרון פנוי / חום / סוללה כל 18 שניות (עובדת רק כשהאפליקציה בחזית)
+        val poll = object : Runnable {
+            override fun run() {
+                if (!isMonitoringActive) return
+                val host = hostRef?.get()
+                if (host != null && !host.isFinishing && !host.isDestroyed) {
+                    if (adaptationMode == AdaptationMode.AUTO) {
+                        // אם הזיכרון התייצב — משחררים לחץ זיכרון ישן
+                        if (memoryPressureLevel > 0) memoryPressureLevel = 0
+                        evaluateLiveConditions(host, notifyOnTierChange = true)
+                    }
+                    mainHandler.postDelayed(this, LIVE_POLL_INTERVAL_MS)
+                }
+            }
+        }
+        periodicCheckRunnable = poll
+        mainHandler.postDelayed(poll, LIVE_POLL_INTERVAL_MS)
+    }
+
+    private fun stopLiveMonitoring(activity: MainActivity) {
+        isMonitoringActive = false
+        periodicCheckRunnable?.let { mainHandler.removeCallbacks(it) }
+        periodicCheckRunnable = null
+
+        val recv = systemStateReceiver
+        systemStateReceiver = null
+        if (recv != null) {
+            try { activity.unregisterReceiver(recv) } catch (_: Throwable) {}
+        }
+
+        val tObj = thermalListenerObj
+        thermalListenerObj = null
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && tObj is PowerManager.OnThermalStatusChangedListener) {
+            try {
+                val pm = activity.getSystemService(Context.POWER_SERVICE) as? PowerManager
+                pm?.removeThermalStatusListener(tObj)
+            } catch (_: Throwable) {}
+        }
+    }
+
+    private fun evaluateLiveConditions(activity: MainActivity, notifyOnTierChange: Boolean) {
+        if (activity.isFinishing || activity.isDestroyed) return
+        val profile = detectHardwareProfile(activity)
+        lastProfile = profile
+        val prevTier = activeTier
+        recomputeActiveTier(profile)
+
+        if (activeTier != prevTier) {
+            applyTierToEngines(
+                activity = activity,
+                forcePackSwitch = (adaptationMode == AdaptationMode.AUTO),
+                notifyUser = notifyOnTierChange
+            )
+            // עדכון שקט של תווית הכפתור אם המשתמש נמצא כרגע בהגדרות
+            if (activity.currentTabIndex == 19) {
+                val btn = activity.contentFrame.findViewWithTag<TextView>(SETTINGS_BTN_TAG)
+                btn?.text = IosGlassTheme.cleanCategoryTitle(getSettingsButtonLabel(activity), activity.isCleanGlassActive)
+                applySettingsButtonIcon(activity.contentFrame, activity)
+            }
         }
     }
 
@@ -204,7 +332,7 @@ object ProHardwarePerformanceAdapter {
         val profile = detectHardwareProfile(activity)
         lastProfile = profile
         recomputeActiveTier(profile)
-        applyTierToEngines(activity, forcePackSwitch = applyPack)
+        applyTierToEngines(activity, forcePackSwitch = applyPack, notifyUser = false)
     }
 
     private fun recomputeActiveTier(profile: HardwareProfile) {
@@ -225,49 +353,76 @@ object ProHardwarePerformanceAdapter {
         }
     }
 
-    private fun applyTierToEngines(activity: MainActivity, forcePackSwitch: Boolean) {
+    private fun applyTierToEngines(activity: MainActivity, forcePackSwitch: Boolean, notifyUser: Boolean) {
         val tier = activeTier
         val profile = lastProfile
 
-        // 1. שליטה ברקע הקנבס המונפש
+        // 1. הפעלה/השהיה מיידית של אנימציות רקע
         if (!tier.allowAmbientCanvas) {
             ProCanvasAnimations.onActivityPause()
         } else {
             ProCanvasAnimations.onActivityResume()
         }
 
-        // 2. אם מערכת האנדרואיד כולה כיוונה אנימציות ל-0 ("הסר אנימציות") — מכבדים זאת במצב AUTO
-        if (adaptationMode == AdaptationMode.AUTO && profile?.systemReduceMotion == true) {
-            ProUiMotionPacks.selectPack(activity, ProUiMotionPacks.MotionPack.LITE_SNAP, autoEnableIfOff = false)
-            return
+        // 2. כיבוי מיידי של טשטוש זכוכית כבד אם הורדנו רמה
+        if (!tier.allowRealtimeBlur) {
+            IosGlassTheme.applyRealtimeGlassBlur(activity.mainContent, false)
         }
 
-        // 3. התאמת חבילת האנימציות לחומרה (רק כשנדרש או כשהמכשיר במצב חסכוני)
-        if (forcePackSwitch) {
-            val targetPack = when (tier) {
+        // 3. התאמת חבילת אנימציות אוטומטית (כולל שמירה ושחזור של החבילה המועדפת על המשתמש)
+        if (adaptationMode == AdaptationMode.AUTO && profile?.systemReduceMotion == true) {
+            saveCurrentRichPackIfApplicable(activity)
+            ProUiMotionPacks.selectPack(activity, ProUiMotionPacks.MotionPack.LITE_SNAP, autoEnableIfOff = false)
+        } else if (forcePackSwitch) {
+            val currentPack = ProUiMotionPacks.currentPack
+            when (tier) {
                 PerformanceTier.ECO_LOW_END -> {
-                    if (profile?.isPowerSaveMode == true || profile?.isThermalThrottled == true) {
+                    saveCurrentRichPackIfApplicable(activity)
+                    val target = if (profile?.isPowerSaveMode == true || profile?.isThermalThrottled == true) {
                         ProUiMotionPacks.MotionPack.LITE_SNAP
                     } else {
                         ProUiMotionPacks.MotionPack.LITE_FADE
                     }
+                    ProUiMotionPacks.selectPack(activity, target, autoEnableIfOff = false)
                 }
-                PerformanceTier.BALANCED -> ProUiMotionPacks.MotionPack.LITE_SOFT_LIFT
-                PerformanceTier.HIGH -> when {
-                    activity.isMinimalistMode -> ProUiMotionPacks.MotionPack.ZEN_SILK
-                    activity.isAuroraMode -> ProUiMotionPacks.MotionPack.AURORA_COSMIC
-                    else -> ProUiMotionPacks.MotionPack.LIQUID_SPRING
+                PerformanceTier.BALANCED -> {
+                    saveCurrentRichPackIfApplicable(activity)
+                    if (!currentPack.isLowPower) {
+                        ProUiMotionPacks.selectPack(activity, ProUiMotionPacks.MotionPack.LITE_SOFT_LIFT, autoEnableIfOff = false)
+                    }
                 }
-                PerformanceTier.ULTRA -> when {
-                    activity.isMinimalistMode -> ProUiMotionPacks.MotionPack.ZEN_SILK
-                    activity.isAuroraMode -> ProUiMotionPacks.MotionPack.AURORA_COSMIC
-                    else -> ProUiMotionPacks.MotionPack.LIQUID_SPRING
+                PerformanceTier.HIGH, PerformanceTier.ULTRA -> {
+                    // שחזור אוטומטי של החבילה העשירה שהמשתמש אהב כשהעומס/חיסכון הסוללה מסתיים!
+                    val savedId = activity.prefs?.getInt(PREF_KEY_SAVED_RICH_PACK, -1) ?: -1
+                    val restored = if (savedId >= 0) {
+                        ProUiMotionPacks.MotionPack.fromId(savedId)
+                    } else {
+                        when {
+                            activity.isMinimalistMode -> ProUiMotionPacks.MotionPack.ZEN_SILK
+                            activity.isAuroraMode -> ProUiMotionPacks.MotionPack.AURORA_COSMIC
+                            else -> ProUiMotionPacks.MotionPack.LIQUID_SPRING
+                        }
+                    }
+                    if (currentPack.isLowPower) {
+                        ProUiMotionPacks.selectPack(activity, restored, autoEnableIfOff = false)
+                    }
                 }
             }
-            ProUiMotionPacks.selectPack(activity, targetPack, autoEnableIfOff = false)
-        } else if (adaptationMode == AdaptationMode.AUTO && tier == PerformanceTier.ECO_LOW_END && !ProUiMotionPacks.currentPack.isLowPower) {
-            // מעבר אוטומטי לבטיחות אם המכשיר נכנס לחיסכון סוללה/התחממות תוך כדי שימוש
-            ProUiMotionPacks.selectPack(activity, ProUiMotionPacks.MotionPack.LITE_FADE, autoEnableIfOff = false)
+        }
+
+        if (notifyUser) {
+            Toast.makeText(
+                activity,
+                "⚡ ביצועים הותאמו אוטומטית: ${tier.shortName}",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    private fun saveCurrentRichPackIfApplicable(activity: MainActivity) {
+        val cur = ProUiMotionPacks.currentPack
+        if (!cur.isLowPower) {
+            activity.prefs?.edit()?.putInt(PREF_KEY_SAVED_RICH_PACK, cur.id)?.apply()
         }
     }
 
@@ -331,9 +486,7 @@ object ProHardwarePerformanceAdapter {
             }
         } catch (_: Throwable) { Build.MODEL ?: "Android" }
 
-        // חישוב ציון חומרה משוקלל (0..100)
         var score = 0
-        // RAM (עד 36 נקודות)
         score += when {
             totalRamGb >= 10.5f -> 36
             totalRamGb >= 7.2f -> 31
@@ -341,7 +494,6 @@ object ProHardwarePerformanceAdapter {
             totalRamGb >= 3.4f -> 15
             else -> 6
         }
-        // CPU + תדר + 64-bit (עד 34 נקודות)
         score += when {
             cores >= 8 -> 16
             cores >= 6 -> 12
@@ -355,8 +507,6 @@ object ProHardwarePerformanceAdapter {
             else -> 3
         }
         if (is64Bit) score += 5
-
-        // תצוגה, Heap וגרסת אנדרואיד (עד 30 נקודות)
         score += when {
             hz >= 115f -> 12
             hz >= 85f -> 9
@@ -373,22 +523,20 @@ object ProHardwarePerformanceAdapter {
         score = score.coerceIn(5, 100)
 
         var tier = when {
-            isLowRam || totalRamGb < 3.4f || score < 44 -> PerformanceTier.ECO_LOW_END
-            score < 64 -> PerformanceTier.BALANCED
+            isLowRam || totalRamGb < 3.4f || availRamGb < 0.55f || score < 44 -> PerformanceTier.ECO_LOW_END
+            availRamGb < 1.0f || score < 64 -> PerformanceTier.BALANCED
             score < 82 -> PerformanceTier.HIGH
             else -> PerformanceTier.ULTRA
         }
 
-        // הורדת עומס דינמית בחיסכון סוללה, התחממות או סוללה קריטית מתחת ל-15%
         if (isPowerSave || isThermal || reduceMotion || (!isCharging && battPct <= 15)) {
-            tier = when (tier) {
-                PerformanceTier.ULTRA -> PerformanceTier.BALANCED
-                PerformanceTier.HIGH -> PerformanceTier.BALANCED
-                PerformanceTier.BALANCED -> PerformanceTier.ECO_LOW_END
-                PerformanceTier.ECO_LOW_END -> PerformanceTier.ECO_LOW_END
-            }
-            if (isThermal || isPowerSave) {
-                tier = PerformanceTier.ECO_LOW_END
+            tier = if (isThermal || isPowerSave || reduceMotion) {
+                PerformanceTier.ECO_LOW_END
+            } else {
+                when (tier) {
+                    PerformanceTier.ULTRA, PerformanceTier.HIGH -> PerformanceTier.BALANCED
+                    else -> PerformanceTier.ECO_LOW_END
+                }
             }
         }
 
@@ -427,14 +575,11 @@ object ProHardwarePerformanceAdapter {
     }
 
     // =========================================================================
-    // 3. ממשק שאילתות מהיר לכל רכיבי האפליקציה (משחקים, קנבס, טשטוש והצללות)
+    // 3. ממשק שאילתות מהיר לכל רכיבי האפליקציה
     // =========================================================================
     fun allowRealtimeBlur(): Boolean = activeTier.allowRealtimeBlur
-
     fun allowGlowShadows(): Boolean = activeTier.allowGlowShadows
-
     fun allowAmbientCanvas(): Boolean = activeTier.allowAmbientCanvas
-
     fun allowElevationShadows(): Boolean = activeTier.allowElevationShadows
 
     fun scaleParticleCount(baseCount: Int): Int {
@@ -452,10 +597,10 @@ object ProHardwarePerformanceAdapter {
     }
 
     // =========================================================================
-    // 4. כפתור בהגדרות + סמל שבב חומרה וקטורי ל-4 ערכות הנושא + חלון בקרה
+    // 4. כפתור בהגדרות + סמל שבב וקטורי + חלון בקרה
     // =========================================================================
     fun getSettingsButtonLabel(activity: MainActivity): String {
-        val modeTag = if (adaptationMode == AdaptationMode.AUTO) "אוטומטי • ${activeTier.shortName}" else activeTier.shortName
+        val modeTag = if (adaptationMode == AdaptationMode.AUTO) "אוטומטי חי • ${activeTier.shortName}" else activeTier.shortName
         return if (activity.isCleanGlassActive) {
             "התאמה לחומרת המכשיר: $modeTag"
         } else {
@@ -535,14 +680,11 @@ object ProHardwarePerformanceAdapter {
                 val cy = bounds.exactCenterY()
                 val r = min(bounds.width(), bounds.height()) * 0.42f
 
-                // גוף שבב CPU מרובע
                 val body = r * 0.56f
                 canvas.drawRoundRect(RectF(cx - body, cy - body, cx + body, cy + body), r * 0.16f, r * 0.16f, strokeP)
-                // ליבה פנימית
                 val core = r * 0.22f
                 canvas.drawRoundRect(RectF(cx - core, cy - core, cx + core, cy + core), r * 0.08f, r * 0.08f, fillP)
 
-                // 8 רגלי חיבור (2 מכל צד)
                 val pinOut = r * 0.88f
                 val off = r * 0.26f
                 for (sign in floatArrayOf(-1f, 1f)) {
@@ -635,7 +777,6 @@ object ProHardwarePerformanceAdapter {
         scroll.addView(body)
         root.addView(scroll)
 
-        // כרטיס נתוני חומרה מזוהים
         val cardFill = if (isMin) MinimalistTheme.CARD_WHITE else Color.argb(34, 255, 255, 255)
         val specCard = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
@@ -655,13 +796,14 @@ object ProHardwarePerformanceAdapter {
         val cpuStr = String.format(Locale.US, "%d ליבות • %.1f GHz", profile.cpuCores, profile.maxCpuGhz)
         val hzStr = "${profile.refreshRateHz.roundToInt()} Hz"
         val powerNote = when {
-            profile.isThermalThrottled -> "התחממות פעילה (מוגבל)"
-            profile.isPowerSaveMode -> "חיסכון סוללה פעיל"
+            profile.isThermalThrottled -> "התחממות פעילה (מוגבל אוטומטית)"
+            profile.isPowerSaveMode -> "חיסכון סוללה פעיל (הותאם אוטומטית)"
+            profile.isCharging -> "בטעינה (${profile.batteryPct}%)"
             else -> "תקין (${profile.batteryPct}%)"
         }
 
         specCard.addView(TextView(activity).apply {
-            text = "\u200Fמפרט המכשיר שזוהה:"
+            text = "\u200Fמפרט המכשיר שזוהה (ניטור חי פעיל):"
             setTextColor(textPrimary)
             textSize = 14f
             typeface = Typeface.DEFAULT_BOLD
@@ -680,7 +822,6 @@ object ProHardwarePerformanceAdapter {
         })
         body.addView(specCard)
 
-        // כרטיס השפעה בפועל על האיכות והאפקטים
         val effectCard = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(activity.dp(14f), activity.dp(12f), activity.dp(14f), activity.dp(12f))
@@ -717,7 +858,6 @@ object ProHardwarePerformanceAdapter {
         })
         body.addView(effectCard)
 
-        // בחירת פרופיל פעולה (אוטומטי או ידני)
         body.addView(TextView(activity).apply {
             text = "\u200Fבחר מצב התאמה:"
             setTextColor(textPrimary)
@@ -731,10 +871,10 @@ object ProHardwarePerformanceAdapter {
             val isSel = (mode == adaptationMode)
             val rowFill = if (isSel) Color.argb(58, Color.red(accentCol), Color.green(accentCol), Color.blue(accentCol)) else cardFill
             val row = TextView(activity).apply {
-                val suffix = if (mode == AdaptationMode.AUTO) " — מומלץ: ${profile.recommendedTier.shortName}" else ""
+                val suffix = if (mode == AdaptationMode.AUTO) " — כעת: ${profile.recommendedTier.shortName}" else ""
                 text = "\u200F${if (isSel) "✓ " else ""}${mode.label}$suffix"
                 setTextColor(MinimalistTheme.ensureReadableTextOnBg(textPrimary, rowFill, 2.3))
-                textSize = 13.8f
+                textSize = 13.6f
                 typeface = if (isSel) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
                 gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
                 setPadding(activity.dp(14f), activity.dp(11f), activity.dp(14f), activity.dp(11f))
